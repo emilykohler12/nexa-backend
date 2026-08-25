@@ -1,0 +1,320 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  professional
+  client
+}
+
+enum Gender {
+  male
+  female
+  other
+  prefer_not_to_say
+}
+
+model User {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String    @db.VarChar(100)
+  email             String    @unique @db.VarChar(255)
+  passwordHash      String    @map("password_hash") @db.VarChar(255)
+  role              UserRole  @default(client)
+  phone             String?   @db.VarChar(20)
+  gender            Gender?
+  emailVerified     Boolean   @default(false) @map("email_verified")
+  active            Boolean   @default(true)
+  refreshToken      String?   @map("refresh_token") @db.Text
+  profileComplete   Boolean   @default(false) @map("profile_complete")
+  verificationToken String?   @map("verification_token") @db.VarChar(255)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  client       Client?
+  professional    Professional?
+  invitationsSent Invitation[]    @relation("SentBy")
+  passwordResets  PasswordReset[]
+  appointmentsAsClient       Appointment[] @relation("ClientAppointments")
+  appointmentsAsProfessional Appointment[] @relation("ProfessionalAppointments")
+  galleryPhotos              ClientGalleryPhoto[]
+  notifications              ProfessionalNotification[]
+  productOrders              ProductOrder[]
+
+  @@map("users")
+}
+
+model Professional {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String   @unique @map("user_id") @db.Uuid
+  user            User     @relation(fields: [userId], references: [id])
+  bio             String?
+  photo           String?
+  specialty       String?
+  yearsExperience Int      @default(0) @map("years_experience")
+  certifications  String?
+  languages       String[] @default([])
+  instagram       String?
+  facebook        String?
+  tiktok          String?
+  twitter         String?
+  policies        String?
+  paymentMethods  String[] @default([]) @map("payment_methods")
+  commissionType  String   @default("earned") @map("commission_type") @db.VarChar(20)
+  commissionPct   Int      @default(0) @map("commission_pct")
+  vacationFrom    DateTime? @map("vacation_from") @db.Date
+  vacationTo      DateTime? @map("vacation_to") @db.Date
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  services ProfessionalService[]
+
+  availability ProfessionalAvailability[]
+
+  @@map("professionals")
+}
+
+model ProfessionalAvailability {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  professionalId String       @map("professional_id") @db.Uuid
+  professional   Professional @relation(fields: [professionalId], references: [id])
+  dayOfWeek      Int          @map("day_of_week")
+  startTime      String       @map("start_time")
+  endTime        String       @map("end_time")
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([professionalId, dayOfWeek], name: "professionalId_dayOfWeek")
+  @@map("professional_availability")
+}
+
+model Invitation {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email     String   @db.VarChar(255)
+  token     String   @unique @db.VarChar(255)
+  used      Boolean  @default(false)
+  sentById  String?  @map("sent_by_id") @db.Uuid
+  sentBy    User?    @relation("SentBy", fields: [sentById], references: [id])
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  expiresAt DateTime @default(dbgenerated("NOW() + INTERVAL '7 days'")) @map("expires_at") @db.Timestamptz
+
+  @@map("invitations")
+}
+
+model PasswordReset {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id])
+  token     String   @unique @db.VarChar(255)
+  used      Boolean  @default(false)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("password_resets")
+}
+
+model Client {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String    @unique @map("user_id") @db.Uuid
+  user        User      @relation(fields: [userId], references: [id])
+  birthDate   DateTime? @map("birth_date") @db.Date
+  allergies   String?   @db.Text
+  preferences String?   @db.Text
+  observations String?  @db.Text
+  consents    String[]  @default([])
+  loyaltyPoints Int     @default(0) @map("loyalty_points")
+  notes       String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("clients")
+}
+
+model ProfessionalService {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  professionalId String       @map("professional_id") @db.Uuid
+  professional   Professional @relation(fields: [professionalId], references: [id])
+  serviceId      String       @map("service_id") @db.Uuid
+  service        Service      @relation(fields: [serviceId], references: [id])
+  ownPrice       Decimal      @map("own_price") @db.Decimal(10, 2)
+  ownDuration    Int          @map("own_duration")
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([professionalId, serviceId])
+  @@map("professional_services")
+}
+
+model Service {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @db.VarChar(150)
+  categoryId  String   @map("category_id") @db.VarChar(50)
+  description String   @db.Text
+  duration    Int
+  price       Decimal  @db.Decimal(10, 2)
+  image       String?  @db.Text
+  status      String   @default("active") @db.VarChar(20)
+  isCombo     Boolean  @default(false) @map("is_combo")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  professionalServices ProfessionalService[]
+  appointments         Appointment[]
+
+  @@map("services")
+}
+
+model Appointment {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clientId       String   @map("client_id") @db.Uuid
+  client         User     @relation("ClientAppointments", fields: [clientId], references: [id])
+  professionalId String   @map("professional_id") @db.Uuid
+  professional   User     @relation("ProfessionalAppointments", fields: [professionalId], references: [id])
+  serviceId      String   @map("service_id") @db.Uuid
+  service        Service  @relation(fields: [serviceId], references: [id])
+  date           String   @db.VarChar(10)
+  time           String   @db.VarChar(5)
+  duration       Int
+  servicePrice   Decimal  @map("service_price") @db.Decimal(10, 2)
+  depositAmount  Decimal  @default(0) @map("deposit_amount") @db.Decimal(10, 2)
+  status         String   @default("pending") @db.VarChar(20)
+  paymentStatus  String   @default("pending") @map("payment_status") @db.VarChar(20)
+  clientNotes    String?  @map("client_notes") @db.Text
+  internalNotes  String?  @map("internal_notes") @db.Text
+  allergies      String?  @db.Text
+  accompanied    Boolean?
+  companionName  String?  @map("companion_name") @db.VarChar(150)
+  designType     String?  @map("design_type") @db.VarChar(10)
+  designValue    String?  @map("design_value") @db.Text
+  cancelledAt    DateTime? @map("cancelled_at") @db.Timestamptz
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("appointments")
+}
+
+model Product {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @db.VarChar(150)
+  brand     String   @default("") @db.VarChar(100)
+  category  String   @default("") @db.VarChar(50)
+  imageUrl  String?  @map("image_url") @db.Text
+  price     Decimal  @db.Decimal(10, 2)
+  stock     Int      @default(0)
+  minStock  Int      @default(0) @map("min_stock")
+  status    String   @default("active") @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  orders    ProductOrder[]
+
+  @@map("products")
+}
+
+model ProductOrder {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clientId   String   @map("client_id") @db.Uuid
+  client     User     @relation(fields: [clientId], references: [id])
+  productId  String   @map("product_id") @db.Uuid
+  product    Product  @relation(fields: [productId], references: [id])
+  quantity   Int
+  unitPrice  Decimal  @map("unit_price") @db.Decimal(10, 2)
+  totalPrice Decimal  @map("total_price") @db.Decimal(10, 2)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("product_orders")
+}
+
+// Fila única — configuración de seña, cancelaciones y reembolsos
+model PaymentSettings {
+  id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  depositAmount     Decimal @default(5000) @map("deposit_amount") @db.Decimal(10, 2)
+  depositPercent    Boolean @default(false) @map("deposit_percent")
+  cancellationHours Int     @default(24) @map("cancellation_hours")
+  refundPolicy      String  @default("full") @map("refund_policy") @db.VarChar(20)
+
+  @@map("payment_settings")
+}
+
+// Fila única — datos generales del negocio (nombre, contacto, redes, políticas)
+model BusinessSettings {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @default("") @db.VarChar(150)
+  logo        String?  @db.Text
+  description String   @default("") @db.Text
+  address     String   @default("") @db.VarChar(255)
+  phone       String   @default("") @db.VarChar(30)
+  email       String   @default("") @db.VarChar(255)
+  instagram   String?  @db.VarChar(255)
+  facebook    String?  @db.VarChar(255)
+  tiktok      String?  @db.VarChar(255)
+  twitter     String?  @db.VarChar(255)
+  whatsapp    String?  @db.VarChar(30)
+  policies    String[] @default([])
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("business_settings")
+}
+
+// Horario semanal de atención — una fila por día
+model BusinessScheduleDay {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  day       String  @unique @db.VarChar(20)
+  isOpen    Boolean @default(false) @map("is_open")
+  openTime  String  @default("09:00") @map("open_time") @db.VarChar(5)
+  closeTime String  @default("18:00") @map("close_time") @db.VarChar(5)
+
+  @@map("business_schedule_days")
+}
+
+model BusinessHoliday {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  date        String   @db.VarChar(10)
+  description String   @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("business_holidays")
+}
+
+model ClientGalleryPhoto {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clientId   String   @map("client_id") @db.Uuid
+  client     User     @relation(fields: [clientId], references: [id])
+  url        String   @db.Text
+  category   String   @db.VarChar(10)
+  showOnHome Boolean  @default(false) @map("show_on_home")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("client_gallery_photos")
+}
+
+model ActivityLog {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userName  String   @default("Sistema") @map("user_name") @db.VarChar(100)
+  action    String   @db.VarChar(255)
+  module    String   @db.VarChar(30)
+  level     String   @default("info") @db.VarChar(20)
+  detail    String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("activity_logs")
+}
+
+model ProfessionalNotification {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  professionalId String   @map("professional_id") @db.Uuid
+  professional   User     @relation(fields: [professionalId], references: [id])
+  type           String   @db.VarChar(30)
+  title          String   @db.VarChar(255)
+  body           String   @db.Text
+  read           Boolean  @default(false)
+  link           String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("professional_notifications")
+}

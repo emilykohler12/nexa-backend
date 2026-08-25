@@ -1,0 +1,35 @@
+//src/app/config/env.ts
+
+import { z } from 'zod'
+import dotenv from 'dotenv'
+
+dotenv.config()
+
+const schema = z.object({
+  NODE_ENV:               z.enum(['development', 'production', 'test']).default('development'),
+  PORT:                   z.string().default('4000').transform(Number),
+  DATABASE_URL:           z.string().min(1),
+  JWT_SECRET:             z.string().min(32),
+  JWT_EXPIRES_IN:         z.string().default('15m'),
+  JWT_REFRESH_SECRET:     z.string().min(32),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+  FRONTEND_URL:           z.string().url(),
+  ADMIN_EMAIL:            z.string().email(),
+  ADMIN_PASSWORD:         z.string().min(8),
+  ADMIN_NAME:             z.string().min(2),
+  MAIL_HOST:              z.string().default('smtp.gmail.com'),
+  MAIL_PORT: z.string().default('587').transform(Number),
+  MAIL_USER:              z.string().default(''),
+  MAIL_PASS:              z.string().default(''),
+  MAIL_FROM:              z.string().default('noreply@app.com'),
+})
+
+const parsed = schema.safeParse(process.env)
+
+if (!parsed.success) {
+  console.error('❌ Variables de entorno inválidas:')
+  parsed.error.issues.forEach(i => console.error(`  ${i.path.join('.')}: ${i.message}`))
+  process.exit(1)
+}
+
+export const env = parsed.data
