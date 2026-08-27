@@ -48,6 +48,16 @@ export const adminController = {
     } catch (err) { next(err) }
   },
 
+  setClientBlocked: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (typeof req.body?.blocked !== 'boolean') {
+        throw new AppError(HTTP.BAD_REQUEST, 'blocked debe ser true o false', 'VALIDATION_ERROR')
+      }
+      const client = await adminService.setClientBlocked(getId(req), req.body.blocked)
+      res.json({ client })
+    } catch (err) { next(err) }
+  },
+
   getClientGallery: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const photos = await adminService.getClientGallery(getId(req))

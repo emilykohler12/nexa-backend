@@ -8,6 +8,7 @@ export interface AuthUser {
   role:            UserRole
   phone?:          string | null
   photo?:          string | null
+  gender?:         string | null
   createdAt?:      string
   profileComplete?: boolean
 }

@@ -12,10 +12,22 @@ const strictLimiter = rateLimit({
   legacyHeaders:   false,
 })
 
+// El login tiene su propio límite, más corto y permisivo que registro/reset de
+// contraseña — esos son intentos puntuales, pero el login se reintenta seguido
+// (contraseña tipeada mal, varias cuentas de prueba, etc.) y 15 min/10 intentos
+// resultaba en bloqueos molestos para uso legítimo.
+const loginLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 20,
+  message:        { error: 'Demasiados intentos. Intentá de nuevo en 5 minutos.' },
+  standardHeaders: true,
+  legacyHeaders:   false,
+})
+
 const router = Router()
 
 router.post('/register',        strictLimiter, authController.register)
-router.post('/login',           strictLimiter, authController.login)
+router.post('/login',           loginLimiter,  authController.login)
 router.post('/forgot-password', strictLimiter, authController.forgotPassword)
 router.post('/reset-password',  strictLimiter, authController.resetPassword)
 router.post('/change-password', authenticate, authController.changePassword)

@@ -12,6 +12,8 @@ export interface ServiceData {
   image:       string | null
   status:      ServiceStatus
   isCombo:     boolean
+  comboServiceIds: string[]
+  simultaneous:    boolean
 }
 
 export const serviceModel = {
@@ -36,8 +38,21 @@ export const serviceModel = {
   update: (id: string, data: Partial<ServiceData>) =>
     prisma.service.update({ where: { id }, data }),
 
-  delete: (id: string) =>
-    prisma.service.delete({ where: { id } }),
+  delete: async (id: string): Promise<{ deleted: boolean }> => {
+    try {
+      await prisma.service.delete({ where: { id } })
+      return { deleted: true }
+    } catch (err: any) {
+      // El servicio tiene turnos o asignaciones a profesionales (RESTRICT) —
+      // no se puede borrar sin perder ese historial, así que se desactiva en su lugar.
+      const isForeignKeyRestrict = err?.code === 'P2003' || String(err?.message ?? '').includes('foreign key constraint')
+      if (isForeignKeyRestrict) {
+        await prisma.service.update({ where: { id }, data: { status: 'inactive' } })
+        return { deleted: false }
+      }
+      throw err
+    }
+  },
 
   toggleStatus: async (id: string) => {
     const service = await prisma.service.findUnique({ where: { id } })

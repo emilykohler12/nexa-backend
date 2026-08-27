@@ -9,6 +9,7 @@ const productSchema = z.object({
   name:     z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres').max(150),
   brand:    z.string().trim().max(100).optional().default(''),
   category: z.string().trim().max(50).optional().default(''),
+  description: z.string().trim().max(2000).optional().default(''),
   imageUrl: z.string().url('URL de imagen inválida').nullable().optional(),
   price:    z.coerce.number().min(0, 'El precio no puede ser negativo').max(999999),
   stock:    z.coerce.number().int().min(0).default(0),
@@ -62,8 +63,14 @@ export const productController = {
   delete: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const id = getId(req)
-      await productModel.delete(id)
-      res.json({ success: true })
+      const result = await productModel.delete(id)
+      res.json({
+        success:     true,
+        deactivated: !result.deleted,
+        message:     result.deleted
+          ? undefined
+          : 'El producto tiene compras registradas, así que se desactivó en vez de eliminarse para no perder el historial de ventas.',
+      })
     } catch (err) { next(err) }
   },
 }

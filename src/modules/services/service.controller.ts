@@ -14,6 +14,8 @@ const serviceSchema = z.object({
   image:       z.string().url('URL de imagen inválida').nullable().optional(),
   status:      z.enum(['active', 'inactive']).default('active'),
   isCombo:     z.coerce.boolean().default(false),
+  comboServiceIds: z.array(z.string().uuid()).default([]),
+  simultaneous:    z.coerce.boolean().default(false),
 })
 
 function getId(req: Request): string {
@@ -78,8 +80,14 @@ export const serviceController = {
   delete: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const id = getId(req)
-      await serviceModel.delete(id)
-      res.json({ success: true })
+      const result = await serviceModel.delete(id)
+      res.json({
+        success:     true,
+        deactivated: !result.deleted,
+        message:     result.deleted
+          ? undefined
+          : 'El servicio tiene turnos registrados, así que se desactivó en vez de eliminarse para no perder el historial.',
+      })
     } catch (err) { next(err) }
   },
 }

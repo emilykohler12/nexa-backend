@@ -22,6 +22,7 @@ function mapAdminClient(
     birthDate: Date | null
     allergies: string | null; preferences: string | null; observations: string | null
     loyaltyPoints: number
+    blocked: boolean
   } | null,
   loyalty: { totalVisits: number; totalSpent: number; lastVisit: string | null },
 ) {
@@ -45,6 +46,7 @@ function mapAdminClient(
       points:          client?.loyaltyPoints ?? 0,
       availablePromos: [] as string[],
     },
+    blocked:   client?.blocked ?? false,
     createdAt: user.createdAt.toISOString(),
   }
 }
@@ -164,6 +166,19 @@ export const adminService = {
         ...(data.clinical?.observations !== undefined ? { observations: data.clinical.observations } : {}),
         ...(data.loyalty?.points !== undefined ? { loyaltyPoints: data.loyalty.points } : {}),
       },
+    })
+
+    return getByIdInternal(id)
+  },
+
+  setClientBlocked: async (id: string, blocked: boolean) => {
+    const user = await prisma.user.findUnique({ where: { id } })
+    if (!user || user.role !== 'client') throw new AppError(HTTP.NOT_FOUND, 'Cliente no encontrado', 'NOT_FOUND')
+
+    await prisma.client.upsert({
+      where:  { userId: id },
+      create: { userId: id, blocked },
+      update: { blocked },
     })
 
     return getByIdInternal(id)

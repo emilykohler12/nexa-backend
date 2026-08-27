@@ -48,6 +48,7 @@ function toAuthUser(user: {
   role:            string
   phone?:          string | null
   photo?:          string | null
+  gender?:         string | null
   profileComplete: boolean
   createdAt:       Date
 }): AuthUser {
@@ -58,6 +59,7 @@ function toAuthUser(user: {
     role:            user.role as AuthUser['role'],
     phone:           user.phone ?? null,
     photo:           user.photo ?? null,
+    gender:          user.gender ?? null,
     profileComplete: user.profileComplete,
     createdAt:       user.createdAt.toISOString(),
   }

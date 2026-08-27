@@ -8,23 +8,30 @@ const DAY_MAP: Record<string, number> = {
   monday: 0, tuesday: 1, wednesday: 2, thursday: 3, friday: 4, saturday: 5, sunday: 6,
 }
 
-type DayRange = { start: string; end: string } | null
-type WeeklyAvailability = Record<string, DayRange>
+type DayRange = { start: string; end: string }
+// Se acepta tanto el formato viejo (un solo rango u null, todavía usado por la
+// edición de horario del admin) como el nuevo (array de rangos, self-service y
+// onboarding) — así un mismo profesional puede tener más de un bloque el mismo
+// día (ej: 08–12 y 14–20 con un hueco al mediodía).
+type DayValue = DayRange | DayRange[] | null
+type WeeklyAvailability = Record<string, DayValue>
 
 async function syncAvailability(professionalId: string, availability: WeeklyAvailability) {
-  for (const [day, range] of Object.entries(availability)) {
+  for (const [day, value] of Object.entries(availability)) {
     const dayIndex = DAY_MAP[day]
     if (dayIndex === undefined) continue
 
-    if (range === null) {
-      await prisma.professionalAvailability.deleteMany({
-        where: { professionalId, dayOfWeek: dayIndex },
-      })
-    } else {
-      await prisma.professionalAvailability.upsert({
-        where:  { professionalId_dayOfWeek: { professionalId, dayOfWeek: dayIndex } },
-        create: { professionalId, dayOfWeek: dayIndex, startTime: range.start, endTime: range.end },
-        update: { startTime: range.start, endTime: range.end, active: true },
+    const ranges: DayRange[] = value === null ? [] : Array.isArray(value) ? value : [value]
+
+    // Reemplaza todas las filas de ese día en vez de hacer upsert por
+    // (professionalId, dayOfWeek) — esa combinación ya no es única, así que
+    // no hay una sola fila para actualizar.
+    await prisma.professionalAvailability.deleteMany({
+      where: { professionalId, dayOfWeek: dayIndex },
+    })
+    if (ranges.length > 0) {
+      await prisma.professionalAvailability.createMany({
+        data: ranges.map(r => ({ professionalId, dayOfWeek: dayIndex, startTime: r.start, endTime: r.end })),
       })
     }
   }
@@ -36,7 +43,9 @@ async function syncServices(
 ) {
   const keepIds = services.map(s => s.serviceId)
   await prisma.professionalService.deleteMany({
-    where: { professionalId, serviceId: { notIn: keepIds.length ? keepIds : ['__none__'] } },
+    where: keepIds.length
+      ? { professionalId, serviceId: { notIn: keepIds } }
+      : { professionalId },
   })
 
   for (const s of services) {
@@ -67,6 +76,35 @@ function scheduleFromAvailability(availability: { dayOfWeek: number; startTime: 
   return schedule
 }
 
+type AdminProfessionalMetrics = { totalAppointments: number; totalClients: number; totalRevenue: number }
+
+async function computeMetrics(professionalIds: string[]): Promise<Map<string, AdminProfessionalMetrics>> {
+  const map = new Map<string, AdminProfessionalMetrics>()
+  if (professionalIds.length === 0) return map
+
+  const rows = await prisma.appointment.findMany({
+    where:  { professionalId: { in: professionalIds }, status: 'finished' },
+    select: { professionalId: true, clientId: true, servicePrice: true },
+  })
+
+  const clientsByProf = new Map<string, Set<string>>()
+  for (const r of rows) {
+    const bucket = map.get(r.professionalId) ?? { totalAppointments: 0, totalClients: 0, totalRevenue: 0 }
+    bucket.totalAppointments += 1
+    bucket.totalRevenue += Number(r.servicePrice)
+    map.set(r.professionalId, bucket)
+
+    const clients = clientsByProf.get(r.professionalId) ?? new Set<string>()
+    clients.add(r.clientId)
+    clientsByProf.set(r.professionalId, clients)
+  }
+  for (const [professionalId, clients] of clientsByProf) {
+    map.get(professionalId)!.totalClients = clients.size
+  }
+
+  return map
+}
+
 function toAdminProfessional(user: {
   id: string; name: string; email: string; phone: string | null
   role: string; active: boolean; createdAt: Date
@@ -78,7 +116,7 @@ function toAdminProfessional(user: {
     availability: { dayOfWeek: number; startTime: string; endTime: string }[]
     services: { serviceId: string }[]
   } | null
-}) {
+}, metrics?: AdminProfessionalMetrics) {
   const professional = user.professional
   return {
     id:        user.id,
@@ -103,7 +141,13 @@ function toAdminProfessional(user: {
     vacationFrom: professional?.vacationFrom ? professional.vacationFrom.toISOString().slice(0, 10) : null,
     vacationTo:   professional?.vacationTo   ? professional.vacationTo.toISOString().slice(0, 10)   : null,
     createdAt:    user.createdAt.toISOString(),
-    metrics: { totalAppointments: 0, totalClients: 0, totalRevenue: 0, rating: 0 },
+    metrics: {
+      totalAppointments: metrics?.totalAppointments ?? 0,
+      totalClients:      metrics?.totalClients      ?? 0,
+      totalRevenue:      metrics?.totalRevenue       ?? 0,
+      // No hay sistema de reseñas todavía — sin dato real para promediar.
+      rating: 0,
+    },
   }
 }
 
@@ -137,10 +181,13 @@ export const professionalService = {
             photo:     true,
             bio:       true,
             specialty: true,
+            certifications: true,
             instagram: true,
             facebook:  true,
             tiktok:    true,
             twitter:   true,
+            priorRecommendations: true,
+            afterCare:            true,
             services:  { where: { active: true }, select: { serviceId: true } },
           },
         },
@@ -153,28 +200,46 @@ export const professionalService = {
       photo:     u.professional?.photo     ?? null,
       bio:       u.professional?.bio       ?? null,
       specialty: u.professional?.specialty ?? null,
+      certifications: u.professional?.certifications ?? null,
       instagram: u.professional?.instagram ?? null,
       facebook:  u.professional?.facebook  ?? null,
       tiktok:    u.professional?.tiktok    ?? null,
       twitter:   u.professional?.twitter   ?? null,
+      // El frontend arma el mensaje de confirmación post-reserva con esto.
+      priorRecommendations: u.professional?.priorRecommendations ?? null,
+      afterCare:            u.professional?.afterCare            ?? null,
       services:  (u.professional?.services ?? []).map(s => s.serviceId),
     }))
   },
 
   // Disponibilidad semanal de un profesional — pública, para el flujo de reserva
-  getPublicAvailability: async (id: string) => {
+  // date opcional (YYYY-MM-DD): si se pasa, además de la disponibilidad semanal
+  // devuelve los horarios ya ocupados ese día, para que el frontend no ofrezca
+  // turnos que van a chocar con la constraint de no-doble-reserva.
+  getPublicAvailability: async (id: string, date?: string) => {
     const user = await prisma.user.findUnique({ where: { id }, select: { role: true, active: true } })
     if (!user || !['professional', 'admin'].includes(user.role) || !user.active) {
       throw new AppError(HTTP.NOT_FOUND, 'Profesional no encontrado', 'NOT_FOUND')
     }
     const professional = await prisma.professional.findUnique({ where: { userId: id } })
-    if (!professional) return []
 
-    const rows = await prisma.professionalAvailability.findMany({
-      where:   { professionalId: professional.id, active: true },
-      orderBy: { dayOfWeek: 'asc' },
-    })
-    return rows.map(r => ({ dayOfWeek: r.dayOfWeek, startTime: r.startTime, endTime: r.endTime }))
+    const availability = professional
+      ? (await prisma.professionalAvailability.findMany({
+          where:   { professionalId: professional.id, active: true },
+          orderBy: { dayOfWeek: 'asc' },
+        })).map(r => ({ dayOfWeek: r.dayOfWeek, startTime: r.startTime, endTime: r.endTime }))
+      : []
+
+    let bookedTimes: string[] = []
+    if (date) {
+      const booked = await prisma.appointment.findMany({
+        where:  { professionalId: id, date, status: { notIn: ['cancelled', 'no_show'] } },
+        select: { time: true },
+      })
+      bookedTimes = booked.map(b => b.time)
+    }
+
+    return { availability, bookedTimes }
   },
 
   getAll: async () => {
@@ -183,7 +248,8 @@ export const professionalService = {
       orderBy: { createdAt: 'asc' },
       include: ADMIN_PROFESSIONAL_INCLUDE,
     })
-    return users.map(toAdminProfessional)
+    const metricsMap = await computeMetrics(users.map(u => u.id))
+    return users.map(u => toAdminProfessional(u, metricsMap.get(u.id)))
   },
 
   getById: async (id: string) => {
@@ -192,7 +258,8 @@ export const professionalService = {
       include: ADMIN_PROFESSIONAL_INCLUDE,
     })
     if (!user) throw new AppError(HTTP.NOT_FOUND, 'Profesional no encontrado', 'NOT_FOUND')
-    return toAdminProfessional(user)
+    const metricsMap = await computeMetrics([id])
+    return toAdminProfessional(user, metricsMap.get(id))
   },
 
   updateById: async (id: string, data: any) => {
@@ -288,13 +355,22 @@ export const professionalService = {
       specialty:       professional?.specialty       ?? null,
       yearsExperience: professional?.yearsExperience ?? 0,
       certifications:  professional?.certifications  ?? null,
-      languages:       professional?.languages       ?? [],
+      // El formulario de configuración lo edita como texto separado por comas
+      // (igual que el paso de onboarding) — no como array.
+      languages:       (professional?.languages ?? []).join(', '),
       instagram:       professional?.instagram       ?? null,
       facebook:        professional?.facebook        ?? null,
       tiktok:          professional?.tiktok          ?? null,
       twitter:         professional?.twitter         ?? null,
       policies:        professional?.policies        ?? null,
       paymentMethods:  professional?.paymentMethods  ?? [],
+      toleranceMinutes:     professional?.toleranceMinutes     ?? null,
+      latePenalty:          professional?.latePenalty          ?? null,
+      cancellationPolicy:   professional?.cancellationPolicy   ?? null,
+      reschedulePolicy:     professional?.reschedulePolicy     ?? null,
+      depositPolicy:        professional?.depositPolicy        ?? null,
+      priorRecommendations: professional?.priorRecommendations ?? null,
+      afterCare:            professional?.afterCare            ?? null,
       availability: (professional?.availability ?? []).map(a => ({
         dayOfWeek: a.dayOfWeek, startTime: a.startTime, endTime: a.endTime,
       })),
@@ -312,27 +388,35 @@ export const professionalService = {
       })
     }
 
+    const languages = data.languages !== undefined
+      ? String(data.languages).split(',').map((l: string) => l.trim()).filter(Boolean)
+      : []
+
+    const professionalFields = {
+      bio:       data.bio       ?? null,
+      photo:     data.photo     ?? null,
+      specialty: data.specialty ?? null,
+      instagram: data.instagram ?? null,
+      facebook:  data.facebook  ?? null,
+      tiktok:    data.tiktok    ?? null,
+      twitter:   data.twitter   ?? null,
+      yearsExperience: data.yearsExperience ?? 0,
+      certifications:  data.certifications  ?? null,
+      languages,
+      paymentMethods:       data.paymentMethods       ?? [],
+      toleranceMinutes:     data.toleranceMinutes     ?? null,
+      latePenalty:          data.latePenalty          ?? null,
+      cancellationPolicy:   data.cancellationPolicy   ?? null,
+      reschedulePolicy:     data.reschedulePolicy     ?? null,
+      depositPolicy:        data.depositPolicy        ?? null,
+      priorRecommendations: data.priorRecommendations ?? null,
+      afterCare:            data.afterCare            ?? null,
+    }
+
     await prisma.professional.upsert({
       where:  { userId },
-      create: {
-        userId,
-        bio:       data.bio       ?? null,
-        photo:     data.photo     ?? null,
-        specialty: data.specialty ?? null,
-        instagram: data.instagram ?? null,
-        facebook:  data.facebook  ?? null,
-        tiktok:    data.tiktok    ?? null,
-        twitter:   data.twitter   ?? null,
-      },
-      update: {
-        bio:       data.bio       ?? null,
-        photo:     data.photo     ?? null,
-        specialty: data.specialty ?? null,
-        instagram: data.instagram ?? null,
-        facebook:  data.facebook  ?? null,
-        tiktok:    data.tiktok    ?? null,
-        twitter:   data.twitter   ?? null,
-      },
+      create: { userId, ...professionalFields },
+      update: professionalFields,
     })
 
     return professionalService.getMyProfile(userId)
@@ -370,37 +454,45 @@ export const professionalService = {
   saveOnboarding: async (userId: string, data: any): Promise<void> => {
     const { personal, work, availability, services, policies } = data
 
+    // El paso "Personal" del onboarding manda un único campo `name` (no
+    // firstName/lastName/dni) — se persiste en el User igual que en el registro.
+    if (personal?.name !== undefined || personal?.phone !== undefined || personal?.gender !== undefined) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          ...(personal?.name   !== undefined ? { name: personal.name }     : {}),
+          ...(personal?.phone  !== undefined ? { phone: personal.phone }   : {}),
+          ...(personal?.gender !== undefined ? { gender: personal.gender } : {}),
+        },
+      })
+    }
+
+    const professionalFields = {
+      bio:             personal?.bio             ?? null,
+      photo:           personal?.photo           ?? null,
+      specialty:       work?.specialty           ?? null,
+      yearsExperience: work?.yearsExperience     ?? 0,
+      certifications:  work?.certifications      ?? null,
+      languages:       work?.languages ? work.languages.split(',').map((l: string) => l.trim()) : [],
+      instagram:       personal?.instagram       ?? null,
+      facebook:        personal?.facebook        ?? null,
+      tiktok:          personal?.tiktok          ?? null,
+      twitter:         personal?.twitter         ?? null,
+      policies:        policies?.cancellationPolicy ?? null,
+      paymentMethods:  policies?.paymentMethods  ?? [],
+      toleranceMinutes:     policies?.toleranceMinutes     ?? null,
+      latePenalty:          policies?.latePenalty          ?? null,
+      cancellationPolicy:   policies?.cancellationPolicy   ?? null,
+      reschedulePolicy:     policies?.reschedulePolicy     ?? null,
+      depositPolicy:        policies?.depositPolicy        ?? null,
+      priorRecommendations: policies?.priorRecommendations ?? null,
+      afterCare:            policies?.afterCare            ?? null,
+    }
+
     const professional = await prisma.professional.upsert({
       where:  { userId },
-      create: {
-        userId,
-        bio:             personal?.bio             ?? null,
-        photo:           personal?.photo           ?? null,
-        specialty:       work?.specialty           ?? null,
-        yearsExperience: work?.yearsExperience     ?? 0,
-        certifications:  work?.certifications      ?? null,
-        languages:       work?.languages ? work.languages.split(',').map((l: string) => l.trim()) : [],
-        instagram:       personal?.instagram       ?? null,
-        facebook:        personal?.facebook        ?? null,
-        tiktok:          personal?.tiktok          ?? null,
-        twitter:         personal?.twitter         ?? null,
-        policies:        policies?.cancellationPolicy ?? null,
-        paymentMethods:  policies?.paymentMethods  ?? [],
-      },
-      update: {
-        bio:             personal?.bio             ?? null,
-        photo:           personal?.photo           ?? null,
-        specialty:       work?.specialty           ?? null,
-        yearsExperience: work?.yearsExperience     ?? 0,
-        certifications:  work?.certifications      ?? null,
-        languages:       work?.languages ? work.languages.split(',').map((l: string) => l.trim()) : [],
-        instagram:       personal?.instagram       ?? null,
-        facebook:        personal?.facebook        ?? null,
-        tiktok:          personal?.tiktok          ?? null,
-        twitter:         personal?.twitter         ?? null,
-        policies:        policies?.cancellationPolicy ?? null,
-        paymentMethods:  policies?.paymentMethods  ?? [],
-      },
+      create: { userId, ...professionalFields },
+      update: professionalFields,
     })
 
     if (availability) await syncAvailability(professional.id, availability)

@@ -3,7 +3,7 @@ import { prisma } from '../../app/database/prisma'
 
 export type ActivityModule =
   | 'appointments' | 'clients' | 'professionals' | 'services'
-  | 'store' | 'payments' | 'config' | 'auth' | 'chatbot' | 'system'
+  | 'store' | 'payments' | 'config' | 'auth' | 'chatbot' | 'system' | 'jobs'
 export type ActivityLevel = 'info' | 'warning' | 'error' | 'success'
 
 export const activityService = {

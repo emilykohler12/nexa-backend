@@ -20,11 +20,28 @@ function parseBody<T>(schema: z.ZodType<T>, body: unknown): T {
   return parsed.data
 }
 
+// "any" ("Cualquiera") deja que el backend elija el profesional con menos turnos.
+const professionalIdSchema = z.union([
+  z.literal('any'),
+  z.string().uuid('ID de profesional inválido'),
+])
+
 const bookingSchema = z.object({
   serviceId:      z.string().uuid('ID de servicio inválido'),
-  professionalId: z.string().uuid('ID de profesional inválido'),
+  professionalId: professionalIdSchema,
   date:           dateSchema,
   time:           timeSchema,
+})
+
+const comboBookingSchema = z.object({
+  comboServiceId: z.string().uuid('ID de combo inválido'),
+  simultaneous:   z.boolean(),
+  components: z.array(z.object({
+    serviceId:      z.string().uuid('ID de servicio inválido'),
+    professionalId: professionalIdSchema,
+    date:           dateSchema,
+    time:           timeSchema,
+  })).min(1, 'El combo necesita al menos un servicio'),
 })
 
 const detailsSchema = z.object({
@@ -35,6 +52,12 @@ const detailsSchema = z.object({
     type:  z.enum(['image', 'text']),
     value: z.string().nullable(),
   }).nullable().optional(),
+  hasOtherSalonPolish:     z.boolean().nullable().optional(),
+  isNailReconstruction:    z.boolean().nullable().optional(),
+  nailReconstructionCount: z.coerce.number().int().min(0).nullable().optional(),
+  hairLength:              z.string().max(20).nullable().optional(),
+  wantsExtensions:         z.boolean().nullable().optional(),
+  skinType:                z.string().max(20).nullable().optional(),
 })
 
 const adminUpdateAppointmentSchema = z.object({
@@ -42,11 +65,70 @@ const adminUpdateAppointmentSchema = z.object({
   professionalId: z.string().uuid('ID de profesional inválido').optional(),
   date:           dateSchema.optional(),
   time:           timeSchema.optional(),
-  duration:       z.coerce.number().int().min(5, 'Duración mínima: 5 minutos').max(480).optional(),
-  servicePrice:   z.coerce.number().min(0, 'El precio no puede ser negativo').optional(),
-  internalNotes:  z.string().max(2000).optional(),
-  clientNotes:    z.string().max(2000).optional(),
+  // El modal de edición del admin reprograma mandando start/end (ISO) en vez de date/time sueltos.
+  start:            z.string().datetime('Fecha/hora de inicio inválida').optional(),
+  end:              z.string().datetime('Fecha/hora de fin inválida').optional(),
+  duration:         z.coerce.number().int().min(5, 'Duración mínima: 5 minutos').max(480).optional(),
+  serviceDuration:  z.coerce.number().int().min(5, 'Duración mínima: 5 minutos').max(480).optional(),
+  servicePrice:     z.coerce.number().min(0, 'El precio no puede ser negativo').optional(),
+  internalNotes:     z.string().max(2000).optional(),
+  professionalNotes: z.string().max(2000).optional(),
+  clientNotes:       z.string().max(2000).optional(),
+  clientName:        z.string().trim().min(1).max(150).optional(),
+  clientPhone:       z.string().max(30).optional(),
+  clientEmail:       z.string().email('Email inválido').optional(),
 })
+
+const adminCreateAppointmentSchema = z.object({
+  clientName:     z.string().trim().min(1, 'El nombre del cliente es obligatorio').max(150),
+  clientPhone:    z.string().max(30).optional().default(''),
+  clientEmail:    z.string().trim().max(255).optional().default(''),
+  serviceId:      z.string().uuid('ID de servicio inválido'),
+  professionalId: z.string().uuid('ID de profesional inválido'),
+  date:           dateSchema,
+  time:           timeSchema,
+})
+
+const professionalCreateAppointmentSchema = z.object({
+  clientName:  z.string().trim().min(1, 'El nombre del cliente es obligatorio').max(150),
+  clientPhone: z.string().max(30).optional().default(''),
+  clientEmail: z.string().trim().max(255).optional().default(''),
+  serviceId:   z.string().uuid('ID de servicio inválido'),
+  date:        dateSchema,
+  time:        timeSchema,
+})
+
+function pad2(n: number): string { return String(n).padStart(2, '0') }
+
+// El modal de edición manda start/end en ISO (hora local codificada en UTC) — se
+// convierten a los mismos date/time locales 'YYYY-MM-DD'/'HH:mm' que usa el resto
+// del sistema, igual que toAdminView arma start/end a partir de esos mismos campos.
+function normalizeAdminUpdateInput(input: z.infer<typeof adminUpdateAppointmentSchema>) {
+  const { start, end, serviceDuration, professionalNotes, ...rest } = input
+  const out: Record<string, unknown> = { ...rest }
+
+  if (start) {
+    const d = new Date(start)
+    out.date = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+    out.time = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+  }
+  if (out.duration === undefined && serviceDuration !== undefined) {
+    out.duration = serviceDuration
+  } else if (out.duration === undefined && start && end) {
+    out.duration = Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000)
+  }
+  if (out.internalNotes === undefined && professionalNotes !== undefined) {
+    out.internalNotes = professionalNotes
+  }
+
+  return out as {
+    status?: string; professionalId?: string
+    date?: string; time?: string
+    duration?: number; servicePrice?: number
+    internalNotes?: string; clientNotes?: string
+    clientName?: string; clientPhone?: string; clientEmail?: string
+  }
+}
 
 export const appointmentController = {
 
@@ -56,6 +138,14 @@ export const appointmentController = {
       const input = parseBody(bookingSchema, req.body)
       const appointment = await appointmentService.createForClient(req.user!.id, input)
       res.status(HTTP.CREATED).json({ appointment })
+    } catch (err) { next(err) }
+  },
+
+  createCombo: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const input = parseBody(comboBookingSchema, req.body)
+      const appointments = await appointmentService.createComboForClient(req.user!.id, input)
+      res.status(HTTP.CREATED).json({ appointments })
     } catch (err) { next(err) }
   },
 
@@ -89,6 +179,13 @@ export const appointmentController = {
     } catch (err) { next(err) }
   },
 
+  acknowledgeReschedule: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const appointment = await appointmentService.acknowledgeReschedule(req.user!.id, getId(req))
+      res.json({ appointment })
+    } catch (err) { next(err) }
+  },
+
   // Profesional
   listForProfessional: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -101,6 +198,14 @@ export const appointmentController = {
     try {
       const appointment = await appointmentService.updateForProfessional(req.user!.id, getId(req), req.body)
       res.json({ appointment })
+    } catch (err) { next(err) }
+  },
+
+  createForProfessional: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const input = parseBody(professionalCreateAppointmentSchema, req.body)
+      const appointment = await appointmentService.createForProfessional(req.user!.id, input)
+      res.status(HTTP.CREATED).json({ appointment })
     } catch (err) { next(err) }
   },
 
@@ -121,9 +226,18 @@ export const appointmentController = {
 
   updateForAdmin: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const input = parseBody(adminUpdateAppointmentSchema, req.body)
+      const parsed = parseBody(adminUpdateAppointmentSchema, req.body)
+      const input  = normalizeAdminUpdateInput(parsed)
       const appointment = await appointmentService.updateForAdmin(getId(req), input)
       res.json({ appointment })
+    } catch (err) { next(err) }
+  },
+
+  createForAdmin: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const input = parseBody(adminCreateAppointmentSchema, req.body)
+      const appointment = await appointmentService.createForAdmin(input)
+      res.status(HTTP.CREATED).json({ appointment })
     } catch (err) { next(err) }
   },
 

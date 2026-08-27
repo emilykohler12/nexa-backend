@@ -30,8 +30,9 @@ export const professionalsController = {
       if (!id || Array.isArray(id)) {
         throw new AppError(HTTP.BAD_REQUEST, 'ID requerido', 'MISSING_ID')
       }
-      const availability = await professionalService.getPublicAvailability(id)
-      res.json({ availability })
+      const date = typeof req.query.date === 'string' ? req.query.date : undefined
+      const { availability, bookedTimes } = await professionalService.getPublicAvailability(id, date)
+      res.json({ availability, bookedTimes })
     } catch (err) { next(err) }
   },
 

@@ -11,6 +11,8 @@ import { productRoutes }      from '../modules/products/product.routes'
 import { adminRoutes }        from '../modules/admin/admin.routes'
 import { galleryRoutes }      from '../modules/gallery/gallery.routes'
 import { scheduleRoutes }     from '../modules/settings/schedule.routes'
+import { contactRoutes }      from '../modules/contact/contact.routes'
+import { promotionRoutes }    from '../modules/promotions/promotion.routes'
 
 const router = Router()
 
@@ -26,5 +28,7 @@ router.use('/store/products', productRoutes)
 router.use('/admin',        adminRoutes)
 router.use('/gallery',      galleryRoutes)
 router.use('/schedule',     scheduleRoutes)
+router.use('/contact',      contactRoutes)
+router.use('/promotions',   promotionRoutes)
 
 export { router as apiRoutes }

@@ -24,6 +24,7 @@ router.patch('/schedule',        authMiddleware, requireRole('professional'), pr
 router.post('/onboarding',       authMiddleware, requireRole('professional'), professionalsController.submitOnboarding)
 router.get('/onboarding/status', authMiddleware, requireRole('professional'), professionalsController.onboardingStatus)
 router.get('/appointments',      authMiddleware, requireRole('professional'), appointmentController.listForProfessional)
+router.post('/appointments',     authMiddleware, requireRole('professional'), appointmentController.createForProfessional)
 router.patch('/appointments/:id',authMiddleware, requireRole('professional'), appointmentController.updateForProfessional)
 router.get('/clients',           authMiddleware, requireRole('professional'), appointmentController.listClientsForProfessional)
 router.get('/statistics',        authMiddleware, requireRole('professional'), professionalsController.getMyStatistics)

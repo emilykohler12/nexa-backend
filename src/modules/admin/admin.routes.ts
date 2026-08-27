@@ -2,6 +2,7 @@
 import { Router } from 'express'
 import { adminController } from './admin.controller'
 import { appointmentController } from '../appointments/appointment.controller'
+import { promotionController }   from '../promotions/promotion.controller'
 import { authMiddleware } from '../auth/middleware/auth.middleware'
 import { requireRole }    from '../auth/middleware/guest.middleware'
 
@@ -17,11 +18,18 @@ router.post('/clients/:id/gallery',              adminController.addClientGaller
 router.patch('/clients/:id/gallery/:photoId',    adminController.updateClientGalleryPhoto)
 router.delete('/clients/:id/gallery/:photoId',   adminController.deleteClientGalleryPhoto)
 router.put ('/clients/:id',         adminController.updateClient)
+router.patch('/clients/:id/block',  adminController.setClientBlocked)
 
 router.get('/appointments',      appointmentController.listForAdmin)
+router.post('/appointments',      appointmentController.createForAdmin)
 router.patch('/appointments/:id', appointmentController.updateForAdmin)
 
 router.get('/activity',  adminController.getActivity)
 router.get('/dashboard', adminController.getDashboard)
+
+router.get   ('/promotions',     promotionController.getAll)
+router.post  ('/promotions',     promotionController.create)
+router.put   ('/promotions/:id', promotionController.update)
+router.delete('/promotions/:id', promotionController.delete)
 
 export { router as adminRoutes }

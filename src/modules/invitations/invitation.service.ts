@@ -121,6 +121,8 @@ export const invitationService = {
       name:            dbUser.name,
       email:           dbUser.email,
       role:            dbUser.role as AuthUser['role'],
+      phone:           dbUser.phone ?? null,
+      gender:          dbUser.gender ?? null,
       profileComplete: dbUser.profileComplete,
     }
 

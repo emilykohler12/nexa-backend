@@ -45,6 +45,7 @@ model User {
   galleryPhotos              ClientGalleryPhoto[]
   notifications              ProfessionalNotification[]
   productOrders              ProductOrder[]
+  orders                     Order[]
 
   @@map("users")
 }
@@ -65,6 +66,13 @@ model Professional {
   twitter         String?
   policies        String?
   paymentMethods  String[] @default([]) @map("payment_methods")
+  toleranceMinutes     Int?    @map("tolerance_minutes")
+  latePenalty          String? @map("late_penalty") @db.Text
+  cancellationPolicy   String? @map("cancellation_policy") @db.Text
+  reschedulePolicy     String? @map("reschedule_policy") @db.Text
+  depositPolicy        String? @map("deposit_policy") @db.Text
+  priorRecommendations String? @map("prior_recommendations") @db.Text
+  afterCare            String? @map("after_care") @db.Text
   commissionType  String   @default("earned") @map("commission_type") @db.VarChar(20)
   commissionPct   Int      @default(0) @map("commission_pct")
   vacationFrom    DateTime? @map("vacation_from") @db.Date
@@ -89,7 +97,11 @@ model ProfessionalAvailability {
   active         Boolean      @default(true)
   createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
 
-  @@unique([professionalId, dayOfWeek], name: "professionalId_dayOfWeek")
+  // Ya no es único por día — un profesional puede tener varios rangos el mismo
+  // día (ej: 08–12 y 14–20 con un hueco al mediodía). syncAvailability borra y
+  // recrea las filas de un día entero en cada guardado, así que solo hace
+  // falta un índice normal, no una constraint de unicidad.
+  @@index([professionalId, dayOfWeek])
   @@map("professional_availability")
 }
 
@@ -129,6 +141,7 @@ model Client {
   consents    String[]  @default([])
   loyaltyPoints Int     @default(0) @map("loyalty_points")
   notes       String?   @db.Text
+  blocked     Boolean   @default(false)
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -160,6 +173,8 @@ model Service {
   image       String?  @db.Text
   status      String   @default("active") @db.VarChar(20)
   isCombo     Boolean  @default(false) @map("is_combo")
+  comboServiceIds String[] @default([]) @map("combo_service_ids")
+  simultaneous    Boolean  @default(false)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -191,33 +206,74 @@ model Appointment {
   companionName  String?  @map("companion_name") @db.VarChar(150)
   designType     String?  @map("design_type") @db.VarChar(10)
   designValue    String?  @map("design_value") @db.Text
+  hasOtherSalonPolish     Boolean? @map("has_other_salon_polish")
+  isNailReconstruction    Boolean? @map("is_nail_reconstruction")
+  nailReconstructionCount Int?     @map("nail_reconstruction_count")
+  hairLength              String?  @map("hair_length") @db.VarChar(20)
+  wantsExtensions         Boolean? @map("wants_extensions")
+  skinType                String?  @map("skin_type") @db.VarChar(20)
+  comboGroupId   String?  @map("combo_group_id") @db.Uuid
+  // Se prende cuando ADMIN o PROFESIONAL reprograman el turno (no cuando lo hace
+  // el cliente — ahí ya sabe que cambió). El cliente lo ve como un aviso hasta
+  // que confirma haberlo visto vía PATCH .../acknowledge-reschedule.
+  rescheduleNoticePending Boolean  @default(false) @map("reschedule_notice_pending")
+  previousDate            String?  @map("previous_date") @db.VarChar(10)
+  previousTime            String?  @map("previous_time") @db.VarChar(5)
   cancelledAt    DateTime? @map("cancelled_at") @db.Timestamptz
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
+  // Evita doble reserva: un mismo profesional no puede tener dos turnos activos
+  // (ni cancelled ni no_show) en la misma fecha/hora. Se implementa como un índice
+  // único PARCIAL creado a mano en la migración — Prisma
+  // no puede expresar ese WHERE en el schema, así que intencionalmente no hay
+  // ningún @@unique/@@index acá para esas columnas (evita que `migrate diff`
+  // intente crear un índice plano redundante). Ver migración add_no_double_booking.
   @@map("appointments")
 }
 
 model Product {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name      String   @db.VarChar(150)
-  brand     String   @default("") @db.VarChar(100)
-  category  String   @default("") @db.VarChar(50)
-  imageUrl  String?  @map("image_url") @db.Text
-  price     Decimal  @db.Decimal(10, 2)
-  stock     Int      @default(0)
-  minStock  Int      @default(0) @map("min_stock")
-  status    String   @default("active") @db.VarChar(20)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @db.VarChar(150)
+  brand       String   @default("") @db.VarChar(100)
+  category    String   @default("") @db.VarChar(50)
+  description String   @default("") @db.Text
+  imageUrl    String?  @map("image_url") @db.Text
+  price       Decimal  @db.Decimal(10, 2)
+  stock       Int      @default(0)
+  minStock    Int      @default(0) @map("min_stock")
+  status      String   @default("active") @db.VarChar(20)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   orders    ProductOrder[]
 
   @@map("products")
 }
 
+// Un pedido de tienda — puede tener varios productos (items) y datos de entrega.
+model Order {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clientId        String   @map("client_id") @db.Uuid
+  client          User     @relation(fields: [clientId], references: [id])
+  deliveryType    String   @map("delivery_type") @db.VarChar(20)
+  deliveryAddress String?  @map("delivery_address") @db.Text
+  phone           String?  @db.VarChar(30)
+  notes           String?  @db.Text
+  paymentMethod   String?  @map("payment_method") @db.VarChar(20)
+  totalPrice      Decimal  @map("total_price") @db.Decimal(10, 2)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  items ProductOrder[]
+
+  @@map("orders")
+}
+
+// Línea de un pedido — un producto + cantidad dentro de un Order.
 model ProductOrder {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId    String   @map("order_id") @db.Uuid
+  order      Order    @relation(fields: [orderId], references: [id])
   clientId   String   @map("client_id") @db.Uuid
   client     User     @relation(fields: [clientId], references: [id])
   productId  String   @map("product_id") @db.Uuid
@@ -228,6 +284,34 @@ model ProductOrder {
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@map("product_orders")
+}
+
+model Promotion {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type          String   @db.VarChar(20)
+  // discount: un ítem real a precio promocional. bundle: 2+ ítems reales combo.
+  // buy_x_pay_y: un ítem real, oferta "llevás X, pagás Y".
+  kind          String   @default("discount") @db.VarChar(20)
+  title         String   @db.VarChar(150)
+  description   String   @default("") @db.Text
+  image         String?  @db.Text
+  price         Decimal  @db.Decimal(10, 2)
+  originalPrice Decimal? @map("original_price") @db.Decimal(10, 2)
+  status        String   @default("active") @db.VarChar(20)
+  // Servicios o productos reales a los que aplica — [{id, name, price}], snapshot
+  // tomado del catálogo al armar la promo, no una relación en vivo.
+  items         Json     @default("[]")
+  // Solo para kind: 'buy_x_pay_y' — ej. buyQty:3, payQty:2 = "3x2".
+  buyQty        Int?     @map("buy_qty")
+  payQty        Int?     @map("pay_qty")
+  // Ventana de vigencia (YYYY-MM-DD, mismo formato que Appointment.date) — fuera
+  // de este rango la promo no debe aparecer en /api/promotions/public.
+  startDate     String?  @map("start_date") @db.VarChar(10)
+  endDate       String?  @map("end_date") @db.VarChar(10)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("promotions")
 }
 
 // Fila única — configuración de seña, cancelaciones y reembolsos

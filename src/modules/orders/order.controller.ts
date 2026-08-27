@@ -6,8 +6,18 @@ import { AppError }     from '../../app/middlewares/errorHandler'
 import { HTTP }         from '../../app/constants/http'
 
 const createOrderSchema = z.object({
-  productId: z.string().uuid('ID de producto inválido'),
-  quantity:  z.coerce.number().int().min(1, 'La cantidad mínima es 1'),
+  items: z.array(z.object({
+    productId:   z.string().uuid('ID de producto inválido'),
+    quantity:    z.coerce.number().int().min(1, 'La cantidad mínima es 1'),
+    promotionId: z.string().uuid('ID de promoción inválido').nullable().optional(),
+  })).min(1, 'El pedido necesita al menos un producto'),
+  delivery: z.object({
+    type:    z.enum(['pickup', 'delivery']),
+    address: z.string().max(500).nullable().optional(),
+  }),
+  phone:         z.string().max(30).nullable().optional(),
+  notes:         z.string().max(1000).nullable().optional(),
+  paymentMethod: z.enum(['qr', 'link', 'card']).nullable().optional(),
 })
 
 export const orderController = {
@@ -17,6 +27,9 @@ export const orderController = {
       const parsed = createOrderSchema.safeParse(req.body)
       if (!parsed.success) {
         throw new AppError(HTTP.BAD_REQUEST, parsed.error.issues[0].message, 'VALIDATION_ERROR')
+      }
+      if (parsed.data.delivery.type === 'delivery' && !parsed.data.delivery.address?.trim()) {
+        throw new AppError(HTTP.BAD_REQUEST, 'La dirección es obligatoria para envío a domicilio', 'VALIDATION_ERROR')
       }
       const order = await orderService.createForClient(req.user!.id, parsed.data)
       res.status(HTTP.CREATED).json({ order })
