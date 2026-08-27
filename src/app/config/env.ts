@@ -22,6 +22,14 @@ const schema = z.object({
   MAIL_USER:              z.string().default(''),
   MAIL_PASS:              z.string().default(''),
   MAIL_FROM:              z.string().default('noreply@app.com'),
+
+  // Opcionales: el resto de la app arranca sin ellas. Solo hacen falta
+  // cuando efectivamente se usa el webhook de WhatsApp (whatsapp.service.ts
+  // valida su presencia recién al momento de mandar un mensaje).
+  WHATSAPP_VERIFY_TOKEN:    z.string().optional(),
+  WHATSAPP_APP_SECRET:      z.string().optional(),
+  WHATSAPP_ACCESS_TOKEN:    z.string().optional(),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
 })
 
 const parsed = schema.safeParse(process.env)

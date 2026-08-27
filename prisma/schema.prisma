@@ -402,3 +402,26 @@ model ProfessionalNotification {
 
   @@map("professional_notifications")
 }
+
+// Estado del árbol conversacional de WhatsApp por número de teléfono.
+// Una fila por cliente en conversación con el bot.
+model ConversacionWhatsapp {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  telefono     String   @unique @db.VarChar(20)
+  estadoActual String   @default("inicio") @map("estado_actual") @db.VarChar(50)
+  contexto     Json     @default("{}")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("conversaciones_whatsapp")
+}
+
+// Registro de mensajes ya procesados (idempotencia, RNF-10) — evita
+// procesar dos veces el mismo mensaje si Meta reintenta la entrega del webhook.
+model MensajeWhatsappProcesado {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wamid     String   @unique @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("mensajes_whatsapp_procesados")
+}
