@@ -4,6 +4,7 @@ import { app }       from './app'
 import { env }       from './config/env'
 import { prisma }    from './database/prisma'
 import { seedAdmin } from './database/seed'
+import { startScheduledJobs } from '../jobs/scheduler'
 
 async function start(): Promise<void> {
   try {
@@ -11,6 +12,7 @@ async function start(): Promise<void> {
     console.log('✅ Conectado a PostgreSQL')
 
     await seedAdmin()
+    startScheduledJobs()
 
     app.listen(env.PORT, () => {
       console.log(`🚀 Servidor en http://localhost:${env.PORT} (${env.NODE_ENV})`)

@@ -144,6 +144,9 @@ model Client {
   loyaltyPoints Int     @default(0) @map("loyalty_points")
   notes       String?   @db.Text
   blocked     Boolean   @default(false)
+  // Cooldown del job de recordatorio por inactividad — evita re-mandar el
+  // mismo mail todos los días mientras el cliente sigue sin reservar.
+  lastInactivityReminderAt DateTime? @map("last_inactivity_reminder_at") @db.Timestamptz
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 

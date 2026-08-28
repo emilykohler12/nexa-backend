@@ -96,4 +96,11 @@ export const settingsController = {
       res.json({ settings })
     } catch (err) { next(err) }
   },
+
+  getPublicStats: async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const stats = await settingsService.getPublicStats()
+      res.json(stats)
+    } catch (err) { next(err) }
+  },
 }

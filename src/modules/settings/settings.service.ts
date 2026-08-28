@@ -212,6 +212,17 @@ export const settingsService = {
     const row = await getOrCreatePaymentSettings()
     return mapPaymentSettings(row)
   },
+
+  // "activeProfessionals" respeta el nombre — solo cuenta los activos. "totalClients"
+  // es un contador de marca (todos los clientes que pasaron por acá alguna vez),
+  // por eso no filtra por active.
+  getPublicStats: async () => {
+    const [activeProfessionals, totalClients] = await Promise.all([
+      prisma.user.count({ where: { role: 'professional', active: true } }),
+      prisma.user.count({ where: { role: 'client' } }),
+    ])
+    return { activeProfessionals, totalClients }
+  },
 }
 
 async function getOrCreatePaymentSettings() {
