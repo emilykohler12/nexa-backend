@@ -153,6 +153,14 @@ export const professionalsController = {
     } catch (err) { next(err) }
   },
 
+  getMySpecialAssignments: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const date = typeof req.query.date === 'string' ? req.query.date : undefined
+      const assignments = await professionalService.getSpecialAssignments(req.user!.id, date)
+      res.json({ assignments })
+    } catch (err) { next(err) }
+  },
+
   getMyNotifications: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const notifications = await notificationService.getMine(req.user!.id)

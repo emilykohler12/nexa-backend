@@ -13,6 +13,7 @@ router.patch('/profile', authenticate, authorize('client'), clientController.upd
 
 router.post ('/appointments',            authenticate, authorize('client'), appointmentController.create)
 router.post ('/appointments/combo',      authenticate, authorize('client'), appointmentController.createCombo)
+router.post ('/appointments/special',    authenticate, authorize('client'), appointmentController.createSpecial)
 router.get  ('/appointments',            authenticate, authorize('client'), appointmentController.listMine)
 router.patch('/appointments/:id/cancel',      authenticate, authorize('client'), appointmentController.cancelMine)
 router.patch('/appointments/:id/reschedule',  authenticate, authorize('client'), appointmentController.rescheduleMine)

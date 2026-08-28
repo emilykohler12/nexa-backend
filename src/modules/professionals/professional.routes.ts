@@ -28,6 +28,7 @@ router.post('/appointments',     authMiddleware, requireRole('professional'), ap
 router.patch('/appointments/:id',authMiddleware, requireRole('professional'), appointmentController.updateForProfessional)
 router.get('/clients',           authMiddleware, requireRole('professional'), appointmentController.listClientsForProfessional)
 router.get('/statistics',        authMiddleware, requireRole('professional'), professionalsController.getMyStatistics)
+router.get('/special-assignments', authMiddleware, requireRole('professional'), professionalsController.getMySpecialAssignments)
 router.get('/notifications',              authMiddleware, requireRole('professional'), professionalsController.getMyNotifications)
 router.patch('/notifications/read-all',   authMiddleware, requireRole('professional'), professionalsController.markAllNotificationsRead)
 router.patch('/notifications/:id/read',   authMiddleware, requireRole('professional'), professionalsController.markNotificationRead)

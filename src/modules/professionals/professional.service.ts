@@ -520,4 +520,31 @@ export const professionalService = {
     })
     return { profileComplete: user?.profileComplete ?? false }
   },
+
+  // Horarios de servicios especiales que el profesional tiene asignados y que
+  // TODAVÍA no reservó ningún cliente — hasta que eso pasa, no existe ningún
+  // Appointment real, así que no aparecen en /professional/appointments. La
+  // Agenda los usa para mostrar un bloque vacío "reservado para esto" en el
+  // día/semana correspondiente.
+  getSpecialAssignments: async (professionalId: string, date?: string) => {
+    const services = await prisma.service.findMany({
+      where: {
+        isSpecial: true,
+        status:    'active',
+        ...(date ? { specialDate: date } : {}),
+      },
+    })
+
+    const result: { serviceId: string; serviceName: string; date: string; time: string }[] = []
+    for (const s of services) {
+      if (!s.specialDate) continue
+      const slots = (s.specialSlots as unknown as { time: string; professionalId: string; active: boolean; appointmentId?: string | null }[]) ?? []
+      for (const slot of slots) {
+        if (slot.active && slot.professionalId === professionalId && !slot.appointmentId) {
+          result.push({ serviceId: s.id, serviceName: s.name, date: s.specialDate, time: slot.time })
+        }
+      }
+    }
+    return result
+  },
 }

@@ -175,6 +175,18 @@ model Service {
   isCombo     Boolean  @default(false) @map("is_combo")
   comboServiceIds String[] @default([]) @map("combo_service_ids")
   simultaneous    Boolean  @default(false)
+  // Servicio especial: un solo día fijo (specialDate), con horarios puntuales
+  // (specialSlots) cada uno asignado a un profesional. duration/price de arriba
+  // no se usan acá — el precio/duración reales salen de las zonas/paquetes que
+  // el cliente elige al reservar.
+  isSpecial    Boolean  @default(false) @map("is_special")
+  specialDate  String?  @map("special_date") @db.VarChar(10)
+  // [{ id, time, professionalId, professionalName, active, clientName?, appointmentId? }]
+  specialSlots Json     @default("[]") @map("special_slots")
+  // [{ id, name, duration, price, active }]
+  zones        Json     @default("[]")
+  // [{ id, name, zoneIds: [id], duration, price, active }]
+  packages     Json     @default("[]")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -219,6 +231,11 @@ model Appointment {
   rescheduleNoticePending Boolean  @default(false) @map("reschedule_notice_pending")
   previousDate            String?  @map("previous_date") @db.VarChar(10)
   previousTime            String?  @map("previous_time") @db.VarChar(5)
+  // Servicios especiales — snapshot de las zonas/paquetes elegidos al reservar
+  // ({name, price, duration}), así una edición posterior de la zona/paquete no
+  // cambia retroactivamente turnos ya reservados.
+  selectedZones    Json  @default("[]") @map("selected_zones")
+  selectedPackages Json  @default("[]") @map("selected_packages")
   cancelledAt    DateTime? @map("cancelled_at") @db.Timestamptz
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz

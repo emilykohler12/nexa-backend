@@ -44,6 +44,13 @@ const comboBookingSchema = z.object({
   })).min(1, 'El combo necesita al menos un servicio'),
 })
 
+const specialBookingSchema = z.object({
+  serviceId:  z.string().uuid('ID de servicio inválido'),
+  time:       timeSchema,
+  zoneIds:    z.array(z.string()).default([]),
+  packageIds: z.array(z.string()).default([]),
+})
+
 const detailsSchema = z.object({
   allergies:     z.string().max(2000).nullable().optional(),
   accompanied:   z.boolean().optional(),
@@ -146,6 +153,14 @@ export const appointmentController = {
       const input = parseBody(comboBookingSchema, req.body)
       const appointments = await appointmentService.createComboForClient(req.user!.id, input)
       res.status(HTTP.CREATED).json({ appointments })
+    } catch (err) { next(err) }
+  },
+
+  createSpecial: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const input = parseBody(specialBookingSchema, req.body)
+      const appointment = await appointmentService.createSpecialForClient(req.user!.id, input)
+      res.status(HTTP.CREATED).json({ appointment })
     } catch (err) { next(err) }
   },
 

@@ -12,6 +12,13 @@ import { capturarRawBody } from '../modules/whatsapp/middleware/whatsapp-signatu
 
 const app = express()
 
+// Confía en el primer proxy delante de la app (el túnel de VS Code en dev;
+// en producción va a ser el proxy real del hosting elegido — revisar este
+// número si en algún momento hay más de un proxy en cadena). Sin esto,
+// express-rate-limit no puede confiar en el header X-Forwarded-For que
+// agrega el túnel, y tira el warning ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
+app.set('trust proxy', 1)
+
 app.use(helmet())
 
 app.use(cors({

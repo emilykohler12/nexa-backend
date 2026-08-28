@@ -11,6 +11,7 @@ import { activityService } from '../activity/activity.service'
 import { notificationService } from '../professionals/notification.service'
 import { mailProvider } from '../auth/providers/mail.provider'
 import { bcryptProvider } from '../auth/providers/bcrypt.provider'
+import type { SpecialSlot } from '../services/service.model'
 
 function loadTemplate(name: string, replacements: Record<string, string>): string {
   const candidates = [
@@ -97,6 +98,8 @@ function toClientView(a: AppointmentRow) {
     rescheduleNoticePending: a.rescheduleNoticePending,
     previousDate:            a.previousDate ?? null,
     previousTime:            a.previousTime ?? null,
+    selectedZones:     (a.selectedZones ?? []) as unknown as { name: string; price: number; duration: number }[],
+    selectedPackages:  (a.selectedPackages ?? []) as unknown as { name: string; price: number; duration: number }[],
     details:           detailsOf(a),
   }
 }
@@ -122,6 +125,8 @@ function toProfessionalView(a: AppointmentRow, isSimultaneous = false) {
     status:         a.status,
     paymentStatus:  a.paymentStatus,
     internalNotes:  a.internalNotes ?? '',
+    selectedZones:     (a.selectedZones ?? []) as unknown as { name: string; price: number; duration: number }[],
+    selectedPackages:  (a.selectedPackages ?? []) as unknown as { name: string; price: number; duration: number }[],
     details:        detailsOf(a),
     isSimultaneous,
   }
@@ -148,6 +153,8 @@ function toAdminView(a: AppointmentRow) {
     status:            a.status,
     clientNotes:       a.clientNotes ?? '',
     professionalNotes: a.internalNotes ?? '',
+    selectedZones:     (a.selectedZones ?? []) as unknown as { name: string; price: number; duration: number }[],
+    selectedPackages:  (a.selectedPackages ?? []) as unknown as { name: string; price: number; duration: number }[],
     details:           detailsOf(a),
   }
 }
@@ -590,6 +597,111 @@ export const appointmentService = {
     }
 
     return created.map(toClientView)
+  },
+
+  // Reserva de un "servicio especial": el cliente elige zonas/paquetes (arman el
+  // precio/duración, nunca confiados del cliente) y un horario puntual — el
+  // profesional sale del horario, el cliente nunca lo elige. El horario se
+  // bloquea con un lock de fila (FOR UPDATE) sobre el Service dentro de la misma
+  // transacción que crea el turno, así dos reservas simultáneas del mismo
+  // horario quedan serializadas: la segunda relee el array ya actualizado y
+  // encuentra el horario tomado → 409 SLOT_TAKEN.
+  createSpecialForClient: async (
+    clientId: string,
+    input: { serviceId: string; time: string; zoneIds: string[]; packageIds: string[] },
+  ) => {
+    await assertClientNotBlocked(clientId)
+
+    const service = await prisma.service.findUnique({ where: { id: input.serviceId } })
+    if (!service || service.status !== 'active' || !service.isSpecial || !service.specialDate) {
+      throw new AppError(HTTP.BAD_REQUEST, 'Servicio no disponible', 'SERVICE_NOT_FOUND')
+    }
+
+    const zones    = ((service.zones    as unknown as { id: string; name: string; duration: number; price: number; active: boolean }[]) ?? [])
+    const packages = ((service.packages as unknown as { id: string; name: string; zoneIds: string[]; duration: number; price: number; active: boolean }[]) ?? [])
+
+    const selectedZones    = zones.filter(z => z.active && input.zoneIds.includes(z.id))
+    const selectedPackages = packages.filter(p => p.active && input.packageIds.includes(p.id))
+    if (selectedZones.length !== input.zoneIds.length || selectedPackages.length !== input.packageIds.length) {
+      throw new AppError(HTTP.BAD_REQUEST, 'Una de las zonas o paquetes elegidos ya no está disponible', 'ZONE_NOT_FOUND')
+    }
+    if (selectedZones.length === 0 && selectedPackages.length === 0) {
+      throw new AppError(HTTP.BAD_REQUEST, 'Elegí al menos una zona o paquete', 'VALIDATION_ERROR')
+    }
+
+    // Precio/duración siempre calculados server-side sobre el catálogo real del
+    // servicio — nunca confiados de lo que mande el cliente (mismo principio
+    // que el fix de precios de promociones).
+    const price    = selectedZones.reduce((s, z) => s + z.price, 0)    + selectedPackages.reduce((s, p) => s + p.price, 0)
+    const duration = selectedZones.reduce((s, z) => s + z.duration, 0) + selectedPackages.reduce((s, p) => s + p.duration, 0)
+
+    const paymentSettings = await settingsService.getPaymentSettings()
+    const deposit = computeDeposit(price, paymentSettings)
+
+    const zonesSnapshot    = selectedZones.map(z => ({ name: z.name, price: z.price, duration: z.duration }))
+    const packagesSnapshot = selectedPackages.map(p => ({ name: p.name, price: p.price, duration: p.duration }))
+
+    let appointment: AppointmentRow
+    try {
+      appointment = await prisma.$transaction(async (tx) => {
+        const locked = await tx.$queryRaw<{ status: string; is_special: boolean; special_slots: unknown }[]>`
+          SELECT status, is_special, special_slots FROM services WHERE id = ${input.serviceId}::uuid FOR UPDATE
+        `
+        const row = locked[0]
+        if (!row || row.status !== 'active' || !row.is_special) {
+          throw new AppError(HTTP.BAD_REQUEST, 'Servicio no disponible', 'SERVICE_NOT_FOUND')
+        }
+
+        const slots = (row.special_slots as SpecialSlot[]) ?? []
+        const slotIndex = slots.findIndex(s => s.time === input.time && s.active && !s.appointmentId)
+        if (slotIndex === -1) {
+          throw new AppError(HTTP.CONFLICT, 'Ese horario ya no está disponible. Elegí otro.', 'SLOT_TAKEN')
+        }
+        const slot = slots[slotIndex]
+
+        const professional = await tx.user.findUnique({ where: { id: slot.professionalId } })
+        if (!professional || !['professional', 'admin'].includes(professional.role) || !professional.active) {
+          throw new AppError(HTTP.BAD_REQUEST, 'Profesional no disponible', 'PROFESSIONAL_NOT_FOUND')
+        }
+
+        const created = await tx.appointment.create({
+          data: {
+            clientId,
+            professionalId: slot.professionalId,
+            serviceId:      input.serviceId,
+            date:           service.specialDate!,
+            time:           input.time,
+            duration,
+            servicePrice:   price,
+            depositAmount:  deposit,
+            status:         'confirmed',
+            paymentStatus:  'partial',
+            selectedZones:    zonesSnapshot    as unknown as Prisma.InputJsonValue,
+            selectedPackages: packagesSnapshot as unknown as Prisma.InputJsonValue,
+          },
+          include: APPOINTMENT_INCLUDE,
+        })
+
+        const updatedSlots = slots.map((s, i) =>
+          i === slotIndex ? { ...s, appointmentId: created.id, clientName: created.client.name } : s
+        )
+        await tx.service.update({
+          where: { id: input.serviceId },
+          data:  { specialSlots: updatedSlots as unknown as Prisma.InputJsonValue },
+        })
+
+        return created
+      })
+    } catch (err: any) {
+      if (err instanceof AppError) throw err
+      if (isSlotConflict(err)) {
+        throw new AppError(HTTP.CONFLICT, 'Ese horario ya no está disponible. Elegí otro.', 'SLOT_TAKEN')
+      }
+      throw err
+    }
+
+    await afterCreate(appointment)
+    return toClientView(appointment)
   },
 
   listForClient: async (clientId: string) => {
