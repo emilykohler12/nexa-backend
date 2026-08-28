@@ -13,6 +13,7 @@ import { galleryRoutes }      from '../modules/gallery/gallery.routes'
 import { scheduleRoutes }     from '../modules/settings/schedule.routes'
 import { contactRoutes }      from '../modules/contact/contact.routes'
 import { promotionRoutes }    from '../modules/promotions/promotion.routes'
+import { reviewRoutes }       from '../modules/reviews/review.routes'
 import { whatsappRoutes }     from '../modules/whatsapp/whatsapp.routes'
 
 const router = Router()
@@ -31,6 +32,7 @@ router.use('/gallery',      galleryRoutes)
 router.use('/schedule',     scheduleRoutes)
 router.use('/contact',      contactRoutes)
 router.use('/promotions',   promotionRoutes)
+router.use('/reviews',      reviewRoutes)
 router.use('/webhook',      whatsappRoutes)
 
 export { router as apiRoutes }

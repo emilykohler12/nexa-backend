@@ -5,6 +5,7 @@ import { promotionModel } from './promotion.model'
 import { AppError }       from '../../app/middlewares/errorHandler'
 import { HTTP }           from '../../app/constants/http'
 import { dateSchema }     from '../../app/validators/datetime'
+import { clientNotificationService } from '../clients/client-notification.service'
 
 const promotionItemSchema = z.object({
   id:    z.string().min(1, 'ID de ítem inválido'),
@@ -106,13 +107,24 @@ export const promotionController = {
         endDate:       parsed.data.endDate   ?? null,
       })
       res.status(HTTP.CREATED).json({ promotion: toResponse(promotion) })
+
+      // Nace activa → ya cuenta como "activación". Fire-and-forget, no bloquea
+      // la respuesta (ver client-notification.service.ts).
+      if (promotion.status === 'active') {
+        clientNotificationService.broadcast({
+          type: 'new_promotion', title: 'Nueva promoción',
+          body: `"${promotion.title}" ya está disponible.`,
+          link: '/',
+        })
+      }
     } catch (err) { next(err) }
   },
 
   update: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const id     = getId(req)
-      const parsed = promotionSchema.partial().safeParse(req.body)
+      const id       = getId(req)
+      const existing = await promotionModel.findById(id)
+      const parsed   = promotionSchema.partial().safeParse(req.body)
       if (!parsed.success) {
         throw new AppError(HTTP.BAD_REQUEST, parsed.error.issues[0].message, 'VALIDATION_ERROR')
       }
@@ -122,6 +134,17 @@ export const promotionController = {
 
       const promotion = await promotionModel.update(id, parsed.data)
       res.json({ promotion: toResponse(promotion) })
+
+      // Solo avisa cuando PASA a activa — nunca en una edición que la deja
+      // como ya estaba (activa o inactiva).
+      const justActivated = promotion.status === 'active' && existing?.status !== 'active'
+      if (justActivated) {
+        clientNotificationService.broadcast({
+          type: 'new_promotion', title: 'Nueva promoción',
+          body: `"${promotion.title}" ya está disponible.`,
+          link: '/',
+        })
+      }
     } catch (err) { next(err) }
   },
 

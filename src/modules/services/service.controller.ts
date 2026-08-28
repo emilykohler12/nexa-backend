@@ -6,6 +6,7 @@ import { AppError }     from '../../app/middlewares/errorHandler'
 import { HTTP }         from '../../app/constants/http'
 import { z }            from 'zod'
 import { dateSchema, timeSchema } from '../../app/validators/datetime'
+import { clientNotificationService } from '../clients/client-notification.service'
 
 const specialSlotSchema = z.object({
   id:               z.string().optional(),
@@ -125,13 +126,34 @@ export const serviceController = {
         specialSlots: withSlotIds(parsed.data.specialSlots),
       })
       res.status(HTTP.CREATED).json({ service })
+
+      // Aviso a los clientes — no bloquea la respuesta (fire-and-forget, ver
+      // client-notification.service.ts). Un servicio especial recién creado
+      // avisa como "special_service" solo si ya arranca activo; uno común
+      // (no especial) siempre avisa como "new_service" al crearse.
+      if (service.isSpecial) {
+        if (service.status === 'active') {
+          clientNotificationService.broadcast({
+            type: 'special_service', title: 'Servicio especial disponible',
+            body: `"${service.name}" ya tiene horarios disponibles para reservar.`,
+            link: '/client/book',
+          })
+        }
+      } else {
+        clientNotificationService.broadcast({
+          type: 'new_service', title: 'Nuevo servicio',
+          body: `Ya podés reservar "${service.name}".`,
+          link: '/client/book',
+        })
+      }
     } catch (err) { next(err) }
   },
 
   update: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const id     = getId(req)
-      const parsed = serviceSchema.partial().safeParse(req.body)
+      const id       = getId(req)
+      const existing = await serviceModel.findById(id)
+      const parsed   = serviceSchema.partial().safeParse(req.body)
       if (!parsed.success) {
         throw new AppError(HTTP.BAD_REQUEST, parsed.error.issues[0].message, 'VALIDATION_ERROR')
       }
@@ -142,6 +164,17 @@ export const serviceController = {
         ...(parsed.data.specialSlots !== undefined ? { specialSlots: withSlotIds(parsed.data.specialSlots) } : {}),
       })
       res.json({ service })
+
+      // Solo avisa cuando un servicio especial recién PASA a activo — nunca en
+      // una edición común, y nunca de nuevo si ya estaba activo.
+      const justActivated = service.isSpecial && service.status === 'active' && existing?.status !== 'active'
+      if (justActivated) {
+        clientNotificationService.broadcast({
+          type: 'special_service', title: 'Servicio especial disponible',
+          body: `"${service.name}" ya tiene horarios disponibles para reservar.`,
+          link: '/client/book',
+        })
+      }
     } catch (err) { next(err) }
   },
 
@@ -151,6 +184,14 @@ export const serviceController = {
       const service = await serviceModel.toggleStatus(id)
       if (!service) throw new AppError(HTTP.NOT_FOUND, 'Servicio no encontrado')
       res.json({ service })
+
+      if (service.isSpecial && service.status === 'active') {
+        clientNotificationService.broadcast({
+          type: 'special_service', title: 'Servicio especial disponible',
+          body: `"${service.name}" ya tiene horarios disponibles para reservar.`,
+          link: '/client/book',
+        })
+      }
     } catch (err) { next(err) }
   },
 

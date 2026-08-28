@@ -4,6 +4,7 @@ import { productModel } from './product.model'
 import { AppError }     from '../../app/middlewares/errorHandler'
 import { HTTP }         from '../../app/constants/http'
 import { z }            from 'zod'
+import { clientNotificationService } from '../clients/client-notification.service'
 
 const productSchema = z.object({
   name:     z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres').max(150),
@@ -45,6 +46,15 @@ export const productController = {
         imageUrl: parsed.data.imageUrl ?? null,
       })
       res.status(HTTP.CREATED).json({ product })
+
+      // Fire-and-forget — no bloquea la respuesta (ver client-notification.service.ts).
+      if (product.status === 'active') {
+        clientNotificationService.broadcast({
+          type: 'new_product', title: 'Nuevo producto',
+          body: `Ya está disponible "${product.name}" en la tienda.`,
+          link: '/',
+        })
+      }
     } catch (err) { next(err) }
   },
 

@@ -3,6 +3,7 @@ import { Router }       from 'express'
 import { clientController } from './client.controller'
 import { appointmentController } from '../appointments/appointment.controller'
 import { orderController } from '../orders/order.controller'
+import { reviewController } from '../reviews/review.controller'
 import { authenticate }  from '../auth/middleware/auth.middleware'
 import { authorize }     from '../auth/middleware/auth.middleware'
 
@@ -21,5 +22,15 @@ router.patch('/appointments/:id/details',     authenticate, authorize('client'),
 router.patch('/appointments/:id/acknowledge-reschedule', authenticate, authorize('client'), appointmentController.acknowledgeReschedule)
 
 router.post('/orders', authenticate, authorize('client'), orderController.create)
+router.get ('/orders', authenticate, authorize('client'), orderController.listMine)
+
+router.get  ('/notifications',            authenticate, authorize('client'), clientController.getMyNotifications)
+router.patch('/notifications/read-all',   authenticate, authorize('client'), clientController.markAllNotificationsRead)
+router.patch('/notifications/:id/read',   authenticate, authorize('client'), clientController.markNotificationRead)
+
+router.get ('/reviews/pending', authenticate, authorize('client'), reviewController.getPendingMine)
+router.post('/reviews/dismiss', authenticate, authorize('client'), reviewController.dismiss)
+router.post('/reviews',         authenticate, authorize('client'), reviewController.create)
+router.get ('/reviews',         authenticate, authorize('client'), reviewController.getMine)
 
 export { router as clientRoutes }

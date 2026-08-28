@@ -44,8 +44,10 @@ model User {
   appointmentsAsProfessional Appointment[] @relation("ProfessionalAppointments")
   galleryPhotos              ClientGalleryPhoto[]
   notifications              ProfessionalNotification[]
+  clientNotifications        ClientNotification[]
   productOrders              ProductOrder[]
   orders                     Order[]
+  reviews                    Review[]
 
   @@map("users")
 }
@@ -236,6 +238,10 @@ model Appointment {
   // cambia retroactivamente turnos ya reservados.
   selectedZones    Json  @default("[]") @map("selected_zones")
   selectedPackages Json  @default("[]") @map("selected_packages")
+  // El cliente contestó "ahora no" al pedido de reseña — no se le vuelve a
+  // preguntar por este turno puntual.
+  reviewDismissed Boolean  @default(false) @map("review_dismissed")
+  review          Review?
   cancelledAt    DateTime? @map("cancelled_at") @db.Timestamptz
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
@@ -279,6 +285,9 @@ model Order {
   notes           String?  @db.Text
   paymentMethod   String?  @map("payment_method") @db.VarChar(20)
   totalPrice      Decimal  @map("total_price") @db.Decimal(10, 2)
+  // 'pending' | 'confirmed' | 'ready' | 'delivered' | 'cancelled' — sin gestión
+  // de admin todavía, así que por ahora queda en 'pending' desde que se crea.
+  status          String   @default("pending") @db.VarChar(20)
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   items ProductOrder[]
@@ -401,9 +410,32 @@ model ActivityLog {
   module    String   @db.VarChar(30)
   level     String   @default("info") @db.VarChar(20)
   detail    String?  @db.Text
+  // Referencia suelta (sin FK formal) a la reseña que originó este log, para
+  // poder aprobar/rechazar el comentario desde Actividad. El estado se lee en
+  // vivo de Review.status en el momento de listar, no se duplica acá.
+  reviewId  String?  @map("review_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@map("activity_logs")
+}
+
+model Review {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clientId      String   @map("client_id") @db.Uuid
+  client        User     @relation(fields: [clientId], references: [id])
+  appointmentId String   @unique @map("appointment_id") @db.Uuid
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  rating        Int
+  message       String?  @db.Text
+  // El rating siempre cuenta para el promedio público apenas se crea. El
+  // status acá es sobre la moderación del MENSAJE: sin mensaje no hay nada
+  // que aprobar, así que nace 'approved' directamente; con mensaje nace
+  // 'pending' hasta que el admin lo revisa desde Actividad.
+  status        String   @default("approved") @db.VarChar(20)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("reviews")
 }
 
 model ProfessionalNotification {
@@ -418,6 +450,20 @@ model ProfessionalNotification {
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@map("professional_notifications")
+}
+
+model ClientNotification {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clientId  String   @map("client_id") @db.Uuid
+  client    User     @relation(fields: [clientId], references: [id])
+  type      String   @db.VarChar(30)
+  title     String   @db.VarChar(255)
+  body      String   @db.Text
+  read      Boolean  @default(false)
+  link      String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("client_notifications")
 }
 
 // Estado del árbol conversacional de WhatsApp por número de teléfono.

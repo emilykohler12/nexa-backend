@@ -35,4 +35,11 @@ export const orderController = {
       res.status(HTTP.CREATED).json({ order })
     } catch (err) { next(err) }
   },
+
+  listMine: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const orders = await orderService.listForClient(req.user!.id)
+      res.json({ orders })
+    } catch (err) { next(err) }
+  },
 }

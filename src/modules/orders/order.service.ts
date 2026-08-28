@@ -197,4 +197,29 @@ export const orderService = {
       createdAt:     order.createdAt.toISOString(),
     }
   },
+
+  listForClient: async (clientId: string) => {
+    const orders = await prisma.order.findMany({
+      where:   { clientId },
+      include: { items: { include: { product: true } } },
+      orderBy: { createdAt: 'desc' },
+    })
+    return orders.map(o => ({
+      id: o.id,
+      items: o.items.map(li => ({
+        productId: li.productId,
+        name:      li.product.name,
+        quantity:  li.quantity,
+        price:     Number(li.unitPrice),
+        image:     li.product.imageUrl,
+      })),
+      total:    Number(o.totalPrice),
+      delivery: { type: o.deliveryType as 'pickup' | 'delivery', address: o.deliveryAddress },
+      phone:         o.phone,
+      notes:         o.notes,
+      paymentMethod: o.paymentMethod,
+      status:        o.status as 'pending' | 'confirmed' | 'ready' | 'delivered' | 'cancelled',
+      createdAt:     o.createdAt.toISOString(),
+    }))
+  },
 }
