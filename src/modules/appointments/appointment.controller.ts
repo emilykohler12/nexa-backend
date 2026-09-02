@@ -33,6 +33,16 @@ const bookingSchema = z.object({
   time:           timeSchema,
 })
 
+// RF-06.01 — checkbox obligatorio de Términos de Servicio y Política de Privacidad
+// en la confirmación de la reserva (cubre además cuentas creadas antes de este
+// requisito). Solo en la creación, no en `rescheduleMine` — reprogramar no es
+// "confirmar una reserva nueva" y ya aceptó al reservar la primera vez.
+const createBookingSchema = bookingSchema.extend({
+  termsAccepted: z.boolean().refine(v => v === true, {
+    message: 'Tenés que aceptar los Términos de Servicio y la Política de Privacidad',
+  }),
+})
+
 const comboBookingSchema = z.object({
   comboServiceId: z.string().uuid('ID de combo inválido'),
   simultaneous:   z.boolean(),
@@ -65,6 +75,12 @@ const detailsSchema = z.object({
   hairLength:              z.string().max(20).nullable().optional(),
   wantsExtensions:         z.boolean().nullable().optional(),
   skinType:                z.string().max(20).nullable().optional(),
+  // RF-06.02 — consentimiento obligatorio para guardar estas observaciones operativas
+  // (alergias, tipo de piel, etc.). Solo se pide cuando efectivamente se guarda algo
+  // (el botón "Omitir por ahora" del frontend no llega a este endpoint).
+  consentAlertas: z.boolean().refine(v => v === true, {
+    message: 'Necesitamos tu autorización para guardar estas observaciones',
+  }),
 })
 
 const adminUpdateAppointmentSchema = z.object({
@@ -142,7 +158,7 @@ export const appointmentController = {
   // Cliente
   create: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const input = parseBody(bookingSchema, req.body)
+      const input = parseBody(createBookingSchema, req.body)
       const appointment = await appointmentService.createForClient(req.user!.id, input)
       res.status(HTTP.CREATED).json({ appointment })
     } catch (err) { next(err) }

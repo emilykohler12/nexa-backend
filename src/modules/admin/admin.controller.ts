@@ -86,6 +86,13 @@ export const adminController = {
     } catch (err) { next(err) }
   },
 
+  anonymizeClient: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const client = await adminService.anonymizeClient(getId(req), req.user?.email ?? 'Admin')
+      res.json({ client })
+    } catch (err) { next(err) }
+  },
+
   getActivity: async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const logs = await activityService.getAll()

@@ -447,9 +447,13 @@ export const appointmentService = {
 
   createForClient: async (
     clientId: string,
-    input: { serviceId: string; professionalId: string; date: string; time: string },
+    input: { serviceId: string; professionalId: string; date: string; time: string; termsAccepted: boolean },
   ) => {
     await assertClientNotBlocked(clientId)
+
+    // RF-06.01 — (re)graba la aceptación de Términos/Política al confirmar la
+    // reserva. Cubre tanto el registro reciente como cuentas viejas sin este dato.
+    await prisma.user.update({ where: { id: clientId }, data: { termsAcceptedAt: new Date() } })
 
     const service = await prisma.service.findUnique({ where: { id: input.serviceId } })
     if (!service || service.status !== 'active') {
@@ -817,12 +821,23 @@ export const appointmentService = {
       hairLength?:              string | null
       wantsExtensions?:         boolean | null
       skinType?:                string | null
+      consentAlertas:           boolean
     },
   ) => {
     const appointment = await prisma.appointment.findUnique({ where: { id } })
     if (!appointment || appointment.clientId !== clientId) {
       throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
     }
+
+    // RF-06.02 — deja registrado el consentimiento expreso para guardar
+    // observaciones operativas (alergias, tipo de piel, etc.), con fecha y a
+    // qué turno corresponde. Client puede no existir todavía (se crea recién
+    // acá si hace falta) — por eso upsert en vez de update.
+    await prisma.client.upsert({
+      where:  { userId: clientId },
+      create: { userId: clientId, consents: [`alertas_servicio:${id}:${new Date().toISOString()}`] },
+      update: { consents: { push: `alertas_servicio:${id}:${new Date().toISOString()}` } },
+    })
 
     const updated = await prisma.appointment.update({
       where: { id },

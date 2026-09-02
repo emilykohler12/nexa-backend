@@ -20,6 +20,9 @@ router.patch('/clients/:id/gallery/:photoId',    adminController.updateClientGal
 router.delete('/clients/:id/gallery/:photoId',   adminController.deleteClientGalleryPhoto)
 router.put ('/clients/:id',         adminController.updateClient)
 router.patch('/clients/:id/block',  adminController.setClientBlocked)
+// RF-06.03 — supresión de datos personales a pedido del cliente. No borra la
+// fila (mantiene turnos e historial contable), solo anonimiza nombre/email/teléfono.
+router.post('/clients/:id/anonymize', adminController.anonymizeClient)
 router.get ('/clients/:id/reviews', reviewController.getForClient)
 
 router.get('/appointments',      appointmentController.listForAdmin)

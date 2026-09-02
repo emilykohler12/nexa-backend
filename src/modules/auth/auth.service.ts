@@ -77,6 +77,7 @@ export const authService = {
     const created = await authRepository.create({
       name: dto.name, email: dto.email, passwordHash,
       role: 'client', phone: dto.phone, gender: dto.gender, verificationToken,
+      termsAcceptedAt: new Date(),
     })
 
     const html = loadTemplate('verifyEmail', {

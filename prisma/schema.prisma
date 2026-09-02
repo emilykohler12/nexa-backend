@@ -33,6 +33,10 @@ model User {
   refreshToken      String?   @map("refresh_token") @db.Text
   profileComplete   Boolean   @default(false) @map("profile_complete")
   verificationToken String?   @map("verification_token") @db.VarChar(255)
+  // RF-06.01 — fecha en que aceptó Términos de Servicio y Política de Privacidad.
+  // Se (re)graba tanto al registrarse como al confirmar una reserva, para cubrir
+  // también cuentas creadas antes de que este requisito existiera.
+  termsAcceptedAt   DateTime? @map("terms_accepted_at") @db.Timestamptz
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 

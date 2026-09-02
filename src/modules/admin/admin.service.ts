@@ -4,6 +4,7 @@ import { prisma }         from '../../app/database/prisma'
 import { AppError }       from '../../app/middlewares/errorHandler'
 import { HTTP }           from '../../app/constants/http'
 import { bcryptProvider } from '../auth/providers/bcrypt.provider'
+import { activityService } from '../activity/activity.service'
 
 async function computeLoyalty(userId: string) {
   const appointments = await prisma.appointment.findMany({ where: { clientId: userId } })
@@ -179,6 +180,40 @@ export const adminService = {
       where:  { userId: id },
       create: { userId: id, blocked },
       update: { blocked },
+    })
+
+    return getByIdInternal(id)
+  },
+
+  // RF-06.03 — supresión de datos personales a pedido del cliente (derecho de
+  // supresión, Ley 25.326). No borra la fila: mantiene los turnos y totales
+  // contables intactos, pero anonimiza los datos identificatorios y desactiva
+  // la cuenta (no puede volver a loguearse con el email anonimizado, y se
+  // invalida cualquier sesión activa). Deliberadamente NO toca alergias/
+  // preferencias/observaciones — esa decisión queda para cuando se resuelva
+  // si el sistema realmente necesita seguir guardando ese dato clínico o no
+  // (ver dictamen, apartado 10).
+  anonymizeClient: async (id: string, adminName: string) => {
+    const user = await prisma.user.findUnique({ where: { id } })
+    if (!user || user.role !== 'client') throw new AppError(HTTP.NOT_FOUND, 'Cliente no encontrado', 'NOT_FOUND')
+
+    await prisma.user.update({
+      where: { id },
+      data: {
+        name:         'Usuario Anónimo',
+        email:        `anonimo_${id}@borrado.com`,
+        phone:        null,
+        active:       false,
+        refreshToken: null,
+      },
+    })
+
+    await activityService.log({
+      userName: adminName,
+      action:   'Anonimizó los datos de un cliente a pedido suyo',
+      module:   'clients',
+      level:    'warning',
+      detail:   `Cliente ${id}`,
     })
 
     return getByIdInternal(id)

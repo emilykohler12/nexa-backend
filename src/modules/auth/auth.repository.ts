@@ -33,6 +33,7 @@ export const authRepository = {
     phone?: string | null
     gender?: string | null
     verificationToken?: string
+    termsAcceptedAt?: Date
   }) =>
     prisma.user.create({
       data: {
@@ -43,6 +44,7 @@ export const authRepository = {
         phone:             data.phone ?? null,
         gender:            data.gender as any ?? null,
         verificationToken: data.verificationToken ?? null,
+        termsAcceptedAt:   data.termsAcceptedAt ?? null,
       },
     }),
 
