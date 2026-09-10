@@ -6,13 +6,19 @@
 // siguen ocupando el horario (el índice único parcial solo excluye 'cancelled'
 // y 'no_show'), así que hay que cancelarlos pasado el tiempo de reserva.
 //
+// Libera cuando:
+//  - nunca se intentó pagar (paymentStatus 'pending' y sin mpPaymentId), o
+//  - el pago fue rechazado / cancelado (paymentStatus 'rejected' | 'cancelled').
+//
 // Qué NO toca:
 //  - Turnos manuales / walk-in del admin o profesional: se crean con
 //    depositAmount 0 (no pasan por el flujo de pago), por eso el filtro exige
 //    depositAmount > 0.
 //  - Pagos en efectivo (Rapipago/Pago Fácil) que Mercado Pago informa como
-//    'pending': esos ya tienen mpPaymentId, por eso el filtro exige que sea null.
-//  - Combos: usan paymentStatus 'partial' desde el arranque, nunca 'pending'.
+//    'pending': esos ya tienen mpPaymentId, así que no entran en la rama
+//    'pending' del filtro (que exige mpPaymentId null).
+//  - Señas ya pagas ('partial') o reembolsadas ('refunded').
+//  - Combos: usan paymentStatus 'partial' desde el arranque.
 import { prisma }          from '../app/database/prisma'
 import { activityService } from '../modules/activity/activity.service'
 
@@ -30,11 +36,13 @@ export async function runReleaseUnpaidAppointmentsJob(): Promise<{ released: num
   const { count } = await prisma.appointment.updateMany({
     where: {
       status:        'confirmed',
-      paymentStatus: 'pending',
       depositAmount: { gt: 0 },
-      mpPaymentId:   null,
       comboGroupId:  null,
       createdAt:     { lt: cutoff },
+      OR: [
+        { paymentStatus: 'pending', mpPaymentId: null },
+        { paymentStatus: { in: ['rejected', 'cancelled'] } },
+      ],
     },
     data: { status: 'cancelled', cancelledAt: new Date() },
   })

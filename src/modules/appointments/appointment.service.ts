@@ -497,7 +497,10 @@ export const appointmentService = {
       throw err
     }
 
-    await afterCreate(appointment)
+    // OJO: acá NO se llama a afterCreate. El turno recién se le avisa al
+    // profesional (notificación + mail + actividad) cuando se confirma el pago
+    // de la seña — ver applyPaymentResult. Hasta entonces es solo una reserva
+    // provisoria que el job release-unpaid libera si no se paga.
     return toClientView(appointment)
   },
 
@@ -761,26 +764,38 @@ export const appointmentService = {
     return { paymentStatus: fresh?.paymentStatus ?? appointment.paymentStatus }
   },
 
-  // Llamado desde el webhook de Mercado Pago (nunca desde el cliente) — el
-  // estado 'status' ya viene verificado contra la API de Mercado Pago, no
-  // confiado del webhook en crudo.
+  // Llamado desde el webhook de Mercado Pago y desde verifyPayment — el estado
+  // 'status' ya viene verificado contra la API de Mercado Pago, no confiado del
+  // webhook en crudo.
   applyPaymentResult: async (id: string, mpPaymentId: string, status: string) => {
-    const appointment = await prisma.appointment.findUnique({ where: { id } })
+    const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
     if (!appointment) {
       console.warn(`[mercadopago] Webhook para turno inexistente: ${id}`)
       return
     }
 
+    // Idempotencia — el webhook y el polling pueden llegar los dos. Si la seña
+    // ya estaba paga, no re-notificamos al profesional ni re-logueamos.
+    if (appointment.paymentStatus === 'partial') return
+
     const paymentStatus = status === 'approved' ? 'partial' : status // 'partial' = seña pagada
-    await prisma.appointment.update({
-      where: { id },
-      data:  { paymentStatus, mpPaymentId },
+    const updated = await prisma.appointment.update({
+      where:   { id },
+      data:    { paymentStatus, mpPaymentId },
+      include: APPOINTMENT_INCLUDE,
     })
 
     await activityService.log({
       action: 'Pago de seña recibido', module: 'payments',
       detail: `Turno ${id} — Mercado Pago informó estado "${status}"`,
     })
+
+    // Recién ahora, con la seña paga, se le avisa al profesional (notificación
+    // in-app + mail + actividad "Nuevo turno"). Antes de esto el turno era solo
+    // una reserva provisoria.
+    if (status === 'approved') {
+      await afterCreate(updated)
+    }
   },
 
   cancelForClient: async (clientId: string, id: string) => {
