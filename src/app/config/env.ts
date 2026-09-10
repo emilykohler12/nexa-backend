@@ -30,6 +30,19 @@ const schema = z.object({
   WHATSAPP_APP_SECRET:      z.string().optional(),
   WHATSAPP_ACCESS_TOKEN:    z.string().optional(),
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+
+  // Mercado Pago — opcionales, la app arranca sin ellas. payment.service.ts
+  // valida su presencia recién al momento de crear un pago real.
+  MERCADOPAGO_ACCESS_TOKEN:   z.string().optional(),
+  MERCADOPAGO_WEBHOOK_SECRET: z.string().optional(),
+  // URL pública (túnel de VS Code / ngrok) a la que Mercado Pago manda los
+  // webhooks en desarrollo. Sin esto, el webhook nunca llega — los pagos se
+  // pueden crear igual, pero nunca se confirman solos. Un valor vacío en el
+  // .env se trata como "no configurado" en lugar de romper el arranque.
+  BACKEND_PUBLIC_URL: z.preprocess(
+    v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().url().optional(),
+  ),
 })
 
 const parsed = schema.safeParse(process.env)

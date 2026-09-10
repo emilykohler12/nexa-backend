@@ -5,6 +5,12 @@ import { orderService } from './order.service'
 import { AppError }     from '../../app/middlewares/errorHandler'
 import { HTTP }         from '../../app/constants/http'
 
+function getId(req: Request): string {
+  const { id } = req.params
+  if (!id || Array.isArray(id)) throw new AppError(HTTP.BAD_REQUEST, 'ID requerido', 'MISSING_ID')
+  return id
+}
+
 const createOrderSchema = z.object({
   items: z.array(z.object({
     productId:   z.string().uuid('ID de producto inválido'),
@@ -17,7 +23,7 @@ const createOrderSchema = z.object({
   }),
   phone:         z.string().max(30).nullable().optional(),
   notes:         z.string().max(1000).nullable().optional(),
-  paymentMethod: z.enum(['qr', 'link', 'card']).nullable().optional(),
+  paymentMethod: z.enum(['mercadopago']).nullable().optional(),
 })
 
 export const orderController = {
@@ -40,6 +46,13 @@ export const orderController = {
     try {
       const orders = await orderService.listForClient(req.user!.id)
       res.json({ orders })
+    } catch (err) { next(err) }
+  },
+
+  createPaymentPreference: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await orderService.createPaymentPreference(req.user!.id, getId(req))
+      res.json(result)
     } catch (err) { next(err) }
   },
 }

@@ -220,6 +220,9 @@ model Appointment {
   depositAmount  Decimal  @default(0) @map("deposit_amount") @db.Decimal(10, 2)
   status         String   @default("pending") @db.VarChar(20)
   paymentStatus  String   @default("pending") @map("payment_status") @db.VarChar(20)
+  // Id del pago en Mercado Pago que confirmó la seña — se completa recién
+  // cuando llega el webhook, nunca antes. Sirve también de traza de auditoría.
+  mpPaymentId    String?  @map("mp_payment_id") @db.VarChar(50)
   clientNotes    String?  @map("client_notes") @db.Text
   internalNotes  String?  @map("internal_notes") @db.Text
   allergies      String?  @db.Text
@@ -295,6 +298,10 @@ model Order {
   // 'pending' | 'confirmed' | 'ready' | 'delivered' | 'cancelled' — sin gestión
   // de admin todavía, así que por ahora queda en 'pending' desde que se crea.
   status          String   @default("pending") @db.VarChar(20)
+  // Separado de `status` (que es de logística): 'pending' | 'paid' | 'rejected'.
+  // Se actualiza únicamente desde el webhook de Mercado Pago, nunca antes.
+  paymentStatus   String   @default("pending") @map("payment_status") @db.VarChar(20)
+  mpPaymentId     String?  @map("mp_payment_id") @db.VarChar(50)
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   items ProductOrder[]

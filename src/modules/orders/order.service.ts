@@ -3,6 +3,7 @@ import { prisma }   from '../../app/database/prisma'
 import { AppError } from '../../app/middlewares/errorHandler'
 import { HTTP }     from '../../app/constants/http'
 import { activityService } from '../activity/activity.service'
+import { paymentService }  from '../payments/payment.service'
 
 type OrderItemInput = { productId: string; quantity: number; promotionId?: string | null }
 type PromotionItem  = { id: string; name: string; price: number }
@@ -84,7 +85,7 @@ export const orderService = {
     delivery: { type: 'pickup' | 'delivery'; address?: string | null }
     phone?: string | null
     notes?: string | null
-    paymentMethod?: 'qr' | 'link' | 'card' | null
+    paymentMethod?: 'mercadopago' | null
   }) => {
     const client = await prisma.user.findUnique({ where: { id: clientId } })
     if (!client) throw new AppError(HTTP.NOT_FOUND, 'Usuario no encontrado', 'NOT_FOUND')
@@ -171,7 +172,7 @@ export const orderService = {
       })
     })
 
-    const paymentLabels: Record<string, string> = { qr: 'QR', link: 'Link de pago', card: 'Tarjeta' }
+    const paymentLabels: Record<string, string> = { mercadopago: 'Mercado Pago' }
     const paymentLabel = data.paymentMethod ? paymentLabels[data.paymentMethod] ?? null : null
 
     await activityService.log({
@@ -193,9 +194,51 @@ export const orderService = {
       phone:         order.phone,
       notes:         order.notes,
       paymentMethod: order.paymentMethod,
+      paymentStatus: order.paymentStatus,
       totalPrice:    Number(order.totalPrice),
       createdAt:     order.createdAt.toISOString(),
     }
+  },
+
+  // Genera el checkout de Mercado Pago para pagar un pedido ya creado.
+  createPaymentPreference: async (clientId: string, id: string) => {
+    const order = await prisma.order.findUnique({ where: { id }, include: { client: true } })
+    if (!order || order.clientId !== clientId) {
+      throw new AppError(HTTP.NOT_FOUND, 'Pedido no encontrado', 'NOT_FOUND')
+    }
+    if (order.paymentStatus === 'paid') {
+      throw new AppError(HTTP.BAD_REQUEST, 'Este pedido ya está pago', 'ALREADY_PAID')
+    }
+
+    const { checkoutUrl } = await paymentService.createPreference({
+      title:             `Pedido — ${order.client.name}`,
+      amount:            Number(order.totalPrice),
+      externalReference: `order:${order.id}`,
+      payerEmail:        order.client.email,
+    })
+
+    return { checkoutUrl }
+  },
+
+  // Llamado desde el webhook de Mercado Pago — el estado ya viene verificado
+  // contra la API de Mercado Pago, no confiado del webhook en crudo.
+  applyPaymentResult: async (id: string, mpPaymentId: string, status: string) => {
+    const order = await prisma.order.findUnique({ where: { id } })
+    if (!order) {
+      console.warn(`[mercadopago] Webhook para pedido inexistente: ${id}`)
+      return
+    }
+
+    const paymentStatus = status === 'approved' ? 'paid' : status
+    await prisma.order.update({
+      where: { id },
+      data:  { paymentStatus, mpPaymentId },
+    })
+
+    await activityService.log({
+      action: 'Pago de pedido recibido', module: 'payments',
+      detail: `Pedido ${id} — Mercado Pago informó estado "${status}"`,
+    })
   },
 
   listForClient: async (clientId: string) => {
@@ -218,6 +261,7 @@ export const orderService = {
       phone:         o.phone,
       notes:         o.notes,
       paymentMethod: o.paymentMethod,
+      paymentStatus: o.paymentStatus,
       status:        o.status as 'pending' | 'confirmed' | 'ready' | 'delivered' | 'cancelled',
       createdAt:     o.createdAt.toISOString(),
     }))

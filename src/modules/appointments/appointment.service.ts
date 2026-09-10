@@ -8,6 +8,7 @@ import { AppError }      from '../../app/middlewares/errorHandler'
 import { HTTP }          from '../../app/constants/http'
 import { settingsService, computeDeposit } from '../settings/settings.service'
 import { activityService } from '../activity/activity.service'
+import { paymentService } from '../payments/payment.service'
 import { notificationService } from '../professionals/notification.service'
 import { mailProvider } from '../auth/providers/mail.provider'
 import { bcryptProvider } from '../auth/providers/bcrypt.provider'
@@ -483,7 +484,9 @@ export const appointmentService = {
           servicePrice:   price,
           depositAmount:  deposit,
           status:         'confirmed',
-          paymentStatus:  'partial',
+          // Arranca en 'pending' — solo pasa a 'partial' cuando llega el
+          // webhook de Mercado Pago confirmando que la seña se pagó de verdad.
+          paymentStatus:  'pending',
         },
         include: APPOINTMENT_INCLUDE,
       })
@@ -715,6 +718,49 @@ export const appointmentService = {
       orderBy: [{ date: 'desc' }, { time: 'desc' }],
     })
     return rows.map(toClientView)
+  },
+
+  // Genera el checkout de Mercado Pago para pagar la seña de un turno ya
+  // creado (status 'confirmed', paymentStatus todavía 'pending').
+  createPaymentPreference: async (clientId: string, id: string) => {
+    const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
+    if (!appointment || appointment.clientId !== clientId) {
+      throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
+    }
+    if (appointment.paymentStatus === 'partial') {
+      throw new AppError(HTTP.BAD_REQUEST, 'La seña de este turno ya está paga', 'ALREADY_PAID')
+    }
+
+    const { checkoutUrl } = await paymentService.createPreference({
+      title:             `Seña — ${appointment.service.name}`,
+      amount:            Number(appointment.depositAmount),
+      externalReference: `appointment:${appointment.id}`,
+      payerEmail:        appointment.client.email,
+    })
+
+    return { checkoutUrl }
+  },
+
+  // Llamado desde el webhook de Mercado Pago (nunca desde el cliente) — el
+  // estado 'status' ya viene verificado contra la API de Mercado Pago, no
+  // confiado del webhook en crudo.
+  applyPaymentResult: async (id: string, mpPaymentId: string, status: string) => {
+    const appointment = await prisma.appointment.findUnique({ where: { id } })
+    if (!appointment) {
+      console.warn(`[mercadopago] Webhook para turno inexistente: ${id}`)
+      return
+    }
+
+    const paymentStatus = status === 'approved' ? 'partial' : status // 'partial' = seña pagada
+    await prisma.appointment.update({
+      where: { id },
+      data:  { paymentStatus, mpPaymentId },
+    })
+
+    await activityService.log({
+      action: 'Pago de seña recibido', module: 'payments',
+      detail: `Turno ${id} — Mercado Pago informó estado "${status}"`,
+    })
   },
 
   cancelForClient: async (clientId: string, id: string) => {

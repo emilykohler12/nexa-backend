@@ -15,6 +15,7 @@ import { contactRoutes }      from '../modules/contact/contact.routes'
 import { promotionRoutes }    from '../modules/promotions/promotion.routes'
 import { reviewRoutes }       from '../modules/reviews/review.routes'
 import { whatsappRoutes }     from '../modules/whatsapp/whatsapp.routes'
+import { paymentRoutes }      from '../modules/payments/payment.routes'
 
 const router = Router()
 
@@ -34,5 +35,6 @@ router.use('/contact',      contactRoutes)
 router.use('/promotions',   promotionRoutes)
 router.use('/reviews',      reviewRoutes)
 router.use('/webhook',      whatsappRoutes)
+router.use('/webhook',      paymentRoutes)
 
 export { router as apiRoutes }

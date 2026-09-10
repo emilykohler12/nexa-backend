@@ -1,6 +1,7 @@
 // src/jobs/scheduler.ts
 import cron from 'node-cron'
 import { runInactivityReminderJob } from './inactivityReminder.job'
+import { runReleaseUnpaidAppointmentsJob } from './releaseUnpaidAppointments.job'
 
 export function startScheduledJobs(): void {
   // Todos los días a las 9:00 (hora del servidor) — horario razonable para un
@@ -15,5 +16,18 @@ export function startScheduledJobs(): void {
     }
   })
 
-  console.log('[jobs] scheduler iniciado — inactivity-reminder corre todos los días a las 9:00')
+  // Cada 5 minutos — libera turnos cuya seña nunca se pagó (checkout de Mercado
+  // Pago abandonado). Barato: la mayoría de las corridas no encuentra nada.
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      const result = await runReleaseUnpaidAppointmentsJob()
+      if (result.released > 0) {
+        console.log(`[jobs] release-unpaid: ${result.released} turno(s) liberado(s)`)
+      }
+    } catch (err) {
+      console.error('[jobs] error corriendo release-unpaid:', err)
+    }
+  })
+
+  console.log('[jobs] scheduler iniciado — inactivity-reminder (diario 9:00) + release-unpaid (cada 5 min)')
 }

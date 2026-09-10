@@ -187,6 +187,13 @@ export const appointmentController = {
     } catch (err) { next(err) }
   },
 
+  createPaymentPreference: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await appointmentService.createPaymentPreference(req.user!.id, getId(req))
+      res.json(result)
+    } catch (err) { next(err) }
+  },
+
   cancelMine: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const result = await appointmentService.cancelForClient(req.user!.id, getId(req))
