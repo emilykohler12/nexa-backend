@@ -112,8 +112,11 @@ export const orderService = {
       resolved.push(...await resolvePromotionGroup(promotionId, lines))
     }
 
-    // Stock: se valida por la cantidad TOTAL pedida de cada producto, sumando
-    // todas las líneas que lo mencionen (catálogo + una o más promos).
+    // Stock: se valida acá (por la cantidad TOTAL pedida de cada producto,
+    // sumando todas las líneas que lo mencionen) para avisarle al cliente antes
+    // de mandarlo a pagar, pero NO se descuenta todavía — el stock se descuenta
+    // recién cuando Mercado Pago confirma el pago (ver applyPaymentResult). Así
+    // un checkout abandonado no deja productos "reservados" para siempre.
     const totalQtyByProduct = new Map<string, number>()
     for (const r of resolved) {
       totalQtyByProduct.set(r.productId, (totalQtyByProduct.get(r.productId) ?? 0) + r.quantity)
@@ -145,31 +148,26 @@ export const orderService = {
     const deliveryType    = data.delivery.type
     const deliveryAddress = deliveryType === 'delivery' ? (data.delivery.address ?? null) : null
 
-    const order = await prisma.$transaction(async (tx) => {
-      for (const [productId, qty] of totalQtyByProduct) {
-        await tx.product.update({ where: { id: productId }, data: { stock: { decrement: qty } } })
-      }
-      return tx.order.create({
-        data: {
-          clientId,
-          deliveryType,
-          deliveryAddress,
-          phone: data.phone ?? null,
-          notes: data.notes ?? null,
-          paymentMethod: data.paymentMethod ?? null,
-          totalPrice,
-          items: {
-            create: lineItems.map(li => ({
-              clientId,
-              productId:  li.productId,
-              quantity:   li.quantity,
-              unitPrice:  li.unitPrice,
-              totalPrice: li.totalPrice,
-            })),
-          },
+    const order = await prisma.order.create({
+      data: {
+        clientId,
+        deliveryType,
+        deliveryAddress,
+        phone: data.phone ?? null,
+        notes: data.notes ?? null,
+        paymentMethod: data.paymentMethod ?? null,
+        totalPrice,
+        items: {
+          create: lineItems.map(li => ({
+            clientId,
+            productId:  li.productId,
+            quantity:   li.quantity,
+            unitPrice:  li.unitPrice,
+            totalPrice: li.totalPrice,
+          })),
         },
-        include: { items: true },
-      })
+      },
+      include: { items: true },
     })
 
     const paymentLabels: Record<string, string> = { mercadopago: 'Mercado Pago' }
@@ -223,17 +221,52 @@ export const orderService = {
   // Llamado desde el webhook de Mercado Pago — el estado ya viene verificado
   // contra la API de Mercado Pago, no confiado del webhook en crudo.
   applyPaymentResult: async (id: string, mpPaymentId: string, status: string) => {
-    const order = await prisma.order.findUnique({ where: { id } })
+    const order = await prisma.order.findUnique({ where: { id }, include: { items: true } })
     if (!order) {
       console.warn(`[mercadopago] Webhook para pedido inexistente: ${id}`)
       return
     }
 
+    // Idempotencia — Mercado Pago puede mandar el mismo webhook más de una vez.
+    // Si el pedido ya está pago, no volvemos a descontar stock.
+    if (order.paymentStatus === 'paid') return
+
     const paymentStatus = status === 'approved' ? 'paid' : status
-    await prisma.order.update({
-      where: { id },
-      data:  { paymentStatus, mpPaymentId },
-    })
+
+    if (status === 'approved') {
+      // Recién ahora, con el pago confirmado, se descuenta el stock. Se suma la
+      // cantidad total por producto (una línea de catálogo + una de promo del
+      // mismo producto cuentan juntas).
+      const qtyByProduct = new Map<string, number>()
+      for (const li of order.items) {
+        qtyByProduct.set(li.productId, (qtyByProduct.get(li.productId) ?? 0) + li.quantity)
+      }
+
+      await prisma.$transaction(async (tx) => {
+        for (const [productId, qty] of qtyByProduct) {
+          await tx.product.update({ where: { id: productId }, data: { stock: { decrement: qty } } })
+        }
+        await tx.order.update({ where: { id }, data: { paymentStatus, mpPaymentId } })
+      })
+
+      // No es fatal, pero si algún producto quedó en negativo el admin tiene que
+      // saberlo (se vendió más de lo que había entre que se creó el pedido y se
+      // pagó).
+      const oversold = await prisma.product.findMany({
+        where: { id: { in: [...qtyByProduct.keys()] }, stock: { lt: 0 } },
+        select: { name: true, stock: true },
+      })
+      if (oversold.length > 0) {
+        await activityService.log({
+          action: 'Stock negativo tras pago', module: 'store',
+          detail: `Pedido ${id}: ${oversold.map(p => `${p.name} (${p.stock})`).join(', ')} — revisá el stock.`,
+        })
+      }
+    } else {
+      // rechazado / cancelado / pendiente — nunca se descontó stock, solo se
+      // deja registrado el estado.
+      await prisma.order.update({ where: { id }, data: { paymentStatus, mpPaymentId } })
+    }
 
     await activityService.log({
       action: 'Pago de pedido recibido', module: 'payments',
