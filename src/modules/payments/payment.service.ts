@@ -29,6 +29,14 @@ export const paymentService = {
   }): Promise<{ preferenceId: string; checkoutUrl: string }> => {
     const preference = new Preference(requireClient())
 
+    // Mercado Pago valida `auto_return` contra sus propios servidores y rechaza
+    // la preferencia entera ("auto_return invalid. back_url.success must be
+    // defined") si back_urls.success no es una URL pública HTTPS. En local el
+    // front corre en http://localhost, así que ahí NO mandamos auto_return: el
+    // pago igual funciona, solo que Mercado Pago muestra un botón "Volver al
+    // sitio" en vez de redirigir solo. En producción (FRONTEND_URL https) sí va.
+    const frontendIsPublic = env.FRONTEND_URL.startsWith('https://')
+
     const result = await preference.create({
       body: {
         items: [{
@@ -45,7 +53,7 @@ export const paymentService = {
           failure: `${env.FRONTEND_URL}/pago/resultado?estado=error`,
           pending: `${env.FRONTEND_URL}/pago/resultado?estado=pendiente`,
         },
-        auto_return: 'approved',
+        ...(frontendIsPublic ? { auto_return: 'approved' } : {}),
         // Sin esta URL, Mercado Pago nunca nos avisa que el pago se completó
         // — necesita ser pública (el túnel de desarrollo mientras probamos local).
         notification_url: env.BACKEND_PUBLIC_URL
