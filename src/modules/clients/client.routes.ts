@@ -20,11 +20,13 @@ router.patch('/appointments/:id/cancel',      authenticate, authorize('client'),
 router.patch('/appointments/:id/reschedule',  authenticate, authorize('client'), appointmentController.rescheduleMine)
 router.patch('/appointments/:id/details',     authenticate, authorize('client'), appointmentController.updateDetailsMine)
 router.patch('/appointments/:id/acknowledge-reschedule', authenticate, authorize('client'), appointmentController.acknowledgeReschedule)
-router.post ('/appointments/:id/payment', authenticate, authorize('client'), appointmentController.createPaymentPreference)
+router.post ('/appointments/:id/payment',        authenticate, authorize('client'), appointmentController.createPaymentPreference)
+router.post ('/appointments/:id/verify-payment', authenticate, authorize('client'), appointmentController.verifyPayment)
 
 router.post('/orders', authenticate, authorize('client'), orderController.create)
 router.get ('/orders', authenticate, authorize('client'), orderController.listMine)
-router.post('/orders/:id/payment', authenticate, authorize('client'), orderController.createPaymentPreference)
+router.post('/orders/:id/payment',        authenticate, authorize('client'), orderController.createPaymentPreference)
+router.post('/orders/:id/verify-payment', authenticate, authorize('client'), orderController.verifyPayment)
 
 router.get  ('/notifications',            authenticate, authorize('client'), clientController.getMyNotifications)
 router.patch('/notifications/read-all',   authenticate, authorize('client'), clientController.markAllNotificationsRead)

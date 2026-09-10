@@ -55,4 +55,11 @@ export const orderController = {
       res.json(result)
     } catch (err) { next(err) }
   },
+
+  verifyPayment: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await orderService.verifyPayment(req.user!.id, getId(req))
+      res.json(result)
+    } catch (err) { next(err) }
+  },
 }

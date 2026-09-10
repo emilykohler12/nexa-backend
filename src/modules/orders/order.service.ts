@@ -218,6 +218,26 @@ export const orderService = {
     return { checkoutUrl }
   },
 
+  // Verificación "a demanda" del pago de un pedido — no depende del webhook.
+  // Le pregunta a Mercado Pago si hay un pago contra "order:<id>" y, si lo hay,
+  // aplica el resultado igual que lo haría el webhook. La usa el polling del
+  // front y el botón "ya pagué, verificar".
+  verifyPayment: async (clientId: string, id: string): Promise<{ paymentStatus: string }> => {
+    const order = await prisma.order.findUnique({ where: { id } })
+    if (!order || order.clientId !== clientId) {
+      throw new AppError(HTTP.NOT_FOUND, 'Pedido no encontrado', 'NOT_FOUND')
+    }
+    if (order.paymentStatus === 'paid') return { paymentStatus: 'paid' }
+
+    const found = await paymentService.findPaymentByReference(`order:${id}`)
+    if (found) {
+      await orderService.applyPaymentResult(id, found.id, found.status)
+    }
+
+    const fresh = await prisma.order.findUnique({ where: { id }, select: { paymentStatus: true } })
+    return { paymentStatus: fresh?.paymentStatus ?? order.paymentStatus }
+  },
+
   // Llamado desde el webhook de Mercado Pago — el estado ya viene verificado
   // contra la API de Mercado Pago, no confiado del webhook en crudo.
   applyPaymentResult: async (id: string, mpPaymentId: string, status: string) => {

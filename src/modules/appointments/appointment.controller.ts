@@ -194,6 +194,13 @@ export const appointmentController = {
     } catch (err) { next(err) }
   },
 
+  verifyPayment: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await appointmentService.verifyPayment(req.user!.id, getId(req))
+      res.json(result)
+    } catch (err) { next(err) }
+  },
+
   cancelMine: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const result = await appointmentService.cancelForClient(req.user!.id, getId(req))

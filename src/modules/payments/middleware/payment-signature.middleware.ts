@@ -17,6 +17,14 @@ import { env } from '../../../app/config/env'
 export function verificarFirmaMercadoPago(req: Request, res: Response, next: NextFunction) {
   const secret = env.MERCADOPAGO_WEBHOOK_SECRET
 
+  // Log de entrada — deja ver en la terminal si Mercado Pago está llegando al
+  // webhook (y con qué), independientemente de si la firma valida.
+  console.log('[mercadopago] webhook recibido:', JSON.stringify({
+    query: req.query,
+    hasSignature: !!req.header('x-signature'),
+    hasRequestId: !!req.header('x-request-id'),
+  }))
+
   if (!secret) {
     console.error('[mercadopago] Falta MERCADOPAGO_WEBHOOK_SECRET en las variables de entorno')
     return res.sendStatus(500)
@@ -27,6 +35,7 @@ export function verificarFirmaMercadoPago(req: Request, res: Response, next: Nex
   const dataId            = req.query['data.id'] as string | undefined
 
   if (!signatureHeader || !requestId || !dataId) {
+    console.warn('[mercadopago] webhook sin x-signature / x-request-id / data.id — se rechaza (401)')
     return res.sendStatus(401)
   }
 

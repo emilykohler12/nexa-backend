@@ -741,6 +741,26 @@ export const appointmentService = {
     return { checkoutUrl }
   },
 
+  // Verificación "a demanda" de la seña — no depende del webhook. Le pregunta a
+  // Mercado Pago si hay un pago contra "appointment:<id>" y, si lo hay, aplica
+  // el resultado igual que el webhook. La usa el polling del front y el botón
+  // "ya pagué, verificar".
+  verifyPayment: async (clientId: string, id: string): Promise<{ paymentStatus: string }> => {
+    const appointment = await prisma.appointment.findUnique({ where: { id } })
+    if (!appointment || appointment.clientId !== clientId) {
+      throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
+    }
+    if (appointment.paymentStatus === 'partial') return { paymentStatus: 'partial' }
+
+    const found = await paymentService.findPaymentByReference(`appointment:${id}`)
+    if (found) {
+      await appointmentService.applyPaymentResult(id, found.id, found.status)
+    }
+
+    const fresh = await prisma.appointment.findUnique({ where: { id }, select: { paymentStatus: true } })
+    return { paymentStatus: fresh?.paymentStatus ?? appointment.paymentStatus }
+  },
+
   // Llamado desde el webhook de Mercado Pago (nunca desde el cliente) — el
   // estado 'status' ya viene verificado contra la API de Mercado Pago, no
   // confiado del webhook en crudo.

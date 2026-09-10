@@ -84,4 +84,26 @@ export const paymentService = {
     const payment = new Payment(requireClient())
     return payment.get({ id: paymentId })
   },
+
+  /**
+   * Busca en Mercado Pago los pagos hechos contra un `external_reference`
+   * ("order:<id>" / "appointment:<id>") y devuelve el más relevante: si hay uno
+   * aprobado, ese; si no, el más reciente; si no hay ninguno, null.
+   *
+   * Se usa para verificar el pago "a demanda" (cuando el cliente vuelve del
+   * checkout o toca "ya pagué"), sin depender de que el webhook haya llegado.
+   */
+  findPaymentByReference: async (externalReference: string): Promise<{ id: string; status: string } | null> => {
+    const payment = new Payment(requireClient())
+    const search = await payment.search({
+      options: { external_reference: externalReference, sort: 'date_created', criteria: 'desc' },
+    })
+    const results = search.results ?? []
+    if (results.length === 0) return null
+
+    const approved = results.find(p => p.status === 'approved')
+    const chosen = approved ?? results[0]
+    if (!chosen.id || !chosen.status) return null
+    return { id: String(chosen.id), status: chosen.status }
+  },
 }
