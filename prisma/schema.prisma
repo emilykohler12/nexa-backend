@@ -326,6 +326,51 @@ model ProductOrder {
   @@map("product_orders")
 }
 
+// Campaña automática (cumpleaños, turno N, etc.) — a diferencia de Promotion,
+// NUNCA se muestra en el home: es una regla que el admin prende/apaga y que un
+// job diario evalúa por cliente, mandando un mail con el descuento si aplica.
+model AutoPromotion {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String   @db.VarChar(150)
+  // 'birthday' | 'appointment_milestone' — más triggers se agregan acá.
+  trigger       String   @db.VarChar(30)
+  // birthday: {"daysBefore": 3} — cuántos días antes del cumpleaños se manda.
+  // appointment_milestone: {"count": 100} — a qué turno número (del cliente) dispara.
+  triggerConfig Json     @default("{}") @map("trigger_config")
+  discountType  String   @db.VarChar(10) @map("discount_type") // 'percent' | 'fixed'
+  discountValue Decimal  @db.Decimal(10, 2) @map("discount_value")
+  // Texto libre opcional que se suma al mail (además del descuento).
+  message       String   @default("") @db.Text
+  // A quién aplica: 'all' (todos los clientes activos), 'manual' (los elegidos
+  // a mano en audienceClientIds) o 'category' (clientes con algún turno alguna
+  // vez en audienceCategoryId).
+  audienceType       String   @default("all") @db.VarChar(20) @map("audience_type")
+  audienceClientIds  String[] @default([]) @map("audience_client_ids") @db.Uuid
+  audienceCategoryId String?  @db.VarChar(50) @map("audience_category_id")
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  sends AutoPromotionSend[]
+
+  @@map("auto_promotions")
+}
+
+// Registro de a quién ya se le mandó cada campaña, para no repetir el mismo
+// envío (el cumpleaños vuelve cada año, el turno-N es una sola vez).
+model AutoPromotionSend {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  autoPromotionId String        @map("auto_promotion_id") @db.Uuid
+  autoPromotion   AutoPromotion @relation(fields: [autoPromotionId], references: [id], onDelete: Cascade)
+  clientId        String        @map("client_id") @db.Uuid
+  // 'birthday' -> año ("2026"); 'appointment_milestone' -> "once".
+  periodKey       String        @db.VarChar(20) @map("period_key")
+  sentAt          DateTime      @default(now()) @map("sent_at") @db.Timestamptz
+
+  @@unique([autoPromotionId, clientId, periodKey])
+  @@map("auto_promotion_sends")
+}
+
 model Promotion {
   id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   type          String   @db.VarChar(20)

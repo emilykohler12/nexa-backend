@@ -132,7 +132,7 @@ function toProfessionalView(a: AppointmentRow, peers: ComboPeer[] | null = null)
     isSimultaneous: !!peers,
     // Las OTRAS profesionales del combo simultáneo (sin contar esta pata).
     simultaneousWith: peers
-      ? peers.filter(p => p.professionalName !== a.professional.name || p.serviceName !== a.service.name)
+      ? peers.filter(p => p.appointmentId !== a.id)
       : [],
   }
 }
@@ -163,7 +163,7 @@ function toAdminView(a: AppointmentRow, peers: ComboPeer[] | null = null) {
     details:           detailsOf(a),
     isSimultaneous:    !!peers,
     simultaneousWith:  peers
-      ? peers.filter(p => p.professionalName !== a.professional.name || p.serviceName !== a.service.name)
+      ? peers.filter(p => p.appointmentId !== a.id)
       : [],
   }
 }
@@ -304,7 +304,15 @@ async function cancelWithGroup(appointment: AppointmentRow, emailClient: boolean
   return updatedList
 }
 
-type ComboPeer = { serviceName: string; professionalName: string; status: string }
+type ComboPeer = {
+  appointmentId:    string
+  serviceName:      string
+  professionalId:   string
+  professionalName: string
+  status:           string
+  duration:         number
+  price:            number
+}
 
 // Un combo es "simultáneo" cuando todas sus patas activas comparten fecha y
 // hora. Para cada grupo simultáneo devuelve la lista de patas (servicio +
@@ -329,9 +337,13 @@ async function comboGroupPeers(comboGroupIds: (string | null)[]): Promise<Map<st
     const active = entries.filter(e => e.status !== 'cancelled')
     if (active.length > 1 && active.every(e => e.date === active[0].date && e.time === active[0].time)) {
       result.set(groupId, entries.map(e => ({
+        appointmentId:    e.id,
         serviceName:      e.service.name,
+        professionalId:   e.professionalId,
         professionalName: e.professional.name,
         status:           e.status,
+        duration:         e.duration,
+        price:            Number(e.servicePrice),
       })))
     }
   }

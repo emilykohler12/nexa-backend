@@ -3,6 +3,7 @@ import { Router } from 'express'
 import { adminController } from './admin.controller'
 import { appointmentController } from '../appointments/appointment.controller'
 import { promotionController }   from '../promotions/promotion.controller'
+import { autoPromotionController } from '../promotions/autoPromotion.controller'
 import { reviewController }      from '../reviews/review.controller'
 import { authMiddleware } from '../auth/middleware/auth.middleware'
 import { requireRole }    from '../auth/middleware/guest.middleware'
@@ -36,6 +37,13 @@ router.get   ('/promotions',     promotionController.getAll)
 router.post  ('/promotions',     promotionController.create)
 router.put   ('/promotions/:id', promotionController.update)
 router.delete('/promotions/:id', promotionController.delete)
+
+// Campañas automáticas (cumpleaños, turno N, etc.) — nunca se muestran en el
+// home, son reglas que evalúa un job diario (ver src/jobs/autoPromotions.job.ts).
+router.get   ('/auto-promotions',     autoPromotionController.getAll)
+router.post  ('/auto-promotions',     autoPromotionController.create)
+router.put   ('/auto-promotions/:id', autoPromotionController.update)
+router.delete('/auto-promotions/:id', autoPromotionController.delete)
 
 router.patch('/reviews/:id/approve', reviewController.approve)
 router.patch('/reviews/:id/reject',  reviewController.reject)

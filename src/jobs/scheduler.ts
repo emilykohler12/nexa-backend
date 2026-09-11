@@ -2,6 +2,7 @@
 import cron from 'node-cron'
 import { runInactivityReminderJob } from './inactivityReminder.job'
 import { runReleaseUnpaidAppointmentsJob } from './releaseUnpaidAppointments.job'
+import { runAutoPromotionsJob } from './autoPromotions.job'
 
 export function startScheduledJobs(): void {
   // Todos los días a las 9:00 (hora del servidor) — horario razonable para un
@@ -13,6 +14,17 @@ export function startScheduledJobs(): void {
       console.log(`[jobs] inactivity-reminder: ${result.sent} enviados, ${result.failed} con error, ${result.eligible} elegibles`)
     } catch (err) {
       console.error('[jobs] error corriendo inactivity-reminder:', err)
+    }
+  })
+
+  // Todos los días a las 9:15 — campañas automáticas (cumpleaños, turno N, etc.).
+  cron.schedule('15 9 * * *', async () => {
+    console.log('[jobs] corriendo auto-promotions...')
+    try {
+      const result = await runAutoPromotionsJob()
+      console.log(`[jobs] auto-promotions: ${result.sent} enviados, ${result.failed} con error, ${result.rules} campaña(s) activa(s)`)
+    } catch (err) {
+      console.error('[jobs] error corriendo auto-promotions:', err)
     }
   })
 
@@ -29,5 +41,5 @@ export function startScheduledJobs(): void {
     }
   })
 
-  console.log('[jobs] scheduler iniciado — inactivity-reminder (diario 9:00) + release-unpaid (cada 5 min)')
+  console.log('[jobs] scheduler iniciado — inactivity-reminder (diario 9:00) + auto-promotions (diario 9:15) + release-unpaid (cada 5 min)')
 }
