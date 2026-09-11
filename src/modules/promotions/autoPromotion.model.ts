@@ -41,4 +41,28 @@ export const autoPromotionModel = {
 
   delete: (id: string) =>
     prisma.autoPromotion.delete({ where: { id } }),
+
+  // Campañas activas que hoy le aplicarían a este cliente en particular
+  // (según audienceType) — para mostrárselo en su ficha, no depende de que
+  // ya se le haya mandado el mail.
+  findApplicableForClient: async (clientId: string) => {
+    const rules = await prisma.autoPromotion.findMany({ where: { active: true } })
+    const categoryRules = rules.filter(r => r.audienceType === 'category')
+
+    let clientCategoryIds = new Set<string>()
+    if (categoryRules.length > 0) {
+      const appts = await prisma.appointment.findMany({
+        where:  { clientId },
+        select: { service: { select: { categoryId: true } } },
+      })
+      clientCategoryIds = new Set(appts.map(a => a.service.categoryId))
+    }
+
+    return rules.filter(r => {
+      if (r.audienceType === 'all') return true
+      if (r.audienceType === 'manual') return r.audienceClientIds.includes(clientId)
+      if (r.audienceType === 'category') return !!r.audienceCategoryId && clientCategoryIds.has(r.audienceCategoryId)
+      return false
+    })
+  },
 }

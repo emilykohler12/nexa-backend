@@ -25,6 +25,7 @@ router.patch('/clients/:id/block',  adminController.setClientBlocked)
 // fila (mantiene turnos e historial contable), solo anonimiza nombre/email/teléfono.
 router.post('/clients/:id/anonymize', adminController.anonymizeClient)
 router.get ('/clients/:id/reviews', reviewController.getForClient)
+router.get ('/clients/:id/auto-promotions', autoPromotionController.getForClient)
 
 router.get('/appointments',      appointmentController.listForAdmin)
 router.post('/appointments',      appointmentController.createForAdmin)

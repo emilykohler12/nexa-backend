@@ -8,6 +8,7 @@ import { serviceRoutes }      from '../modules/services/service.routes'
 import { settingsRoutes }     from '../modules/settings/settings.routes'
 import { businessRoutes }     from '../modules/settings/business.routes'
 import { productRoutes }      from '../modules/products/product.routes'
+import { movementRoutes }     from '../modules/products/movement.routes'
 import { adminRoutes }        from '../modules/admin/admin.routes'
 import { galleryRoutes }      from '../modules/gallery/gallery.routes'
 import { scheduleRoutes }     from '../modules/settings/schedule.routes'
@@ -28,6 +29,7 @@ router.use('/services',     serviceRoutes)
 router.use('/settings',     settingsRoutes)
 router.use('/business',     businessRoutes)
 router.use('/store/products', productRoutes)
+router.use('/store/movements', movementRoutes)
 router.use('/admin',        adminRoutes)
 router.use('/gallery',      galleryRoutes)
 router.use('/schedule',     scheduleRoutes)

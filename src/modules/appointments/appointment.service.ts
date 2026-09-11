@@ -1253,6 +1253,7 @@ export const appointmentService = {
         photo:         null as string | null,
         allergies:     first.client.client?.allergies ?? '',
         preferences:   first.client.client?.preferences ?? '',
+        observations:  first.client.client?.observations ?? '',
         visits: list.map(a => ({
           id:            a.id,
           date:          a.date,

@@ -280,8 +280,27 @@ model Product {
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   orders    ProductOrder[]
+  movements InventoryMovement[]
 
   @@map("products")
+}
+
+// Ledger de entradas/salidas de stock — cada movimiento ajusta Product.stock
+// al crearse/editarse/borrarse (ver inventoryMovement.model.ts).
+model InventoryMovement {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId   String   @map("product_id") @db.Uuid
+  product     Product  @relation(fields: [productId], references: [id])
+  // Snapshot del nombre al momento del movimiento — si el producto se
+  // renombra después, el historial no cambia retroactivamente.
+  productName String   @map("product_name") @db.VarChar(150)
+  type        String   @db.VarChar(10) // 'entry' | 'exit'
+  quantity    Int
+  note        String   @default("") @db.Text
+  date        String   @db.VarChar(10) // YYYY-MM-DD
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("inventory_movements")
 }
 
 // Un pedido de tienda — puede tener varios productos (items) y datos de entrega.

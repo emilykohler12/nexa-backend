@@ -131,4 +131,13 @@ export const autoPromotionController = {
       res.json({ success: true })
     } catch (err) { next(err) }
   },
+
+  // Campañas activas que le aplican a un cliente puntual — para mostrar en su ficha.
+  getForClient: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const clientId = getId(req)
+      const items = await autoPromotionModel.findApplicableForClient(clientId)
+      res.json({ autoPromotions: items.map(toResponse) })
+    } catch (err) { next(err) }
+  },
 }
