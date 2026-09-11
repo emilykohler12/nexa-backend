@@ -76,7 +76,34 @@ function scheduleFromAvailability(availability: { dayOfWeek: number; startTime: 
   return schedule
 }
 
-type AdminProfessionalMetrics = { totalAppointments: number; totalClients: number; totalRevenue: number }
+type AdminProfessionalMetrics = { totalAppointments: number; totalClients: number; totalRevenue: number; rating: number; reviewCount: number }
+
+// Promedio de reseñas por profesional — se suma vía Appointment.professionalId
+// (Review no tiene una FK directa al profesional). Cuentan TODAS las reseñas
+// sin importar el estado del mensaje, igual que el promedio público global
+// (reviewService.getPublicSummary): el puntaje nunca necesitó aprobación.
+async function computeRatings(professionalIds: string[]): Promise<Map<string, { rating: number; reviewCount: number }>> {
+  const map = new Map<string, { rating: number; reviewCount: number }>()
+  if (professionalIds.length === 0) return map
+
+  const reviews = await prisma.review.findMany({
+    where:  { appointment: { professionalId: { in: professionalIds } } },
+    select: { rating: true, appointment: { select: { professionalId: true } } },
+  })
+
+  const sums = new Map<string, { sum: number; count: number }>()
+  for (const r of reviews) {
+    const proId  = r.appointment.professionalId
+    const bucket = sums.get(proId) ?? { sum: 0, count: 0 }
+    bucket.sum += r.rating
+    bucket.count += 1
+    sums.set(proId, bucket)
+  }
+  for (const [proId, { sum, count }] of sums) {
+    map.set(proId, { rating: count > 0 ? Math.round((sum / count) * 10) / 10 : 0, reviewCount: count })
+  }
+  return map
+}
 
 async function computeMetrics(professionalIds: string[]): Promise<Map<string, AdminProfessionalMetrics>> {
   const map = new Map<string, AdminProfessionalMetrics>()
@@ -89,7 +116,7 @@ async function computeMetrics(professionalIds: string[]): Promise<Map<string, Ad
 
   const clientsByProf = new Map<string, Set<string>>()
   for (const r of rows) {
-    const bucket = map.get(r.professionalId) ?? { totalAppointments: 0, totalClients: 0, totalRevenue: 0 }
+    const bucket = map.get(r.professionalId) ?? { totalAppointments: 0, totalClients: 0, totalRevenue: 0, rating: 0, reviewCount: 0 }
     bucket.totalAppointments += 1
     bucket.totalRevenue += Number(r.servicePrice)
     map.set(r.professionalId, bucket)
@@ -100,6 +127,18 @@ async function computeMetrics(professionalIds: string[]): Promise<Map<string, Ad
   }
   for (const [professionalId, clients] of clientsByProf) {
     map.get(professionalId)!.totalClients = clients.size
+  }
+
+  // El promedio de reseñas se calcula sobre TODOS los profesionales pedidos,
+  // no solo los que tienen turnos finalizados (puede tener reseñas de antes).
+  const ratings = await computeRatings(professionalIds)
+  for (const proId of professionalIds) {
+    const rating = ratings.get(proId)
+    if (!rating) continue
+    const bucket = map.get(proId) ?? { totalAppointments: 0, totalClients: 0, totalRevenue: 0, rating: 0, reviewCount: 0 }
+    bucket.rating = rating.rating
+    bucket.reviewCount = rating.reviewCount
+    map.set(proId, bucket)
   }
 
   return map
@@ -145,8 +184,8 @@ function toAdminProfessional(user: {
       totalAppointments: metrics?.totalAppointments ?? 0,
       totalClients:      metrics?.totalClients      ?? 0,
       totalRevenue:      metrics?.totalRevenue       ?? 0,
-      // No hay sistema de reseñas todavía — sin dato real para promediar.
-      rating: 0,
+      rating:            metrics?.rating             ?? 0,
+      reviewCount:       metrics?.reviewCount        ?? 0,
     },
   }
 }
@@ -188,11 +227,22 @@ export const professionalService = {
             twitter:   true,
             priorRecommendations: true,
             afterCare:            true,
+            // El frontend arma la pantalla final de confirmación con esto
+            // (políticas del profesional, junto con las recomendaciones de arriba).
+            toleranceMinutes:   true,
+            latePenalty:        true,
+            cancellationPolicy: true,
+            reschedulePolicy:   true,
+            depositPolicy:      true,
             services:  { where: { active: true }, select: { serviceId: true } },
           },
         },
       },
     })
+
+    // Promedio de reseñas — el mismo que ve el admin en Rendimiento, acá
+    // público para mostrarlo en la ficha del profesional (home / reserva).
+    const ratings = await computeRatings(users.map(u => u.id))
 
     return users.map(u => ({
       id:        u.id,
@@ -208,6 +258,13 @@ export const professionalService = {
       // El frontend arma el mensaje de confirmación post-reserva con esto.
       priorRecommendations: u.professional?.priorRecommendations ?? null,
       afterCare:            u.professional?.afterCare            ?? null,
+      toleranceMinutes:     u.professional?.toleranceMinutes     ?? null,
+      latePenalty:          u.professional?.latePenalty          ?? null,
+      cancellationPolicy:   u.professional?.cancellationPolicy   ?? null,
+      reschedulePolicy:     u.professional?.reschedulePolicy     ?? null,
+      depositPolicy:        u.professional?.depositPolicy        ?? null,
+      rating:      ratings.get(u.id)?.rating      ?? 0,
+      reviewCount: ratings.get(u.id)?.reviewCount ?? 0,
       services:  (u.professional?.services ?? []).map(s => s.serviceId),
     }))
   },

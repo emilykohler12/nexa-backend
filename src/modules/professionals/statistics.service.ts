@@ -56,8 +56,17 @@ export const statisticsService = {
     const hoursWorked    = inPeriod.reduce((s, a) => s + a.duration, 0) / 60
     const totalClients   = new Set(inPeriod.map(a => a.clientId)).size
 
-    // No hay sistema de reseñas todavía — sin dato real para promediar.
-    const avgRating = 0
+    // Promedio de TODAS las reseñas de este profesional (Review no tiene FK
+    // directa al profesional, se llega vía Appointment.professionalId) — no
+    // se filtra por período, es la calificación general como en el resto del
+    // sistema (Rendimiento del admin, ficha pública).
+    const reviews = await prisma.review.findMany({
+      where:  { appointment: { professionalId } },
+      select: { rating: true },
+    })
+    const avgRating = reviews.length > 0
+      ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10
+      : 0
 
     const professional = await prisma.professional.findUnique({
       where:   { userId: professionalId },
