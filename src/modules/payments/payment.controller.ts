@@ -36,6 +36,8 @@ export async function recibirWebhookMercadoPago(req: Request, res: Response): Pr
     const [kind, id] = externalReference.split(':')
     if (kind === 'appointment' && id) {
       await appointmentService.applyPaymentResult(id, dataId, status)
+    } else if (kind === 'group' && id) {
+      await appointmentService.applyGroupPaymentResult(id, dataId, status)
     } else if (kind === 'order' && id) {
       await orderService.applyPaymentResult(id, dataId, status)
     } else {

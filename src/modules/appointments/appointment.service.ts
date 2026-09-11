@@ -105,7 +105,7 @@ function toClientView(a: AppointmentRow) {
   }
 }
 
-function toProfessionalView(a: AppointmentRow, isSimultaneous = false) {
+function toProfessionalView(a: AppointmentRow, peers: ComboPeer[] | null = null) {
   return {
     id:            a.id,
     comboGroupId:  a.comboGroupId,
@@ -129,11 +129,15 @@ function toProfessionalView(a: AppointmentRow, isSimultaneous = false) {
     selectedZones:     (a.selectedZones ?? []) as unknown as { name: string; price: number; duration: number }[],
     selectedPackages:  (a.selectedPackages ?? []) as unknown as { name: string; price: number; duration: number }[],
     details:        detailsOf(a),
-    isSimultaneous,
+    isSimultaneous: !!peers,
+    // Las OTRAS profesionales del combo simultáneo (sin contar esta pata).
+    simultaneousWith: peers
+      ? peers.filter(p => p.professionalName !== a.professional.name || p.serviceName !== a.service.name)
+      : [],
   }
 }
 
-function toAdminView(a: AppointmentRow) {
+function toAdminView(a: AppointmentRow, peers: ComboPeer[] | null = null) {
   const start = `${a.date}T${a.time}:00`
   const end   = new Date(new Date(start).getTime() + a.duration * 60000).toISOString()
   return {
@@ -157,6 +161,10 @@ function toAdminView(a: AppointmentRow) {
     selectedZones:     (a.selectedZones ?? []) as unknown as { name: string; price: number; duration: number }[],
     selectedPackages:  (a.selectedPackages ?? []) as unknown as { name: string; price: number; duration: number }[],
     details:           detailsOf(a),
+    isSimultaneous:    !!peers,
+    simultaneousWith:  peers
+      ? peers.filter(p => p.professionalName !== a.professional.name || p.serviceName !== a.service.name)
+      : [],
   }
 }
 
@@ -296,27 +304,35 @@ async function cancelWithGroup(appointment: AppointmentRow, emailClient: boolean
   return updatedList
 }
 
-// Un combo es "simultáneo" cuando todas sus patas comparten fecha y hora — se recalcula
-// a partir de los datos reales en vez de guardar un flag aparte, así nunca queda
-// desincronizado si alguna pata cambia. Devuelve el subconjunto de ids que sí lo son.
-async function simultaneousComboGroups(comboGroupIds: (string | null)[]): Promise<Set<string>> {
+type ComboPeer = { serviceName: string; professionalName: string; status: string }
+
+// Un combo es "simultáneo" cuando todas sus patas activas comparten fecha y
+// hora. Para cada grupo simultáneo devuelve la lista de patas (servicio +
+// profesional), para poder mostrarle al profesional/admin con quién comparte
+// el horario. Los grupos que NO son simultáneos no aparecen en el Map.
+async function comboGroupPeers(comboGroupIds: (string | null)[]): Promise<Map<string, ComboPeer[]>> {
   const ids = [...new Set(comboGroupIds.filter((id): id is string => id !== null))]
-  const result = new Set<string>()
+  const result = new Map<string, ComboPeer[]>()
   if (ids.length === 0) return result
 
   const rows = await prisma.appointment.findMany({
-    where:  { comboGroupId: { in: ids } },
-    select: { comboGroupId: true, date: true, time: true },
+    where:   { comboGroupId: { in: ids } },
+    include: { service: true, professional: true },
   })
-  const byGroup = new Map<string, { date: string; time: string }[]>()
+  const byGroup = new Map<string, typeof rows>()
   for (const r of rows) {
     const list = byGroup.get(r.comboGroupId!) ?? []
-    list.push({ date: r.date, time: r.time })
+    list.push(r)
     byGroup.set(r.comboGroupId!, list)
   }
   for (const [groupId, entries] of byGroup) {
-    if (entries.length > 1 && entries.every(e => e.date === entries[0].date && e.time === entries[0].time)) {
-      result.add(groupId)
+    const active = entries.filter(e => e.status !== 'cancelled')
+    if (active.length > 1 && active.every(e => e.date === active[0].date && e.time === active[0].time)) {
+      result.set(groupId, entries.map(e => ({
+        serviceName:      e.service.name,
+        professionalName: e.professional.name,
+        status:           e.status,
+      })))
     }
   }
   return result
@@ -510,10 +526,17 @@ export const appointmentService = {
     return toClientView(appointment)
   },
 
-  // Reserva un combo: crea un turno por cada servicio componente, todos con el mismo
-  // comboGroupId. La seña se calcula individualmente por turno (igual que una reserva
-  // suelta, sobre el precio de su propio servicio) — no hay una seña combinada a nivel
-  // de grupo, así el reembolso al cancelar sigue funcionando igual que siempre por turno.
+  // Reserva un combo (siempre en simultáneo): crea un turno por cada servicio
+  // componente, todos con el mismo comboGroupId, misma fecha y hora.
+  //
+  // Precio: el del servicio combo que cargó el admin (no la suma de los
+  // componentes) — se reparte proporcionalmente entre las patas para que el
+  // total cobrado coincida con el precio anunciado.
+  //
+  // Seña: UNA sola para todo el combo (se paga por el día/hora, no por
+  // servicio). Se guarda entera en la primera pata y 0 en las demás; el pago
+  // real entra por una única preferencia de Mercado Pago con external_reference
+  // "group:<comboGroupId>".
   createComboForClient: async (
     clientId: string,
     input: {
@@ -574,13 +597,28 @@ export const appointmentService = {
 
     const paymentSettings = await settingsService.getPaymentSettings()
     const comboGroupId    = randomUUID()
+    const comboPrice      = Number(comboService.price)
+    const comboDeposit    = computeDeposit(comboPrice, paymentSettings)
+    // Sin seña que cobrar (combo sin precio o política de seña en 0): las patas
+    // se confirman al toque, sin pasar por Mercado Pago.
+    const noDeposit       = comboDeposit <= 0
+
+    // Precio de catálogo de cada componente — para repartir el precio del combo
+    // en proporción a lo que "vale" cada servicio.
+    const componentServices = await prisma.service.findMany({
+      where:  { id: { in: resolvedComponents.map(c => c.serviceId) } },
+    })
+    const svcById   = new Map(componentServices.map(s => [s.id, s]))
+    const rawTotal  = resolvedComponents.reduce((s, c) => s + Number(svcById.get(c.serviceId)?.price ?? 0), 0) || 1
 
     let created: AppointmentRow[]
     try {
       created = await prisma.$transaction(async (tx) => {
         const rows: AppointmentRow[] = []
-        for (const component of resolvedComponents) {
-          const service = await tx.service.findUnique({ where: { id: component.serviceId } })
+        let assignedSoFar = 0
+        for (let i = 0; i < resolvedComponents.length; i++) {
+          const component = resolvedComponents[i]
+          const service = svcById.get(component.serviceId)
           if (!service || service.status !== 'active') {
             throw new AppError(HTTP.BAD_REQUEST, 'Servicio no disponible', 'SERVICE_NOT_FOUND')
           }
@@ -589,8 +627,12 @@ export const appointmentService = {
             throw new AppError(HTTP.BAD_REQUEST, 'Profesional no disponible', 'PROFESSIONAL_NOT_FOUND')
           }
 
-          const price   = Number(service.price)
-          const deposit = computeDeposit(price, paymentSettings)
+          // La última pata se lleva el resto, así la suma da exacto el precio del combo.
+          const isLast   = i === resolvedComponents.length - 1
+          const legPrice = isLast
+            ? comboPrice - assignedSoFar
+            : Math.round(comboPrice * (Number(service.price) / rawTotal))
+          assignedSoFar += legPrice
 
           const appointment = await tx.appointment.create({
             data: {
@@ -600,10 +642,14 @@ export const appointmentService = {
               date:           component.date,
               time:           component.time,
               duration:       service.duration,
-              servicePrice:   price,
-              depositAmount:  deposit,
+              servicePrice:   legPrice,
+              // La seña entera va en la primera pata; el resto en 0.
+              depositAmount:  i === 0 ? comboDeposit : 0,
               status:         'confirmed',
-              paymentStatus:  'partial',
+              // Arranca 'pending' — pasa a 'partial' cuando Mercado Pago
+              // confirma la única seña del grupo (applyGroupPaymentResult).
+              // Sin seña, se confirma directamente.
+              paymentStatus:  noDeposit ? 'partial' : 'pending',
               comboGroupId,
             },
             include: APPOINTMENT_INCLUDE,
@@ -620,11 +666,97 @@ export const appointmentService = {
       throw err
     }
 
-    for (const appointment of created) {
-      await afterCreate(appointment)
+    // Con seña: a los profesionales se les avisa recién cuando se paga
+    // (applyGroupPaymentResult). Sin seña: se avisa acá, ya está confirmado.
+    if (noDeposit) {
+      for (const leg of created) await afterCreate(leg)
     }
 
-    return created.map(toClientView)
+    return {
+      comboGroupId,
+      comboName:    comboService.name,
+      totalPrice:   comboPrice,
+      depositAmount: comboDeposit,
+      appointments: created.map(toClientView),
+    }
+  },
+
+  // Genera el checkout de Mercado Pago para la ÚNICA seña de un combo ya creado.
+  createComboPaymentPreference: async (clientId: string, comboGroupId: string) => {
+    const legs = await prisma.appointment.findMany({
+      where:   { comboGroupId, status: { not: 'cancelled' } },
+      include: APPOINTMENT_INCLUDE,
+      orderBy: { createdAt: 'asc' },
+    })
+    if (legs.length === 0 || legs.some(l => l.clientId !== clientId)) {
+      throw new AppError(HTTP.NOT_FOUND, 'Combo no encontrado', 'NOT_FOUND')
+    }
+    if (legs.every(l => l.paymentStatus === 'partial')) {
+      throw new AppError(HTTP.BAD_REQUEST, 'La seña de este combo ya está paga', 'ALREADY_PAID')
+    }
+
+    const deposit    = legs.reduce((s, l) => s + Number(l.depositAmount), 0)
+    const serviceNames = legs.map(l => l.service.name).join(' + ')
+
+    const { checkoutUrl } = await paymentService.createPreference({
+      title:             `Seña combo — ${serviceNames}`,
+      amount:            deposit,
+      externalReference: `group:${comboGroupId}`,
+      payerEmail:        legs[0].client.email,
+    })
+    return { checkoutUrl }
+  },
+
+  // Verificación "a demanda" de la seña del combo — no depende del webhook.
+  verifyComboPayment: async (clientId: string, comboGroupId: string): Promise<{ paymentStatus: string }> => {
+    const legs = await prisma.appointment.findMany({
+      where:  { comboGroupId, status: { not: 'cancelled' } },
+      select: { clientId: true, paymentStatus: true },
+    })
+    if (legs.length === 0 || legs.some(l => l.clientId !== clientId)) {
+      throw new AppError(HTTP.NOT_FOUND, 'Combo no encontrado', 'NOT_FOUND')
+    }
+    if (legs.every(l => l.paymentStatus === 'partial')) return { paymentStatus: 'partial' }
+
+    const found = await paymentService.findPaymentByReference(`group:${comboGroupId}`)
+    if (found) await appointmentService.applyGroupPaymentResult(comboGroupId, found.id, found.status)
+
+    const fresh = await prisma.appointment.findFirst({
+      where:  { comboGroupId, status: { not: 'cancelled' } },
+      select: { paymentStatus: true },
+    })
+    return { paymentStatus: fresh?.paymentStatus ?? 'pending' }
+  },
+
+  // Aplica el resultado del pago de la seña de un combo a TODAS sus patas.
+  // Idempotente (webhook + polling). Al aprobarse, se le avisa a cada profesional.
+  applyGroupPaymentResult: async (comboGroupId: string, mpPaymentId: string, status: string) => {
+    const legs = await prisma.appointment.findMany({
+      where:   { comboGroupId, status: { not: 'cancelled' } },
+      include: APPOINTMENT_INCLUDE,
+    })
+    if (legs.length === 0) {
+      console.warn(`[mercadopago] Webhook para combo inexistente: ${comboGroupId}`)
+      return
+    }
+    if (legs.every(l => l.paymentStatus === 'partial')) return // ya aplicado
+
+    const paymentStatus = status === 'approved' ? 'partial' : status
+    await prisma.appointment.updateMany({
+      where: { comboGroupId, status: { not: 'cancelled' } },
+      data:  { paymentStatus, mpPaymentId },
+    })
+
+    await activityService.log({
+      action: 'Pago de seña recibido', module: 'payments',
+      detail: `Combo ${comboGroupId} — Mercado Pago informó estado "${status}"`,
+    })
+
+    if (status === 'approved') {
+      for (const leg of legs) {
+        await afterCreate({ ...leg, paymentStatus })
+      }
+    }
   },
 
   // Reserva de un "servicio especial": el cliente elige zonas/paquetes (arman el
@@ -825,17 +957,52 @@ export const appointmentService = {
       throw new AppError(HTTP.BAD_REQUEST, 'El turno ya está cancelado', 'ALREADY_CANCELLED')
     }
 
-    // El cliente ya sabe que canceló — no se le manda mail a sí mismo.
-    // Si el turno es parte de un combo, esto cancela todo el grupo (ver cancelWithGroup).
+    // Combo simultáneo: se cancela SOLO esta pata; las demás quedan igual (mismo
+    // día, hora y profesional). NO se reembolsa nada, salvo que esta sea la
+    // última pata activa — ahí se canceló el combo entero y aplica la política
+    // de reembolso normal sobre la seña del grupo.
+    if (appointment.comboGroupId) {
+      const activeSiblings = await prisma.appointment.count({
+        where: { comboGroupId: appointment.comboGroupId, status: { not: 'cancelled' }, id: { not: id } },
+      })
+      const isLastLeg = activeSiblings === 0
+
+      let refunded = false
+      if (isLastLeg) {
+        const settings   = await settingsService.getPaymentSettings()
+        const dt         = new Date(`${appointment.date}T${appointment.time}:00`)
+        const hoursUntil  = (dt.getTime() - Date.now()) / (1000 * 60 * 60)
+        refunded = hoursUntil >= settings.cancellationHours && settings.refundPolicy !== 'none'
+      }
+
+      const updated = await prisma.appointment.update({
+        where: { id },
+        data: {
+          status:        'cancelled',
+          cancelledAt:   new Date(),
+          paymentStatus: refunded ? 'refunded' : appointment.paymentStatus,
+        },
+        include: APPOINTMENT_INCLUDE,
+      })
+      // Si se reembolsa (última pata), marcamos todo el grupo como reembolsado
+      // para que el admin lo vea claro.
+      if (refunded) {
+        await prisma.appointment.updateMany({
+          where: { comboGroupId: appointment.comboGroupId },
+          data:  { paymentStatus: 'refunded' },
+        })
+      }
+      await afterCancel(updated, false)
+
+      return { appointment: toClientView(updated), refunded, partialCombo: !isLastLeg }
+    }
+
+    // Turno suelto — cancelación normal.
     const updatedList = await cancelWithGroup(appointment, false)
     const target       = updatedList.find(a => a.id === id)!
     const refunded      = target.paymentStatus === 'refunded'
 
-    return {
-      appointment: toClientView(target),
-      refunded,
-      ...(appointment.comboGroupId ? { appointments: updatedList.map(toClientView) } : {}),
-    }
+    return { appointment: toClientView(target), refunded }
   },
 
   rescheduleForClient: async (
@@ -986,8 +1153,8 @@ export const appointmentService = {
       include: APPOINTMENT_INCLUDE,
       orderBy: [{ date: 'desc' }, { time: 'desc' }],
     })
-    const simultaneousGroups = await simultaneousComboGroups(rows.map(r => r.comboGroupId))
-    return rows.map(a => toProfessionalView(a, a.comboGroupId ? simultaneousGroups.has(a.comboGroupId) : false))
+    const peersByGroup = await comboGroupPeers(rows.map(r => r.comboGroupId))
+    return rows.map(a => toProfessionalView(a, a.comboGroupId ? peersByGroup.get(a.comboGroupId) ?? null : null))
   },
 
   // Turno manual cargado por el propio profesional (walk-in, teléfono) — mismo
@@ -997,7 +1164,7 @@ export const appointmentService = {
     serviceId: string; date: string; time: string
   }) => {
     const appointment = await createManualAppointment(professionalId, data)
-    return toProfessionalView(appointment, false)
+    return toProfessionalView(appointment, null)
   },
 
   updateForProfessional: async (
@@ -1023,8 +1190,8 @@ export const appointmentService = {
       }
       const updatedList = await cancelWithGroup(appointment, true)
       const target = updatedList.find(a => a.id === id)!
-      const isSimultaneous = target.comboGroupId ? (await simultaneousComboGroups([target.comboGroupId])).has(target.comboGroupId) : false
-      return toProfessionalView(target, isSimultaneous)
+      const peers = target.comboGroupId ? (await comboGroupPeers([target.comboGroupId])).get(target.comboGroupId) ?? null : null
+      return toProfessionalView(target, peers)
     }
 
     const updated = await prisma.appointment.update({
@@ -1043,8 +1210,8 @@ export const appointmentService = {
       include: APPOINTMENT_INCLUDE,
     })
     if (rescheduling) await afterStaffReschedule(updated, appointment.date, appointment.time)
-    const isSimultaneous = updated.comboGroupId ? (await simultaneousComboGroups([updated.comboGroupId])).has(updated.comboGroupId) : false
-    return toProfessionalView(updated, isSimultaneous)
+    const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
+    return toProfessionalView(updated, peers)
   },
 
   listClientsForProfessional: async (professionalId: string) => {
@@ -1113,7 +1280,8 @@ export const appointmentService = {
       include: APPOINTMENT_INCLUDE,
       orderBy: [{ date: 'desc' }, { time: 'desc' }],
     })
-    return rows.map(toAdminView)
+    const peersByGroup = await comboGroupPeers(rows.map(r => r.comboGroupId))
+    return rows.map(a => toAdminView(a, a.comboGroupId ? peersByGroup.get(a.comboGroupId) ?? null : null))
   },
 
   updateForAdmin: async (id: string, data: {
@@ -1177,7 +1345,8 @@ export const appointmentService = {
       }
       const updatedList = await cancelWithGroup(appointment, true)
       const target = updatedList.find(a => a.id === id)!
-      return toAdminView(target)
+      const peers = target.comboGroupId ? (await comboGroupPeers([target.comboGroupId])).get(target.comboGroupId) ?? null : null
+      return toAdminView(target, peers)
     }
 
     const updated = await prisma.appointment.update({
@@ -1189,7 +1358,8 @@ export const appointmentService = {
       include: APPOINTMENT_INCLUDE,
     })
     if (rescheduling) await afterStaffReschedule(updated, appointment.date, appointment.time)
-    return toAdminView(updated)
+    const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
+    return toAdminView(updated, peers)
   },
 
   // Turno manual — el admin lo carga directamente (walk-in, teléfono, etc.), sin pasar

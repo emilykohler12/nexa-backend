@@ -167,8 +167,23 @@ export const appointmentController = {
   createCombo: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const input = parseBody(comboBookingSchema, req.body)
-      const appointments = await appointmentService.createComboForClient(req.user!.id, input)
-      res.status(HTTP.CREATED).json({ appointments })
+      const result = await appointmentService.createComboForClient(req.user!.id, input)
+      // Se devuelve además `appointments` suelto por compatibilidad con el front viejo.
+      res.status(HTTP.CREATED).json({ ...result })
+    } catch (err) { next(err) }
+  },
+
+  createComboPayment: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await appointmentService.createComboPaymentPreference(req.user!.id, getId(req))
+      res.json(result)
+    } catch (err) { next(err) }
+  },
+
+  verifyComboPayment: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await appointmentService.verifyComboPayment(req.user!.id, getId(req))
+      res.json(result)
     } catch (err) { next(err) }
   },
 
