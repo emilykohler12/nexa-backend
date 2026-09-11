@@ -398,14 +398,20 @@ export const ANY_PROFESSIONAL_SENTINEL = 'any'
 
 // "Cualquiera" — resuelve al profesional activo con el servicio asignado que tenga
 // menos turnos activos (no cancelados) en total. Con un solo candidato no hace falta
-// contar nada.
-async function resolveProfessionalId(serviceId: string, requestedProfessionalId: string): Promise<string> {
+// contar nada. `excludeIds` saca profesionales ya asignados a otro servicio del
+// mismo combo simultáneo (no puede hacer dos a la vez).
+async function resolveProfessionalId(
+  serviceId: string,
+  requestedProfessionalId: string,
+  excludeIds: string[] = [],
+): Promise<string> {
   if (requestedProfessionalId !== ANY_PROFESSIONAL_SENTINEL) return requestedProfessionalId
 
   const candidates = await prisma.user.findMany({
     where: {
       role:   { in: ['professional', 'admin'] },
       active: true,
+      id:     excludeIds.length > 0 ? { notIn: excludeIds } : undefined,
       professional: { services: { some: { serviceId, active: true } } },
     },
     select: { id: true },
@@ -538,11 +544,12 @@ export const appointmentService = {
     }
 
     // "Cualquiera" se resuelve antes de entrar a la transacción — cada componente
-    // se resuelve en orden, así que un combo con el mismo servicio repetido igual
-    // obtiene profesionales distintos si hay más de uno disponible.
+    // se resuelve en orden. En simultáneo se van excluyendo los profesionales ya
+    // asignados: nadie puede hacer dos servicios a la vez.
     const resolvedComponents: { serviceId: string; professionalId: string; date: string; time: string }[] = []
     for (const component of input.components) {
-      const professionalId = await resolveProfessionalId(component.serviceId, component.professionalId)
+      const excludeIds = input.simultaneous ? resolvedComponents.map(c => c.professionalId) : []
+      const professionalId = await resolveProfessionalId(component.serviceId, component.professionalId, excludeIds)
       resolvedComponents.push({ ...component, professionalId })
     }
 
@@ -551,6 +558,17 @@ export const appointmentService = {
       const allSame = rest.every(c => c.date === first.date && c.time === first.time)
       if (!allSame) {
         throw new AppError(HTTP.BAD_REQUEST, 'Los turnos simultáneos deben tener la misma fecha y hora', 'COMBO_NOT_SIMULTANEOUS')
+      }
+      // Si el cliente eligió a mano la misma profesional para dos servicios,
+      // en simultáneo es imposible — se lo decimos claro en vez de dejar que
+      // reviente el índice único como "horario ocupado".
+      const proIds = resolvedComponents.map(c => c.professionalId)
+      if (new Set(proIds).size !== proIds.length) {
+        throw new AppError(
+          HTTP.CONFLICT,
+          'No se puede hacer dos servicios en simultáneo con la misma profesional. Elegí una profesional distinta para cada uno.',
+          'SAME_PROFESSIONAL_SIMULTANEOUS',
+        )
       }
     }
 

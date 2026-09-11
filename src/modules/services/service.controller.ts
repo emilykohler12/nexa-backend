@@ -38,7 +38,7 @@ const servicePackageSchema = z.object({
 const serviceSchema = z.object({
   name:        z.string().trim().min(2,  'El nombre debe tener al menos 2 caracteres').max(150),
   categoryId:  z.string().trim().min(1,  'Seleccioná una categoría'),
-  description: z.string().trim().min(5,  'Agregá una descripción breve').max(1000),
+  description: z.string().trim().max(1000).optional().default(''),
   // Para servicios especiales, duration/price de acá no se usan (van 0) —
   // el mínimo real de 5 min se valida aparte, solo cuando no es especial.
   duration:    z.coerce.number().int().min(0).max(480),
