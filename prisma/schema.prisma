@@ -185,6 +185,11 @@ model Service {
   isCombo     Boolean  @default(false) @map("is_combo")
   comboServiceIds String[] @default([]) @map("combo_service_ids")
   simultaneous    Boolean  @default(false)
+  // Para un servicio simultáneo: qué profesionales puede elegir el cliente
+  // para cada componente — { [componentServiceId]: professionalId[] }. Vacío
+  // o sin entrada para un componente = cualquier profesional que haga ese
+  // servicio (comportamiento previo, vía ProfessionalService).
+  comboProfessionals Json @default("{}") @map("combo_professionals")
   // Servicio especial: un solo día fijo (specialDate), con horarios puntuales
   // (specialSlots) cada uno asignado a un profesional. duration/price de arriba
   // no se usan acá — el precio/duración reales salen de las zonas/paquetes que

@@ -42,6 +42,7 @@ export interface ServiceData {
   isCombo:     boolean
   comboServiceIds: string[]
   simultaneous:    boolean
+  comboProfessionals: Record<string, string[]>
   isSpecial:    boolean
   specialDate:  string | null
   specialSlots: SpecialSlot[]
@@ -99,6 +100,7 @@ export const serviceModel = {
         specialSlots: data.specialSlots as unknown as Prisma.InputJsonValue,
         zones:        data.zones        as unknown as Prisma.InputJsonValue,
         packages:     data.packages     as unknown as Prisma.InputJsonValue,
+        comboProfessionals: data.comboProfessionals as unknown as Prisma.InputJsonValue,
       },
     }),
 
@@ -110,6 +112,7 @@ export const serviceModel = {
         specialSlots: data.specialSlots as unknown as Prisma.InputJsonValue | undefined,
         zones:        data.zones        as unknown as Prisma.InputJsonValue | undefined,
         packages:     data.packages     as unknown as Prisma.InputJsonValue | undefined,
+        comboProfessionals: data.comboProfessionals as unknown as Prisma.InputJsonValue | undefined,
       },
     }),
 

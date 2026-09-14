@@ -436,6 +436,7 @@ async function resolveProfessionalId(
   serviceId: string,
   requestedProfessionalId: string,
   excludeIds: string[] = [],
+  allowedIds?: string[],
 ): Promise<string> {
   if (requestedProfessionalId !== ANY_PROFESSIONAL_SENTINEL) return requestedProfessionalId
 
@@ -443,7 +444,7 @@ async function resolveProfessionalId(
     where: {
       role:   { in: ['professional', 'admin'] },
       active: true,
-      id:     excludeIds.length > 0 ? { notIn: excludeIds } : undefined,
+      id:     allowedIds && allowedIds.length > 0 ? { in: allowedIds, notIn: excludeIds } : excludeIds.length > 0 ? { notIn: excludeIds } : undefined,
       professional: { services: { some: { serviceId, active: true } } },
     },
     select: { id: true },
@@ -582,13 +583,25 @@ export const appointmentService = {
       throw new AppError(HTTP.BAD_REQUEST, 'Los servicios del combo no coinciden con su configuración', 'COMBO_MISMATCH')
     }
 
+    // El admin puede haber restringido, para este combo puntual, qué profesionales
+    // pueden hacer cada componente — { [serviceId]: professionalId[] }.
+    const comboProfessionals = (comboService.comboProfessionals ?? {}) as Record<string, string[]>
+
     // "Cualquiera" se resuelve antes de entrar a la transacción — cada componente
     // se resuelve en orden. En simultáneo se van excluyendo los profesionales ya
     // asignados: nadie puede hacer dos servicios a la vez.
     const resolvedComponents: { serviceId: string; professionalId: string; date: string; time: string }[] = []
     for (const component of input.components) {
       const excludeIds = input.simultaneous ? resolvedComponents.map(c => c.professionalId) : []
-      const professionalId = await resolveProfessionalId(component.serviceId, component.professionalId, excludeIds)
+      const allowedIds = comboProfessionals[component.serviceId]
+      if (
+        component.professionalId !== ANY_PROFESSIONAL_SENTINEL &&
+        allowedIds && allowedIds.length > 0 &&
+        !allowedIds.includes(component.professionalId)
+      ) {
+        throw new AppError(HTTP.BAD_REQUEST, 'Esa profesional no está habilitada para ese servicio en este turno simultáneo', 'PROFESSIONAL_NOT_ALLOWED')
+      }
+      const professionalId = await resolveProfessionalId(component.serviceId, component.professionalId, excludeIds, allowedIds)
       resolvedComponents.push({ ...component, professionalId })
     }
 

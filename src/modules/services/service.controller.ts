@@ -48,6 +48,9 @@ const serviceSchema = z.object({
   isCombo:     z.coerce.boolean().default(false),
   comboServiceIds: z.array(z.string().uuid()).default([]),
   simultaneous:    z.coerce.boolean().default(false),
+  // Profesionales habilitadas por componente del servicio simultáneo —
+  // { [serviceId]: professionalId[] }. Vacío = cualquiera (comportamiento previo).
+  comboProfessionals: z.record(z.string(), z.array(z.string().uuid())).default({}),
   isSpecial:    z.coerce.boolean().default(false),
   specialDate:  dateSchema.nullable().optional(),
   specialSlots: z.array(specialSlotSchema).default([]),
