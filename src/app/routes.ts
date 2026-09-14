@@ -14,6 +14,7 @@ import { galleryRoutes }      from '../modules/gallery/gallery.routes'
 import { scheduleRoutes }     from '../modules/settings/schedule.routes'
 import { contactRoutes }      from '../modules/contact/contact.routes'
 import { promotionRoutes }    from '../modules/promotions/promotion.routes'
+import { specialEventRoutes } from '../modules/specialEvents/specialEvent.routes'
 import { reviewRoutes }       from '../modules/reviews/review.routes'
 import { whatsappRoutes }     from '../modules/whatsapp/whatsapp.routes'
 import { paymentRoutes }      from '../modules/payments/payment.routes'
@@ -35,6 +36,7 @@ router.use('/gallery',      galleryRoutes)
 router.use('/schedule',     scheduleRoutes)
 router.use('/contact',      contactRoutes)
 router.use('/promotions',   promotionRoutes)
+router.use('/special-events', specialEventRoutes)
 router.use('/reviews',      reviewRoutes)
 router.use('/webhook',      whatsappRoutes)
 router.use('/webhook',      paymentRoutes)

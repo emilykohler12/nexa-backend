@@ -52,6 +52,7 @@ model User {
   productOrders              ProductOrder[]
   orders                     Order[]
   reviews                    Review[]
+  specialEventsAsProfessional SpecialEvent[] @relation("SpecialEventProfessional")
 
   @@map("users")
 }
@@ -201,6 +202,7 @@ model Service {
 
   professionalServices ProfessionalService[]
   appointments         Appointment[]
+  specialEvents        SpecialEvent[]
 
   @@map("services")
 }
@@ -416,6 +418,26 @@ model Promotion {
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("promotions")
+}
+
+// Evento especial destacado en el home (ej: jornada de Depilación definitiva
+// con una profesional puntual) — el admin lo activa/desactiva, y el cliente
+// que toca "Reservar" entra al wizard con servicio + profesional + fecha ya
+// elegidos, solo falta el horario (ver DateTimeStep con dateLocked).
+model SpecialEvent {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  serviceId      String   @map("service_id") @db.Uuid
+  service        Service  @relation(fields: [serviceId], references: [id])
+  professionalId String   @map("professional_id") @db.Uuid
+  professional   User     @relation("SpecialEventProfessional", fields: [professionalId], references: [id])
+  date           String   @db.VarChar(10)
+  title          String?  @db.VarChar(150)
+  description    String?  @db.Text
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("special_events")
 }
 
 // Fila única — configuración de seña, cancelaciones y reembolsos

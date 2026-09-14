@@ -4,6 +4,7 @@ import { adminController } from './admin.controller'
 import { appointmentController } from '../appointments/appointment.controller'
 import { promotionController }   from '../promotions/promotion.controller'
 import { autoPromotionController } from '../promotions/autoPromotion.controller'
+import { specialEventController } from '../specialEvents/specialEvent.controller'
 import { reviewController }      from '../reviews/review.controller'
 import { authMiddleware } from '../auth/middleware/auth.middleware'
 import { requireRole }    from '../auth/middleware/guest.middleware'
@@ -45,6 +46,13 @@ router.get   ('/auto-promotions',     autoPromotionController.getAll)
 router.post  ('/auto-promotions',     autoPromotionController.create)
 router.put   ('/auto-promotions/:id', autoPromotionController.update)
 router.delete('/auto-promotions/:id', autoPromotionController.delete)
+
+// Eventos especiales destacados en el home (ej: jornada de Depilación
+// definitiva con una profesional puntual) — sí se muestran en el home.
+router.get   ('/special-events',     specialEventController.getAll)
+router.post  ('/special-events',     specialEventController.create)
+router.put   ('/special-events/:id', specialEventController.update)
+router.delete('/special-events/:id', specialEventController.delete)
 
 router.patch('/reviews/:id/approve', reviewController.approve)
 router.patch('/reviews/:id/reject',  reviewController.reject)
