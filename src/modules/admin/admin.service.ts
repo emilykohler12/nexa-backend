@@ -91,6 +91,7 @@ export const adminService = {
       time:         a.time,
       price:        Number(a.servicePrice),
       status:       a.status,
+      cancelReason: a.cancelReason,
     }))
   },
 

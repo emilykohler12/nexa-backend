@@ -44,7 +44,7 @@ export async function runReleaseUnpaidAppointmentsJob(): Promise<{ released: num
   // Turnos sueltos.
   const single = await prisma.appointment.updateMany({
     where: { ...staleFilter, comboGroupId: null },
-    data:  { status: 'cancelled', cancelledAt: new Date() },
+    data:  { status: 'cancelled', cancelledAt: new Date(), cancelReason: 'unpaid_expired' },
   })
 
   // Combos: la pata que lleva la seña (depositAmount > 0) quedó impaga → se
@@ -59,7 +59,7 @@ export async function runReleaseUnpaidAppointmentsJob(): Promise<{ released: num
   if (groupIds.length > 0) {
     const res = await prisma.appointment.updateMany({
       where: { comboGroupId: { in: groupIds }, status: { not: 'cancelled' } },
-      data:  { status: 'cancelled', cancelledAt: new Date() },
+      data:  { status: 'cancelled', cancelledAt: new Date(), cancelReason: 'unpaid_expired' },
     })
     comboLegs = res.count
   }

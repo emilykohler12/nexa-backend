@@ -94,6 +94,7 @@ function toClientView(a: AppointmentRow) {
     price:             Number(a.servicePrice),
     depositAmount:     Number(a.depositAmount),
     status:            a.status,
+    cancelReason:      a.cancelReason,
     paymentStatus:     a.paymentStatus,
     comboGroupId:      a.comboGroupId,
     rescheduleNoticePending: a.rescheduleNoticePending,
@@ -124,6 +125,7 @@ function toProfessionalView(a: AppointmentRow, peers: ComboPeer[] | null = null)
     date:           a.date,
     time:           a.time,
     status:         a.status,
+    cancelReason:   a.cancelReason,
     paymentStatus:  a.paymentStatus,
     internalNotes:  a.internalNotes ?? '',
     selectedZones:     (a.selectedZones ?? []) as unknown as { name: string; price: number; duration: number }[],
@@ -156,6 +158,7 @@ function toAdminView(a: AppointmentRow, peers: ComboPeer[] | null = null) {
     start,
     end,
     status:            a.status,
+    cancelReason:      a.cancelReason,
     clientNotes:       a.clientNotes ?? '',
     professionalNotes: a.internalNotes ?? '',
     selectedZones:     (a.selectedZones ?? []) as unknown as { name: string; price: number; duration: number }[],
@@ -272,7 +275,7 @@ async function afterStaffReschedule(a: AppointmentRow, previousDate: string, pre
 // resto se cancela dejaría al cliente con una experiencia incompleta. Cada pata calcula su
 // propio reembolso de forma independiente (según su propia fecha/hora vs. la política de
 // cancelación), ya que un combo secuencial puede tener patas en fechas distintas.
-async function cancelWithGroup(appointment: AppointmentRow, emailClient: boolean): Promise<AppointmentRow[]> {
+async function cancelWithGroup(appointment: AppointmentRow, emailClient: boolean, reason: string = 'user_cancelled'): Promise<AppointmentRow[]> {
   const paymentSettings = await settingsService.getPaymentSettings()
 
   const group = appointment.comboGroupId
@@ -294,6 +297,7 @@ async function cancelWithGroup(appointment: AppointmentRow, emailClient: boolean
       data: {
         status:        'cancelled',
         cancelledAt:   new Date(),
+        cancelReason:  reason,
         paymentStatus: refunded ? 'refunded' : a.paymentStatus,
       },
       include: APPOINTMENT_INCLUDE,
@@ -992,6 +996,7 @@ export const appointmentService = {
         data: {
           status:        'cancelled',
           cancelledAt:   new Date(),
+          cancelReason:  'user_cancelled',
           paymentStatus: refunded ? 'refunded' : appointment.paymentStatus,
         },
         include: APPOINTMENT_INCLUDE,

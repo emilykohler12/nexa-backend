@@ -17,6 +17,13 @@ export interface MovementInput {
   date:      string
 }
 
+// Stock actualizado del/los producto(s) afectados por el movimiento — para que
+// el admin pueda actualizar el número en pantalla sin recargar la página.
+export interface AffectedProduct {
+  id:    string
+  stock: number
+}
+
 // entry suma stock, exit lo resta.
 function deltaFor(type: MovementType, quantity: number): number {
   return type === 'entry' ? quantity : -quantity
@@ -38,9 +45,11 @@ export const inventoryMovementModel = {
       }
 
       await tx.product.update({ where: { id: data.productId }, data: { stock: newStock } })
-      return tx.inventoryMovement.create({
+      const movement = await tx.inventoryMovement.create({
         data: { ...data, productName: product.name },
       })
+      const affectedProducts: AffectedProduct[] = [{ id: product.id, stock: newStock }]
+      return { movement, affectedProducts }
     }),
 
   update: (id: string, data: Partial<MovementInput>) =>
@@ -67,12 +76,20 @@ export const inventoryMovementModel = {
       if (targetProduct.stock + applyDelta < 0) {
         throw new AppError(HTTP.BAD_REQUEST, `No hay suficiente stock de ${targetProduct.name} para registrar esa salida`, 'INSUFFICIENT_STOCK')
       }
-      await tx.product.update({ where: { id: merged.productId }, data: { stock: { increment: applyDelta } } })
+      const updatedTarget = await tx.product.update({ where: { id: merged.productId }, data: { stock: { increment: applyDelta } } })
 
-      return tx.inventoryMovement.update({
+      const movement = await tx.inventoryMovement.update({
         where: { id },
         data:  { ...merged, productName: targetProduct.name },
       })
+      // Si el movimiento pasó a otro producto, el original también cambió (se
+      // le devolvió el stock) — hay que avisarle al frontend de los dos.
+      const affectedProducts: AffectedProduct[] = [{ id: updatedTarget.id, stock: updatedTarget.stock }]
+      if (existing.productId !== merged.productId) {
+        const revertedOriginal = await tx.product.findUnique({ where: { id: existing.productId } })
+        if (revertedOriginal) affectedProducts.push({ id: revertedOriginal.id, stock: revertedOriginal.stock })
+      }
+      return { movement, affectedProducts }
     }),
 
   delete: (id: string) =>
@@ -81,7 +98,9 @@ export const inventoryMovementModel = {
       if (!existing) throw new AppError(HTTP.NOT_FOUND, 'Movimiento no encontrado', 'NOT_FOUND')
 
       const revertDelta = -deltaFor(existing.type as MovementType, existing.quantity)
-      await tx.product.update({ where: { id: existing.productId }, data: { stock: { increment: revertDelta } } })
+      const reverted = await tx.product.update({ where: { id: existing.productId }, data: { stock: { increment: revertDelta } } })
       await tx.inventoryMovement.delete({ where: { id } })
+      const affectedProducts: AffectedProduct[] = [{ id: reverted.id, stock: reverted.stock }]
+      return { affectedProducts }
     }),
 }

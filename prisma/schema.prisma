@@ -255,6 +255,10 @@ model Appointment {
   reviewDismissed Boolean  @default(false) @map("review_dismissed")
   review          Review?
   cancelledAt    DateTime? @map("cancelled_at") @db.Timestamptz
+  // 'user_cancelled' (lo canceló el cliente/admin/profesional) | 'unpaid_expired'
+  // (se liberó solo porque nunca se pagó la seña) — para mostrarle al cliente un
+  // mensaje distinto de "cancelado" cuando en realidad nunca llegó a confirmarse.
+  cancelReason   String?   @map("cancel_reason") @db.VarChar(30)
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
 

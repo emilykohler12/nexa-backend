@@ -37,8 +37,8 @@ export const inventoryMovementController = {
       if (!parsed.success) {
         throw new AppError(HTTP.BAD_REQUEST, parsed.error.issues[0].message, 'VALIDATION_ERROR')
       }
-      const movement = await inventoryMovementModel.create(parsed.data)
-      res.status(HTTP.CREATED).json({ movement })
+      const { movement, affectedProducts } = await inventoryMovementModel.create(parsed.data)
+      res.status(HTTP.CREATED).json({ movement, affectedProducts })
     } catch (err) { next(err) }
   },
 
@@ -49,16 +49,16 @@ export const inventoryMovementController = {
       if (!parsed.success) {
         throw new AppError(HTTP.BAD_REQUEST, parsed.error.issues[0].message, 'VALIDATION_ERROR')
       }
-      const movement = await inventoryMovementModel.update(id, parsed.data)
-      res.json({ movement })
+      const { movement, affectedProducts } = await inventoryMovementModel.update(id, parsed.data)
+      res.json({ movement, affectedProducts })
     } catch (err) { next(err) }
   },
 
   delete: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const id = getId(req)
-      await inventoryMovementModel.delete(id)
-      res.json({ success: true })
+      const { affectedProducts } = await inventoryMovementModel.delete(id)
+      res.json({ success: true, affectedProducts })
     } catch (err) { next(err) }
   },
 }
