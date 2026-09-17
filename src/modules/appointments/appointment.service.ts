@@ -159,6 +159,8 @@ function toAdminView(a: AppointmentRow, peers: ComboPeer[] | null = null) {
     end,
     status:            a.status,
     cancelReason:      a.cancelReason,
+    paymentStatus:     a.paymentStatus,
+    depositAmount:     Number(a.depositAmount),
     clientNotes:       a.clientNotes ?? '',
     professionalNotes: a.internalNotes ?? '',
     selectedZones:     (a.selectedZones ?? []) as unknown as { name: string; price: number; duration: number }[],
