@@ -483,13 +483,41 @@ async function assertClientNotBlocked(clientId: string) {
   }
 }
 
+function isPromoLive(promo: { status: string; startDate: string | null; endDate: string | null }): boolean {
+  if (promo.status !== 'active') return false
+  const today = new Date().toISOString().slice(0, 10)
+  if (promo.startDate && promo.startDate > today) return false
+  if (promo.endDate && promo.endDate < today) return false
+  return true
+}
+
+// Valida una promoción de servicio (home) contra el servicio que se está reservando
+// y devuelve el precio repriceado — nunca se confía en un precio mandado por el
+// cliente, igual que resolvePromotionGroup en order.service.ts para la tienda.
+// Solo soporta promos simples de un único servicio (kind: 'discount'), que es lo
+// único que ofrece ServicePromotionsSection en el home.
+async function resolveServicePromotion(promotionId: string, serviceId: string): Promise<number> {
+  const promo = await prisma.promotion.findUnique({ where: { id: promotionId } })
+  if (!promo || promo.type !== 'service' || !isPromoLive(promo)) {
+    throw new AppError(HTTP.BAD_REQUEST, 'Esta promoción ya no está disponible. Volvé a elegir el servicio.', 'PROMOTION_NOT_AVAILABLE')
+  }
+  if (promo.kind !== 'discount') {
+    throw new AppError(HTTP.BAD_REQUEST, 'Esta promoción no se puede reservar así. Volvé a elegir el servicio.', 'PROMOTION_MISMATCH')
+  }
+  const items = (promo.items as unknown as { id: string }[] | null) ?? []
+  if (items.length !== 1 || items[0].id !== serviceId) {
+    throw new AppError(HTTP.BAD_REQUEST, 'La promoción no corresponde a este servicio. Volvé a elegir el servicio.', 'PROMOTION_MISMATCH')
+  }
+  return Number(promo.price)
+}
+
 export const appointmentService = {
 
   // ── Cliente ──────────────────────────────────────────────────────
 
   createForClient: async (
     clientId: string,
-    input: { serviceId: string; professionalId: string; date: string; time: string; termsAccepted: boolean },
+    input: { serviceId: string; professionalId: string; date: string; time: string; termsAccepted: boolean; promotionId?: string | null },
   ) => {
     await assertClientNotBlocked(clientId)
 
@@ -509,7 +537,7 @@ export const appointmentService = {
     }
 
     const paymentSettings = await settingsService.getPaymentSettings()
-    const price   = Number(service.price)
+    const price   = input.promotionId ? await resolveServicePromotion(input.promotionId, input.serviceId) : Number(service.price)
     const deposit = computeDeposit(price, paymentSettings)
 
     let appointment: AppointmentRow
@@ -524,6 +552,7 @@ export const appointmentService = {
           duration:       service.duration,
           servicePrice:   price,
           depositAmount:  deposit,
+          promotionId:    input.promotionId ?? null,
           status:         'confirmed',
           // Arranca en 'pending' — solo pasa a 'partial' cuando llega el
           // webhook de Mercado Pago confirmando que la seña se pagó de verdad.

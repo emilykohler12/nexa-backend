@@ -244,6 +244,12 @@ model Appointment {
   wantsExtensions         Boolean? @map("wants_extensions")
   skinType                String?  @map("skin_type") @db.VarChar(20)
   comboGroupId   String?  @map("combo_group_id") @db.Uuid
+  // Promoción de servicio (home) con la que se reservó, si la hubo — el precio
+  // ya viene repriceado server-side a promotion.price al crear el turno (ver
+  // resolveServicePromotion en appointment.service.ts), esto solo queda como
+  // referencia para reportes (ej. tasa de conversión de promociones).
+  promotionId    String?  @map("promotion_id") @db.Uuid
+  promotion      Promotion? @relation(fields: [promotionId], references: [id])
   // Se prende cuando ADMIN o PROFESIONAL reprograman el turno (no cuando lo hace
   // el cliente — ahí ya sabe que cambió). El cliente lo ve como un aviso hasta
   // que confirma haberlo visto vía PATCH .../acknowledge-reschedule.
@@ -425,6 +431,8 @@ model Promotion {
   endDate       String?  @map("end_date") @db.VarChar(10)
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  appointments  Appointment[]
 
   @@map("promotions")
 }

@@ -33,6 +33,11 @@ const bookingSchema = z.object({
   time:           timeSchema,
 })
 
+// Si el cliente vino de una promo de servicio en el home (ver ServicePromotionsSection),
+// se manda el id acá — el precio real nunca se confía del front, se recalcula
+// server-side en resolveServicePromotion.
+const promotionIdSchema = z.string().uuid('ID de promoción inválido').nullable().optional()
+
 // RF-06.01 — checkbox obligatorio de Términos de Servicio y Política de Privacidad
 // en la confirmación de la reserva (cubre además cuentas creadas antes de este
 // requisito). Solo en la creación, no en `rescheduleMine` — reprogramar no es
@@ -41,6 +46,7 @@ const createBookingSchema = bookingSchema.extend({
   termsAccepted: z.boolean().refine(v => v === true, {
     message: 'Tenés que aceptar los Términos de Servicio y la Política de Privacidad',
   }),
+  promotionId: promotionIdSchema,
 })
 
 const comboBookingSchema = z.object({
