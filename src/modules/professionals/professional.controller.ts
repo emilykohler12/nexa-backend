@@ -2,6 +2,7 @@
 import type { Request, Response, NextFunction } from 'express'
 import { professionalService } from './professional.service'
 import { statisticsService }   from './statistics.service'
+import { professionalDashboardService } from './dashboard.service'
 import { notificationService } from './notification.service'
 import { AppError }            from '../../app/middlewares/errorHandler'
 import { HTTP }                from '../../app/constants/http'
@@ -139,6 +140,17 @@ export const professionalsController = {
     try {
       const status = await professionalService.getOnboardingStatus(req.user!.id)
       res.json(status)
+    } catch (err) { next(err) }
+  },
+
+  getMyDashboard: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const rawPeriod = req.query.period
+      const period = (typeof rawPeriod === 'string' && ['day', 'week', 'month', 'year'].includes(rawPeriod))
+        ? rawPeriod as 'day' | 'week' | 'month' | 'year'
+        : 'month'
+      const dashboard = await professionalDashboardService.compute(req.user!.id, period)
+      res.json({ dashboard })
     } catch (err) { next(err) }
   },
 
