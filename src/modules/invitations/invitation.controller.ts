@@ -58,10 +58,14 @@ export const invitationController = {
 
       const { user, tokens } = await invitationService.registerProfessional(parsed.data)
 
+      // Mismo criterio que auth.controller.ts: en producción el frontend y el
+      // backend están en dominios distintos, así que la cookie necesita
+      // SameSite=None (+ Secure) para que el navegador la acepte cross-site.
+      const isProd = process.env['NODE_ENV'] === 'production'
       res.cookie('refresh_token', tokens.refreshToken, {
         httpOnly: true,
-        secure:   process.env['NODE_ENV'] === 'production',
-        sameSite: 'strict',
+        secure:   isProd,
+        sameSite: isProd ? 'none' : 'lax',
         maxAge:   7 * 24 * 60 * 60 * 1000,
         path:     '/api/auth/refresh',
       })

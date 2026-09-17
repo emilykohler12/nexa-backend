@@ -11,10 +11,14 @@ import { AppError }            from '../../app/middlewares/errorHandler'
 import { HTTP }                from '../../app/constants/http'
 import { env }                 from '../../app/config/env'
 
+// En producción, frontend (Vercel) y backend (Render) viven en dominios
+// distintos — la cookie es "cross-site" y el navegador solo la manda en ese
+// caso con SameSite=None (que además exige Secure=true, por eso van atados).
+// En desarrollo (mismo origen, sin HTTPS) 'lax' + sin secure es lo correcto.
 const COOKIE_BASE = {
   httpOnly: true,
   secure:   env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
+  sameSite: env.NODE_ENV === 'production' ? 'none' as const : 'lax' as const,
 }
 
 function setTokenCookies(res: Response, tokens: { accessToken: string; refreshToken: string }): void {
