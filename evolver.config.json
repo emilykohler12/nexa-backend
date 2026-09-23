@@ -1,0 +1,82 @@
+{
+  "version": "1.0.0",
+  "agents": [
+    {
+      "id": "appointment-service-optimizer",
+      "name": "Appointment Service Optimization",
+      "description": "Evolve appointment.service.ts for better performance and reliability",
+      "target": "src/modules/appointments/appointment.service.ts",
+      "genes": [
+        {
+          "name": "cacheStrategy",
+          "type": "enum",
+          "values": ["none", "memory", "redis"],
+          "current": "none",
+          "reason": "Optimize repeated template loads and date formatting"
+        },
+        {
+          "name": "validationLevel",
+          "type": "enum",
+          "values": ["minimal", "standard", "strict"],
+          "current": "standard",
+          "reason": "Balance speed vs. correctness in appointment validation"
+        },
+        {
+          "name": "maxConcurrentAppointments",
+          "type": "number",
+          "range": [10, 1000],
+          "current": 100,
+          "reason": "Tune concurrency limits for database strain"
+        },
+        {
+          "name": "templateCacheTTL",
+          "type": "number",
+          "range": [0, 3600],
+          "current": 0,
+          "reason": "Cache template files (in seconds, 0 = disabled)"
+        }
+      ],
+      "capsules": [
+        {
+          "name": "appointment-response-time",
+          "test": "npm run test -- src/modules/appointments/appointment.service.ts",
+          "metric": "execution_time",
+          "target": "< 200ms",
+          "weight": 0.4,
+          "description": "Appointment CRUD operations must complete in <200ms"
+        },
+        {
+          "name": "test-suite-pass-rate",
+          "test": "npm run test -- --coverage src/modules/appointments",
+          "metric": "pass_rate",
+          "target": "> 95%",
+          "weight": 0.3,
+          "description": "Tests must pass with >95% coverage"
+        },
+        {
+          "name": "memory-usage",
+          "test": "node --expose-gc ./scripts/memory-check.js",
+          "metric": "memory_mb",
+          "target": "< 150",
+          "weight": 0.2,
+          "description": "Memory usage must stay under 150MB"
+        },
+        {
+          "name": "code-maintainability",
+          "test": "npm run lint src/modules/appointments",
+          "metric": "lint_errors",
+          "target": "= 0",
+          "weight": 0.1,
+          "description": "No linting errors"
+        }
+      ],
+      "iterations": {
+        "max": 20,
+        "populationSize": 8,
+        "mutationRate": 0.3,
+        "elitismRate": 0.2,
+        "strategy": "genetic-algorithm"
+      }
+    }
+  ]
+}
