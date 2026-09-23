@@ -3,8 +3,12 @@ import { Router }    from 'express'
 import rateLimit     from 'express-rate-limit'
 import { authController } from './auth.controller'
 import { authenticate }   from './middleware/auth.middleware'
+import { env }            from '../../app/config/env'
 
-const strictLimiter = rateLimit({
+// En test no hay límite — ver el mismo motivo en app.ts.
+const noopLimiter = (_req: any, _res: any, next: any) => next()
+
+const strictLimiter = env.NODE_ENV === 'test' ? noopLimiter : rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   message:        { error: 'Demasiados intentos. Intentá de nuevo en 15 minutos.' },
@@ -16,7 +20,7 @@ const strictLimiter = rateLimit({
 // contraseña — esos son intentos puntuales, pero el login se reintenta seguido
 // (contraseña tipeada mal, varias cuentas de prueba, etc.) y 15 min/10 intentos
 // resultaba en bloqueos molestos para uso legítimo.
-const loginLimiter = rateLimit({
+const loginLimiter = env.NODE_ENV === 'test' ? noopLimiter : rateLimit({
   windowMs: 5 * 60 * 1000,
   max: 20,
   message:        { error: 'Demasiados intentos. Intentá de nuevo en 5 minutos.' },

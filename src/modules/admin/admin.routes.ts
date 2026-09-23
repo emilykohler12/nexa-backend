@@ -31,6 +31,7 @@ router.get ('/clients/:id/auto-promotions', autoPromotionController.getForClient
 router.get('/appointments',      appointmentController.listForAdmin)
 router.post('/appointments',      appointmentController.createForAdmin)
 router.patch('/appointments/:id', appointmentController.updateForAdmin)
+router.patch('/appointments/:id/arrival', appointmentController.markArrivalForAdmin)
 
 router.get('/activity',  adminController.getActivity)
 router.get('/dashboard', adminController.getDashboard)

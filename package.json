@@ -24,14 +24,22 @@
     "@types/node": "^26.1.1",
     "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.20.0",
+    "@types/supertest": "^7.2.1",
+    "cross-env": "^10.1.0",
     "prisma": "^6.19.3",
+    "supertest": "^7.3.0",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.23.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.1"
   },
   "scripts": {
     "dev": "tsx watch src/app/server.ts",
     "build": "prisma generate && tsc",
-    "start": "node dist/app/server.js"
+    "start": "node dist/app/server.js",
+    "test": "cross-env NODE_ENV=test vitest run",
+    "test:watch": "cross-env NODE_ENV=test vitest",
+    "typecheck": "tsc --noEmit",
+    "typecheck:all": "tsc -p tsconfig.test.json --noEmit"
   }
 }

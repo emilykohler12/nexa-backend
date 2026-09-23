@@ -252,6 +252,13 @@ export const appointmentController = {
     } catch (err) { next(err) }
   },
 
+  markArrivalMine: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const appointment = await appointmentService.markArrivalForClient(req.user!.id, getId(req))
+      res.json({ appointment })
+    } catch (err) { next(err) }
+  },
+
   // Profesional
   listForProfessional: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -282,6 +289,13 @@ export const appointmentController = {
     } catch (err) { next(err) }
   },
 
+  markArrivalForProfessional: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const appointment = await appointmentService.markArrivalForProfessional(req.user!.id, getId(req))
+      res.json({ appointment })
+    } catch (err) { next(err) }
+  },
+
   // Admin
   listForAdmin: async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -294,7 +308,14 @@ export const appointmentController = {
     try {
       const parsed = parseBody(adminUpdateAppointmentSchema, req.body)
       const input  = normalizeAdminUpdateInput(parsed)
-      const appointment = await appointmentService.updateForAdmin(getId(req), input)
+      const appointment = await appointmentService.updateForAdmin(getId(req), input, req.user?.email ?? 'Admin')
+      res.json({ appointment })
+    } catch (err) { next(err) }
+  },
+
+  markArrivalForAdmin: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const appointment = await appointmentService.markArrivalForAdmin(getId(req))
       res.json({ appointment })
     } catch (err) { next(err) }
   },

@@ -3,6 +3,7 @@ import cron from 'node-cron'
 import { runInactivityReminderJob } from './inactivityReminder.job'
 import { runReleaseUnpaidAppointmentsJob } from './releaseUnpaidAppointments.job'
 import { runAutoPromotionsJob } from './autoPromotions.job'
+import { runAutoNoShowJob } from './autoNoShow.job'
 
 export function startScheduledJobs(): void {
   // Todos los días a las 9:00 (hora del servidor) — horario razonable para un
@@ -41,5 +42,18 @@ export function startScheduledJobs(): void {
     }
   })
 
-  console.log('[jobs] scheduler iniciado — inactivity-reminder (diario 9:00) + auto-promotions (diario 9:15) + release-unpaid (cada 5 min)')
+  // Cada 5 minutos — marca 'no_show' los turnos confirmados cuya hora pactada
+  // pasó hace más de 20 minutos sin que se haya registrado la llegada.
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      const result = await runAutoNoShowJob()
+      if (result.marked > 0) {
+        console.log(`[jobs] auto-no-show: ${result.marked} turno(s) marcado(s)`)
+      }
+    } catch (err) {
+      console.error('[jobs] error corriendo auto-no-show:', err)
+    }
+  })
+
+  console.log('[jobs] scheduler iniciado — inactivity-reminder (diario 9:00) + auto-promotions (diario 9:15) + release-unpaid (cada 5 min) + auto-no-show (cada 5 min)')
 }

@@ -3,7 +3,15 @@
 import { z } from 'zod'
 import dotenv from 'dotenv'
 
-dotenv.config()
+// Los tests corren con NODE_ENV=test (lo fija vitest.config.ts) y usan su
+// propia base de datos — .env.test, nunca el .env real, así un test corrido
+// por error jamás toca datos de verdad.
+// override: true porque Vitest ya carga .env solo (vía Vite) antes de que
+// esto corra — sin esto, DATABASE_URL de .env "gana" por estar seteada
+// primero y dotenv no pisa variables existentes por default.
+dotenv.config(
+  process.env.NODE_ENV === 'test' ? { path: '.env.test', quiet: true, override: true } : {},
+)
 
 const schema = z.object({
   NODE_ENV:               z.enum(['development', 'production', 'test']).default('development'),

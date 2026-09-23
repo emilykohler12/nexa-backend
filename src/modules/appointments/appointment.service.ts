@@ -96,6 +96,7 @@ function toClientView(a: AppointmentRow) {
     status:            a.status,
     cancelReason:      a.cancelReason,
     paymentStatus:     a.paymentStatus,
+    arrivedAt:         a.arrivedAt ? a.arrivedAt.toISOString() : null,
     comboGroupId:      a.comboGroupId,
     rescheduleNoticePending: a.rescheduleNoticePending,
     previousDate:            a.previousDate ?? null,
@@ -127,6 +128,7 @@ function toProfessionalView(a: AppointmentRow, peers: ComboPeer[] | null = null)
     status:         a.status,
     cancelReason:   a.cancelReason,
     paymentStatus:  a.paymentStatus,
+    arrivedAt:      a.arrivedAt ? a.arrivedAt.toISOString() : null,
     internalNotes:  a.internalNotes ?? '',
     selectedZones:     (a.selectedZones ?? []) as unknown as { name: string; price: number; duration: number }[],
     selectedPackages:  (a.selectedPackages ?? []) as unknown as { name: string; price: number; duration: number }[],
@@ -160,6 +162,7 @@ function toAdminView(a: AppointmentRow, peers: ComboPeer[] | null = null) {
     status:            a.status,
     cancelReason:      a.cancelReason,
     paymentStatus:     a.paymentStatus,
+    arrivedAt:         a.arrivedAt ? a.arrivedAt.toISOString() : null,
     depositAmount:     Number(a.depositAmount),
     clientNotes:       a.clientNotes ?? '',
     professionalNotes: a.internalNotes ?? '',
@@ -222,6 +225,19 @@ async function afterCancel(a: AppointmentRow, emailClient: boolean) {
   }
 }
 
+// Auditoría de cualquier cambio de estado de un turno que no sea "cancelado"
+// (la cancelación ya se audita aparte en afterCancel). Cubre tanto los cambios
+// manuales (profesional/admin marcando "no asistió", "finalizado", etc.) como
+// el marcado automático del job autoNoShow.job.ts.
+async function logStatusChange(a: AppointmentRow, from: string, to: string, actorName: string) {
+  await activityService.log({
+    userName: actorName,
+    action:   'Cambio de estado de turno',
+    module:   'appointments',
+    detail:   `${a.service.name} — ${a.client.name} con ${a.professional.name} el ${a.date} ${a.time}: "${from}" → "${to}"`,
+  })
+}
+
 async function afterReschedule(a: AppointmentRow) {
   await activityService.log({
     action: 'Turno reprogramado', module: 'appointments',
@@ -270,6 +286,26 @@ async function afterStaffReschedule(a: AppointmentRow, previousDate: string, pre
       TIME:           a.time,
     }),
   ).catch(err => console.error('[mail] error notificando reprogramación (staff):', err.message))
+}
+
+function todayLocalStr(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+async function registerArrival(appointment: AppointmentRow): Promise<AppointmentRow> {
+  if (appointment.arrivedAt) return appointment
+  if (appointment.status !== 'confirmed') {
+    throw new AppError(HTTP.BAD_REQUEST, 'Solo se puede registrar la llegada de un turno confirmado', 'INVALID_STATUS')
+  }
+  if (appointment.date !== todayLocalStr()) {
+    throw new AppError(HTTP.BAD_REQUEST, 'Solo se puede registrar la llegada el día del turno', 'NOT_TODAY')
+  }
+  return prisma.appointment.update({
+    where:   { id: appointment.id },
+    data:    { arrivedAt: new Date() },
+    include: APPOINTMENT_INCLUDE,
+  })
 }
 
 // Cancelar un turno que forma parte de un combo cancela todo el grupo (comboGroupId):
@@ -1270,6 +1306,9 @@ export const appointmentService = {
       },
       include: APPOINTMENT_INCLUDE,
     })
+    if (data.status !== undefined && data.status !== appointment.status) {
+      await logStatusChange(updated, appointment.status, data.status, appointment.professional.name)
+    }
     if (rescheduling) await afterStaffReschedule(updated, appointment.date, appointment.time)
     const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
     return toProfessionalView(updated, peers)
@@ -1352,7 +1391,7 @@ export const appointmentService = {
     duration?: number; servicePrice?: number
     internalNotes?: string; clientNotes?: string
     clientName?: string; clientPhone?: string; clientEmail?: string
-  }) => {
+  }, actorName: string = 'Admin') => {
     const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
     if (!appointment) throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
 
@@ -1419,6 +1458,9 @@ export const appointmentService = {
       },
       include: APPOINTMENT_INCLUDE,
     })
+    if (data.status !== undefined && data.status !== appointment.status) {
+      await logStatusChange(updated, appointment.status, data.status, actorName)
+    }
     if (rescheduling) await afterStaffReschedule(updated, appointment.date, appointment.time)
     const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
     return toAdminView(updated, peers)
@@ -1432,5 +1474,37 @@ export const appointmentService = {
   }) => {
     const appointment = await createManualAppointment(data.professionalId, data)
     return toAdminView(appointment)
+  },
+
+  // ── Registro de llegada ──────────────────────────────────────────
+  // La clienta marca que llegó al local (o lo hace el profesional/admin por
+  // ella, ej. si no tiene el celular a mano). Evita que autoNoShow.job.ts
+  // cancele el turno a los 20 minutos de la hora pactada. Idempotente: una
+  // segunda llamada no falla, simplemente no vuelve a tocar arrivedAt.
+  markArrivalForClient: async (clientId: string, id: string) => {
+    const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
+    if (!appointment || appointment.clientId !== clientId) {
+      throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
+    }
+    const updated = await registerArrival(appointment)
+    return toClientView(updated)
+  },
+
+  markArrivalForProfessional: async (professionalId: string, id: string) => {
+    const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
+    if (!appointment || appointment.professionalId !== professionalId) {
+      throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
+    }
+    const updated = await registerArrival(appointment)
+    const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
+    return toProfessionalView(updated, peers)
+  },
+
+  markArrivalForAdmin: async (id: string) => {
+    const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
+    if (!appointment) throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
+    const updated = await registerArrival(appointment)
+    const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
+    return toAdminView(updated, peers)
   },
 }

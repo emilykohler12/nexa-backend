@@ -28,13 +28,18 @@ app.use(cors({
   allowedHeaders: ['Content-Type'],
 }))
 
-app.use(rateLimit({
-  windowMs: 60 * 1000,
-  max:      100,
-  message:  { error: 'Demasiadas solicitudes. Intentá más tarde.' },
-  standardHeaders: true,
-  legacyHeaders:   false,
-}))
+// En test, los límites de tasa (acá y los de auth.routes.ts) rompen la suite
+// sin aportar nada — una corrida de tests dispara muchas más requests por
+// minuto que un uso real, y no se está probando el rate limit en sí.
+if (env.NODE_ENV !== 'test') {
+  app.use(rateLimit({
+    windowMs: 60 * 1000,
+    max:      100,
+    message:  { error: 'Demasiadas solicitudes. Intentá más tarde.' },
+    standardHeaders: true,
+    legacyHeaders:   false,
+  }))
+}
 
 // verify: capturarRawBody guarda el body crudo en req.rawBody antes de
 // parsearlo — lo necesita el webhook de WhatsApp para validar la firma

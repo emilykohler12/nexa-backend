@@ -270,6 +270,10 @@ model Appointment {
   // (se liberó solo porque nunca se pagó la seña) — para mostrarle al cliente un
   // mensaje distinto de "cancelado" cuando en realidad nunca llegó a confirmarse.
   cancelReason   String?   @map("cancel_reason") @db.VarChar(30)
+  // Se completa cuando la clienta (o el profesional/admin en su nombre) registra
+  // que llegó al local. Si un turno 'confirmed' sigue en null 20 minutos después
+  // de la hora pactada, el job autoNoShow.job.ts lo marca 'no_show' solo.
+  arrivedAt      DateTime? @map("arrived_at") @db.Timestamptz
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
 

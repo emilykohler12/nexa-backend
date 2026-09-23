@@ -22,6 +22,7 @@ router.patch('/appointments/:id/cancel',      authenticate, authorize('client'),
 router.patch('/appointments/:id/reschedule',  authenticate, authorize('client'), appointmentController.rescheduleMine)
 router.patch('/appointments/:id/details',     authenticate, authorize('client'), appointmentController.updateDetailsMine)
 router.patch('/appointments/:id/acknowledge-reschedule', authenticate, authorize('client'), appointmentController.acknowledgeReschedule)
+router.patch('/appointments/:id/arrival',                authenticate, authorize('client'), appointmentController.markArrivalMine)
 router.post ('/appointments/:id/payment',        authenticate, authorize('client'), appointmentController.createPaymentPreference)
 router.post ('/appointments/:id/verify-payment', authenticate, authorize('client'), appointmentController.verifyPayment)
 

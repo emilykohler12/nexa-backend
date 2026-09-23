@@ -201,7 +201,7 @@ export const adminService = {
     await prisma.user.update({
       where: { id },
       data: {
-        name:         'Usuario Anónimo',
+        name:         'Cliente eliminado',
         email:        `anonimo_${id}@borrado.com`,
         phone:        null,
         active:       false,
