@@ -1,9 +1,11 @@
 // src/modules/auth/auth.service.ts
 import fs   from 'fs'
 import path from 'path'
+import { randomUUID } from 'crypto'
 import { authRepository }           from './auth.repository'
 import { bcryptProvider }           from './providers/bcrypt.provider'
 import { jwtProvider }              from './providers/jwt.provider'
+import { socialProvider }           from './providers/social.provider'
 import { generateTokens }           from './utils/generateTokens'
 import { generateSecureToken, generateVerificationCode } from './utils/generateCode'
 import { mailProvider }             from './providers/mail.provider'
@@ -14,6 +16,7 @@ import type { RegisterDto }         from './dto/register.dto'
 import type { LoginDto }            from './dto/login.dto'
 import type { ForgotPasswordDto }   from './dto/forgotPassword.dto'
 import type { ResetPasswordDto }    from './dto/resetPassword.dto'
+import type { SocialLoginDto }      from './dto/socialLogin.dto'
 import type { AuthUser, TokenPair } from './types/auth.types'
 
 function loadTemplate(name: string, replacements: Record<string, string>): string {
@@ -170,5 +173,65 @@ export const authService = {
     const passwordHash = await bcryptProvider.hash(dto.password)
     await authRepository.updatePassword(reset.userId, passwordHash)
     await authRepository.markPasswordResetUsed(dto.token)
+  },
+
+  // Login/registro con Google o Facebook. El perfil (email/nombre) SIEMPRE
+  // sale de verificar el access_token contra el servidor del proveedor
+  // (socialProvider) — nunca de lo que mande el body, así un front
+  // comprometido no puede loguearse como cualquier email inventado.
+  socialLogin: async (dto: SocialLoginDto): Promise<{ user: AuthUser; tokens: TokenPair; created: boolean }> => {
+    let profile: Awaited<ReturnType<typeof socialProvider.verifyGoogle>>
+    try {
+      profile = dto.provider === 'google'
+        ? await socialProvider.verifyGoogle(dto.accessToken)
+        : await socialProvider.verifyFacebook(dto.accessToken)
+    } catch (err: any) {
+      // Token vencido/inválido, email sin verificar, etc. — es esperable (el
+      // usuario tardó en confirmar el popup, canceló y reintentó, etc.), no
+      // un error de servidor: se le muestra el motivo real, no un 500 genérico.
+      throw new AppError(HTTP.UNAUTHORIZED, err.message ?? 'No se pudo verificar el login social', 'SOCIAL_TOKEN_INVALID')
+    }
+
+    const existing = await authRepository.findByEmail(profile.email)
+
+    if (existing) {
+      if (existing.role !== 'client') {
+        throw new AppError(
+          HTTP.FORBIDDEN,
+          'Esa cuenta no es de clienta — iniciá sesión con tu contraseña habitual.',
+          'SOCIAL_LOGIN_WRONG_ROLE',
+        )
+      }
+      const user   = toAuthUser(existing)
+      const tokens = generateTokens(user)
+      await authRepository.saveRefreshToken(user.id, tokens.refreshToken)
+      return { user, tokens, created: false }
+    }
+
+    if (dto.mode === 'login') {
+      throw new AppError(HTTP.NOT_FOUND, 'No encontramos una cuenta con ese email. Registrate primero.', 'SOCIAL_ACCOUNT_NOT_FOUND')
+    }
+    if (!dto.termsAccepted) {
+      throw new AppError(
+        HTTP.BAD_REQUEST,
+        'Tenés que aceptar los Términos de Servicio y la Política de Privacidad',
+        'TERMS_NOT_ACCEPTED',
+      )
+    }
+
+    // Password inutilizable — esta cuenta solo entra por el botón social,
+    // nunca por /auth/login. Igual necesita un hash porque la columna no
+    // acepta null.
+    const passwordHash = await bcryptProvider.hash(randomUUID())
+    const created = await authRepository.create({
+      name: profile.name, email: profile.email, passwordHash, role: 'client',
+      termsAcceptedAt: new Date(),
+      emailVerified:   true, // ya lo verificó Google/Facebook
+    })
+
+    const user   = toAuthUser(created)
+    const tokens = generateTokens(user)
+    await authRepository.saveRefreshToken(user.id, tokens.refreshToken)
+    return { user, tokens, created: true }
   },
 }

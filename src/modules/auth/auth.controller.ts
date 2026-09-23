@@ -7,6 +7,7 @@ import { registerDto }         from './dto/register.dto'
 import { loginDto }            from './dto/login.dto'
 import { forgotPasswordDto }   from './dto/forgotPassword.dto'
 import { resetPasswordDto }    from './dto/resetPassword.dto'
+import { socialLoginDto }      from './dto/socialLogin.dto'
 import { AppError }            from '../../app/middlewares/errorHandler'
 import { HTTP }                from '../../app/constants/http'
 import { env }                 from '../../app/config/env'
@@ -71,6 +72,15 @@ export const authController = {
       const { user, tokens } = await authService.login(dto)
       setTokenCookies(res, tokens)
       res.status(HTTP.OK).json({ user })
+    } catch (err) { next(err) }
+  },
+
+  socialLogin: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const dto = validate(socialLoginDto, req.body)
+      const { user, tokens, created } = await authService.socialLogin(dto)
+      setTokenCookies(res, tokens)
+      res.status(created ? HTTP.CREATED : HTTP.OK).json({ user, created })
     } catch (err) { next(err) }
   },
 

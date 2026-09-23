@@ -1,7 +1,7 @@
 // src/modules/appointments/appointment.controller.ts
 import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
-import { appointmentService, APPOINTMENT_STATUSES } from './appointment.service'
+import { appointmentService, APPOINTMENT_STATUSES, BALANCE_PAYMENT_METHODS } from './appointment.service'
 import { AppError }           from '../../app/middlewares/errorHandler'
 import { HTTP }               from '../../app/constants/http'
 import { dateSchema, timeSchema } from '../../app/validators/datetime'
@@ -25,6 +25,11 @@ const professionalIdSchema = z.union([
   z.literal('any'),
   z.string().uuid('ID de profesional inválido'),
 ])
+
+const balancePaymentSchema = z.object({
+  method: z.enum(BALANCE_PAYMENT_METHODS),
+  amount: z.coerce.number().positive('El monto tiene que ser mayor a cero'),
+})
 
 const bookingSchema = z.object({
   serviceId:      z.string().uuid('ID de servicio inválido'),
@@ -316,6 +321,14 @@ export const appointmentController = {
   markArrivalForAdmin: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const appointment = await appointmentService.markArrivalForAdmin(getId(req))
+      res.json({ appointment })
+    } catch (err) { next(err) }
+  },
+
+  registerBalancePaymentForAdmin: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const input = parseBody(balancePaymentSchema, req.body)
+      const appointment = await appointmentService.registerBalancePaymentForAdmin(req.user!.id, getId(req), input)
       res.json({ appointment })
     } catch (err) { next(err) }
   },

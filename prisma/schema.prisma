@@ -46,6 +46,7 @@ model User {
   passwordResets  PasswordReset[]
   appointmentsAsClient       Appointment[] @relation("ClientAppointments")
   appointmentsAsProfessional Appointment[] @relation("ProfessionalAppointments")
+  balancePaymentsCollected   Appointment[] @relation("BalanceCollectedBy")
   galleryPhotos              ClientGalleryPhoto[]
   notifications              ProfessionalNotification[]
   clientNotifications        ClientNotification[]
@@ -274,6 +275,19 @@ model Appointment {
   // que llegó al local. Si un turno 'confirmed' sigue en null 20 minutos después
   // de la hora pactada, el job autoNoShow.job.ts lo marca 'no_show' solo.
   arrivedAt      DateTime? @map("arrived_at") @db.Timestamptz
+  // Cobro del SALDO restante (precio - seña) en el local — la seña ya se
+  // cobra sola por Mercado Pago (mpPaymentId), pero el resto se paga en mano
+  // al momento del servicio y hasta ahora no quedaba ningún registro. 'cash' |
+  // 'transfer' | 'card' | 'other'. Al completarse, paymentStatus pasa a 'paid'
+  // si con esto se cubre el precio total (ver registerBalancePayment).
+  balancePaymentMethod String?   @map("balance_payment_method") @db.VarChar(20)
+  balancePaidAmount     Decimal?  @map("balance_paid_amount") @db.Decimal(10, 2)
+  balancePaidAt         DateTime? @map("balance_paid_at") @db.Timestamptz
+  // Quién lo cobró/registró — para poder rendir cuentas de efectivo recibido
+  // en mano por cada profesional, no para saber "a quién" se le pagó (eso ya
+  // es la clienta del turno).
+  balanceCollectedById  String?   @map("balance_collected_by_id") @db.Uuid
+  balanceCollectedBy    User?     @relation("BalanceCollectedBy", fields: [balanceCollectedById], references: [id])
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
 

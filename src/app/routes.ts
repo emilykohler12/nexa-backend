@@ -18,9 +18,11 @@ import { specialEventRoutes } from '../modules/specialEvents/specialEvent.routes
 import { reviewRoutes }       from '../modules/reviews/review.routes'
 import { whatsappRoutes }     from '../modules/whatsapp/whatsapp.routes'
 import { paymentRoutes }      from '../modules/payments/payment.routes'
+import { healthRoutes }       from '../modules/health/health.routes'
 
 const router = Router()
 
+router.use('/health',       healthRoutes)
 router.use('/auth',         authRoutes)
 router.use('/invitations',  invitationRoutes)
 router.use('/professional', professionalsRoutes)

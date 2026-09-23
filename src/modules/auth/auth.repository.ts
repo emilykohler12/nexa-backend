@@ -34,6 +34,9 @@ export const authRepository = {
     gender?: string | null
     verificationToken?: string
     termsAcceptedAt?: Date
+    // Solo para login social — Google/Facebook ya verificaron el email, así
+    // que no hace falta mandar el mail de verificación de siempre.
+    emailVerified?: boolean
   }) =>
     prisma.user.create({
       data: {
@@ -45,6 +48,7 @@ export const authRepository = {
         gender:            data.gender as any ?? null,
         verificationToken: data.verificationToken ?? null,
         termsAcceptedAt:   data.termsAcceptedAt ?? null,
+        emailVerified:     data.emailVerified ?? false,
       },
     }),
 

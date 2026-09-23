@@ -1,0 +1,62 @@
+# Prueba de carga liviana con Artillery — simula entre 20 y 50 usuarios
+# concurrentes navegando el home (servicios, profesionales, negocio) y
+# reservando turnos, todo sin login (lo que más tráfico real recibe).
+#
+# Uso:
+#   1. Levantar el backend apuntando a una base de datos DE PRUEBA, nunca la
+#      real (esto crea reservas de verdad si se llega a correr el escenario
+#      de reserva completo).
+#   2. npx artillery run scripts/load-test.yml
+#   3. Para apuntar a producción (Render) en vez de local:
+#      npx artillery run scripts/load-test.yml --target https://tu-backend.onrender.com
+#
+# El reporte final trae p50/p95/p99 de latencia, tasa de error y throughput
+# por endpoint — eso es lo que hay que mirar para "20-50 usuarios concurrentes".
+config:
+  target: "http://localhost:4000"
+  phases:
+    - name: "Calentamiento"
+      duration: 15
+      arrivalRate: 2
+    - name: "Carga sostenida (20 usuarios concurrentes)"
+      duration: 30
+      arrivalRate: 4
+      maxVusers: 20
+    - name: "Pico (50 usuarios concurrentes)"
+      duration: 30
+      arrivalRate: 10
+      maxVusers: 50
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+scenarios:
+  - name: "Visita al home (sin login)"
+    weight: 7
+    flow:
+      - get:
+          url: "/api/business/public"
+      - get:
+          url: "/api/services"
+      - get:
+          url: "/api/professional/public"
+      - think: 1
+      - get:
+          url: "/api/promotions/public"
+
+  - name: "Health check"
+    weight: 1
+    flow:
+      - get:
+          url: "/api/health"
+
+  - name: "Login con credenciales inválidas (mide el costo de bcrypt bajo carga)"
+    weight: 2
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "carga-{{ $randomNumber(1, 100000) }}@test.local"
+            password: "no-existe-esta-cuenta"
+          expect:
+            - statusCode: 401

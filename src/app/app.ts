@@ -19,7 +19,23 @@ const app = express()
 // agrega el túnel, y tira el warning ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
 app.set('trust proxy', 1)
 
-app.use(helmet())
+// Cabeceras de seguridad. helmet() ya trae buenos defaults (CSP, X-Frame-Options,
+// HSTS, etc.) — acá se los deja explícitos porque esta API nunca sirve HTML/JS/CSS
+// propio (solo JSON), así que puede ser más estricta que el default 'self' de CSP.
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'none'"],
+      frameAncestors: ["'none'"], // refuerza X-Frame-Options: nadie nos puede iframear
+    },
+  },
+  strictTransportSecurity: {
+    maxAge: 63072000, // 2 años, el mínimo que piden los navegadores para el preload
+    includeSubDomains: true,
+    preload: true,
+  },
+  frameguard: { action: 'deny' },
+}))
 
 app.use(cors({
   origin:         env.FRONTEND_URL,
@@ -49,6 +65,10 @@ if (env.NODE_ENV !== 'test') {
 app.use(express.json({ limit: '8mb', verify: capturarRawBody }))
 app.use(express.urlencoded({ extended: false }))
 app.use(cookieParser())
+
+// Alias sin /api — el panel de Render suele pedir una ruta de health check
+// "pelada" (ej. /health), así sirve sin importar cuál termines configurando ahí.
+app.get('/health', (_req, res) => res.redirect(307, '/api/health'))
 
 app.use('/api', apiRoutes)
 

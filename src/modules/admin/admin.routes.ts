@@ -32,6 +32,7 @@ router.get('/appointments',      appointmentController.listForAdmin)
 router.post('/appointments',      appointmentController.createForAdmin)
 router.patch('/appointments/:id', appointmentController.updateForAdmin)
 router.patch('/appointments/:id/arrival', appointmentController.markArrivalForAdmin)
+router.patch('/appointments/:id/balance-payment', appointmentController.registerBalancePaymentForAdmin)
 
 router.get('/activity',  adminController.getActivity)
 router.get('/dashboard', adminController.getDashboard)

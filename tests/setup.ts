@@ -27,6 +27,16 @@ vi.mock('../src/modules/payments/payment.service', () => ({
   },
 }))
 
+// El login social nunca le pega a Google/Facebook de verdad en tests — cada
+// test de social-login sobreescribe estos mocks con vi.mocked(...) según lo
+// que necesite simular (perfil válido, token rechazado, etc).
+vi.mock('../src/modules/auth/providers/social.provider', () => ({
+  socialProvider: {
+    verifyGoogle:   vi.fn(),
+    verifyFacebook: vi.fn(),
+  },
+}))
+
 const TABLES = [
   'users', 'professionals', 'professional_availability', 'invitations', 'password_resets',
   'clients', 'professional_services', 'services', 'appointments', 'products',

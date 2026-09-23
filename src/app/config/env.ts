@@ -43,6 +43,15 @@ const schema = z.object({
   // valida su presencia recién al momento de crear un pago real.
   MERCADOPAGO_ACCESS_TOKEN:   z.string().optional(),
   MERCADOPAGO_WEBHOOK_SECRET: z.string().optional(),
+
+  // Login social — opcionales, la app arranca sin ellas. social.provider.ts
+  // valida su presencia recién al momento de verificar un login real.
+  // GOOGLE_CLIENT_ID es el mismo valor público que VITE_GOOGLE_CLIENT_ID del
+  // frontend (los client_id de OAuth para apps web no son secretos, se
+  // exponen en el JS del navegador) — se usa acá para confirmar que el
+  // access_token que llega fue emitido para ESTA app y no para otra.
+  GOOGLE_CLIENT_ID:  z.string().optional(),
+  FACEBOOK_APP_ID:   z.string().optional(),
   // URL pública (túnel de VS Code / ngrok) a la que Mercado Pago manda los
   // webhooks en desarrollo. Sin esto, el webhook nunca llega — los pagos se
   // pueden crear igual, pero nunca se confirman solos. Un valor vacío en el

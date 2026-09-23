@@ -54,10 +54,14 @@ function assertValidStatus(status: string) {
   }
 }
 
+export const BALANCE_PAYMENT_METHODS = ['cash', 'transfer', 'card', 'other'] as const
+export type BalancePaymentMethod = typeof BALANCE_PAYMENT_METHODS[number]
+
 const APPOINTMENT_INCLUDE = {
-  client:       { include: { client: true } },
-  professional: true,
-  service:      true,
+  client:            { include: { client: true } },
+  professional:      true,
+  service:           true,
+  balanceCollectedBy: true,
 } satisfies Prisma.AppointmentInclude
 
 type AppointmentRow = Prisma.AppointmentGetPayload<{ include: typeof APPOINTMENT_INCLUDE }>
@@ -104,6 +108,17 @@ function toClientView(a: AppointmentRow) {
     selectedZones:     (a.selectedZones ?? []) as unknown as { name: string; price: number; duration: number }[],
     selectedPackages:  (a.selectedPackages ?? []) as unknown as { name: string; price: number; duration: number }[],
     details:           detailsOf(a),
+  }
+}
+
+function balancePaymentOf(a: AppointmentRow) {
+  if (!a.balancePaidAt) return null
+  return {
+    method:        a.balancePaymentMethod,
+    amount:        Number(a.balancePaidAmount),
+    paidAt:        a.balancePaidAt.toISOString(),
+    collectedById: a.balanceCollectedById,
+    collectedByName: a.balanceCollectedBy?.name ?? null,
   }
 }
 
@@ -163,6 +178,7 @@ function toAdminView(a: AppointmentRow, peers: ComboPeer[] | null = null) {
     cancelReason:      a.cancelReason,
     paymentStatus:     a.paymentStatus,
     arrivedAt:         a.arrivedAt ? a.arrivedAt.toISOString() : null,
+    balancePayment:    balancePaymentOf(a),
     depositAmount:     Number(a.depositAmount),
     clientNotes:       a.clientNotes ?? '',
     professionalNotes: a.internalNotes ?? '',
@@ -306,6 +322,53 @@ async function registerArrival(appointment: AppointmentRow): Promise<Appointment
     data:    { arrivedAt: new Date() },
     include: APPOINTMENT_INCLUDE,
   })
+}
+
+// Registra el cobro del saldo (precio - seña) hecho en el local — la seña ya
+// se cobra sola por Mercado Pago, esto es la parte que se paga en mano al
+// momento del servicio. `collectedById` es quién lo registra (la profesional
+// del turno, o el admin si lo carga por ella).
+async function registerBalancePayment(
+  appointment: AppointmentRow,
+  data: { method: BalancePaymentMethod; amount: number },
+  collectedById: string,
+): Promise<AppointmentRow> {
+  if (!BALANCE_PAYMENT_METHODS.includes(data.method)) {
+    throw new AppError(HTTP.BAD_REQUEST, 'Método de pago inválido', 'INVALID_PAYMENT_METHOD')
+  }
+  if (!(data.amount > 0)) {
+    throw new AppError(HTTP.BAD_REQUEST, 'El monto tiene que ser mayor a cero', 'INVALID_AMOUNT')
+  }
+  if (['cancelled', 'no_show'].includes(appointment.status)) {
+    throw new AppError(HTTP.BAD_REQUEST, 'No se puede registrar un cobro sobre un turno cancelado o no asistido', 'INVALID_STATUS')
+  }
+
+  const alreadyPaid = appointment.paymentStatus === 'partial' || appointment.paymentStatus === 'paid'
+    ? Number(appointment.depositAmount)
+    : 0
+  const fullyPaid = alreadyPaid + data.amount >= Number(appointment.servicePrice)
+
+  const updated = await prisma.appointment.update({
+    where: { id: appointment.id },
+    data: {
+      balancePaymentMethod: data.method,
+      balancePaidAmount:    data.amount,
+      balancePaidAt:        new Date(),
+      balanceCollectedById: collectedById,
+      paymentStatus:        fullyPaid ? 'paid' : appointment.paymentStatus,
+    },
+    include: APPOINTMENT_INCLUDE,
+  })
+
+  const methodLabel = { cash: 'efectivo', transfer: 'transferencia', card: 'tarjeta', other: 'otro método' }[data.method]
+  await activityService.log({
+    userName: updated.balanceCollectedBy?.name ?? 'Admin',
+    action: 'Cobro de saldo registrado',
+    module: 'payments',
+    detail: `${updated.service.name} — ${updated.client.name} con ${updated.professional.name}: $${data.amount} en ${methodLabel} (turno ${appointment.id})`,
+  })
+
+  return updated
 }
 
 // Cancelar un turno que forma parte de un combo cancela todo el grupo (comboGroupId):
@@ -1504,6 +1567,20 @@ export const appointmentService = {
     const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
     if (!appointment) throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
     const updated = await registerArrival(appointment)
+    const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
+    return toAdminView(updated, peers)
+  },
+
+  // ── Cobro del saldo en el local ──────────────────────────────────
+  // Solo el admin lo completa (no la profesional) — es quien concilia el
+  // efectivo/tarjeta recibido en el local, no la información la reporta
+  // sola cada profesional.
+  registerBalancePaymentForAdmin: async (
+    adminId: string, id: string, data: { method: string; amount: number },
+  ) => {
+    const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
+    if (!appointment) throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
+    const updated = await registerBalancePayment(appointment, data as { method: BalancePaymentMethod; amount: number }, adminId)
     const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
     return toAdminView(updated, peers)
   },

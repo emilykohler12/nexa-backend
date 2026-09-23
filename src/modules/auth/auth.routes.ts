@@ -32,6 +32,7 @@ const router = Router()
 
 router.post('/register',        strictLimiter, authController.register)
 router.post('/login',           loginLimiter,  authController.login)
+router.post('/social-login',    loginLimiter,  authController.socialLogin)
 router.post('/forgot-password', strictLimiter, authController.forgotPassword)
 router.post('/reset-password',  strictLimiter, authController.resetPassword)
 router.post('/change-password', authenticate, authController.changePassword)
