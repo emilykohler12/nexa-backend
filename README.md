@@ -1,19 +1,6 @@
 # Nexa — Sistema de Gestión de Turnos para Estudio de Belleza (Prototipo v1)
 
-## 1. Identificación
-
-- **Proyecto:** Nexa — Sistema integral de gestión de turnos, clientes y pagos para estudios de belleza multidisciplinarios
-- **Tipo:** Proyecto Integrador Final — Actividad de Evaluación N.º 2
-- **Autora:** Kohler, Emily Noralí — DNI 45.555.841
-- **Institución:** Comisión A · Sede Posadas · Docente Titular: PosDr. Darío Ezequiel Díaz
-- **Equipo (Comisión A):** 
-  - Geneyro, Lautaro (Nvstyle)
-  - Leal, Thiago (Motel C.C.)
-  - Kohler, Emily (Nexa) — Este repositorio corresponde exclusivamente a Nexa
-
----
-
-## 2. Qué Hace Este Prototipo
+## 1. Qué Hace Este Prototipo
 
 ### Caso de Uso Vertical Implementado
 
@@ -32,7 +19,7 @@ Si la validación falla, el sistema rechaza la reserva con un mensaje de error e
 
 ---
 
-## 3. Stack Tecnológico
+## 2. Stack Tecnológico
 
 | Capa | Tecnología | Versión |
 |------|-----------|---------|
@@ -49,7 +36,7 @@ Si la validación falla, el sistema rechaza la reserva con un mensaje de error e
 
 ---
 
-## 4. Requisitos Previos
+## 3. Requisitos Previos
 
 **Sistemas operativos soportados:** Windows, macOS, Linux
 
@@ -70,7 +57,7 @@ psql --version        # PostgreSQL 18.4+ (opcional si usas Supabase)
 
 ---
 
-## 5. Instalación Rápida (10 minutos)
+## 4. Instalación Rápida (10 minutos)
 
 ### 5.1 Clonar repositorio
 
@@ -156,7 +143,7 @@ Esto:
 
 ---
 
-## 6. Ejecutar la Aplicación
+## 5. Ejecutar la Aplicación
 
 ### 6.1 Backend (Terminal 1)
 
@@ -195,7 +182,7 @@ http://localhost:5173
 
 ---
 
-## 7. Prueba del Caso de Uso Vertical
+## 6. Prueba del Caso de Uso Vertical
 
 ### 7.1 Crear cuenta de cliente
 
@@ -262,7 +249,7 @@ ORDER BY "createdAt" DESC;
 
 ---
 
-## 8. Ejecutar Tests
+## 7. Ejecutar Tests
 
 ### 8.1 Tests Backend
 
@@ -299,7 +286,7 @@ Duration  2.76s
 
 ---
 
-## 9. Build y Despliegue
+## 8. Build y Despliegue
 
 ### 9.1 Build Backend
 
@@ -319,7 +306,7 @@ Genera `/dist/` listo para Vercel o Netlify.
 
 ---
 
-## 10. CI/CD (GitHub Actions)
+## 9. CI/CD (GitHub Actions)
 
 ### 10.1 Pipeline Backend
 
@@ -359,7 +346,7 @@ Genera `/dist/` listo para Vercel o Netlify.
 
 ---
 
-## 11. Solución de Problemas
+## 10. Solución de Problemas
 
 ### Error: `DATABASE_URL is not defined`
 
@@ -414,61 +401,6 @@ export default defineConfig({
 
 ---
 
-## 12. Uso de Herramientas de IA
-
-**Herramienta utilizada:** Claude Haiku 4.5 (Anthropic)
-
-**Función:** 
-- Implementación de lógica de validación de disponibilidad
-- Refactorización de componentes React
-- Revisión y mejora de queries SQL/Prisma
-- Mejora de mensajes de error y UX
-
-**Artefactos afectados:**
-- `/src/modules/appointments/appointment.service.ts` (validación)
-- `/src/features/auth/components/` (formularios)
-- `/prisma/migrations/` (DDL/DML)
-- `/tests/integration/` (cobertura de tests)
-
-**Verificación propia realizada:**
-- ✅ Todos los casos de uso probados manualmente (secciones 7.1–7.4)
-- ✅ Reglas de negocio validadas contra requisitos funcionales
-- ✅ 108 tests automatizados pasando al 100%
-- ✅ Revisión de lógica SQL y queries de Prisma
-- ✅ Sin regresiones en funcionalidad anterior
-
----
-
-## 13. Próximas Fases
-
-### Fase 2 (Mercado Pago Real)
-- [ ] Integrar credenciales reales de Loren
-- [ ] Webhooks de confirmación de pago
-- [ ] Email de recibos
-
-### Fase 3 (Despliegue en Producción)
-- [ ] Vercel (Frontend)
-- [ ] Render (Backend)
-- [ ] Supabase (Base de datos)
-- [ ] Sentry (Monitoreo de errores)
-- [ ] Uptime Robot (Alertas)
-
-### Fase 4 (Observabilidad)
-- [ ] Logs centralizados (LogTail)
-- [ ] Métricas de rendimiento (Datadog)
-- [ ] Analytics de usuario (PostHog)
-- [ ] Backup automático de BD
-
----
-
-## 14. Contacto y Soporte
-
-- **Reportar bugs:** https://github.com/emilykohler12/nexa-backend/issues
-- **Sugerencias:** https://github.com/emilykohler12/nexa-backend/discussions
-- **Pull requests:** Bienvenidos con descripción clara
-
----
-
 **Versión:** 1.0.0  
-**Última actualización:** 2026-09-24  
+**Última actualización:** 2026-09-25  
 **Estado:** ✅ Prototipo funcional — 108/108 tests pasando
