@@ -9,6 +9,10 @@ import { apiRoutes }    from './routes'
 import { errorHandler } from './middlewares/errorHandler'
 import { notFound }     from './middlewares/notFound'
 import { capturarRawBody } from '../modules/whatsapp/middleware/whatsapp-signature.middleware'
+import { initSentry, sentryRequestHandler, sentryErrorHandler } from '../sentry'
+
+// Inicializar Sentry ANTES de crear la app
+initSentry()
 
 const app = express()
 
@@ -18,6 +22,9 @@ const app = express()
 // express-rate-limit no puede confiar en el header X-Forwarded-For que
 // agrega el túnel, y tira el warning ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
 app.set('trust proxy', 1)
+
+// Sentry request handler PRIMERO para capturar requests
+app.use(sentryRequestHandler())
 
 // Cabeceras de seguridad. helmet() ya trae buenos defaults (CSP, X-Frame-Options,
 // HSTS, etc.) — acá se los deja explícitos porque esta API nunca sirve HTML/JS/CSS
@@ -73,6 +80,7 @@ app.get('/health', (_req, res) => res.redirect(307, '/api/health'))
 app.use('/api', apiRoutes)
 
 app.use(notFound)
+app.use(sentryErrorHandler())
 app.use(errorHandler)
 
 export { app }
