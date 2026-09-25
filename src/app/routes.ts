@@ -19,6 +19,7 @@ import { reviewRoutes }       from '../modules/reviews/review.routes'
 import { whatsappRoutes }     from '../modules/whatsapp/whatsapp.routes'
 import { paymentRoutes }      from '../modules/payments/payment.routes'
 import { healthRoutes }       from '../modules/health/health.routes'
+import { uploadRoutes }       from '../modules/uploads/upload.routes'
 
 const router = Router()
 
@@ -42,5 +43,6 @@ router.use('/special-events', specialEventRoutes)
 router.use('/reviews',      reviewRoutes)
 router.use('/webhook',      whatsappRoutes)
 router.use('/webhook',      paymentRoutes)
+router.use('/uploads',      uploadRoutes)
 
 export { router as apiRoutes }

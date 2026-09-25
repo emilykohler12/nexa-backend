@@ -44,6 +44,15 @@ const schema = z.object({
   MERCADOPAGO_ACCESS_TOKEN:   z.string().optional(),
   MERCADOPAGO_WEBHOOK_SECRET: z.string().optional(),
 
+  // Supabase Storage — donde se guardan las imágenes que suben los admins/
+  // profesionales/clientes (logo, fotos de perfil, galería, promos, etc.).
+  // Opcionales: la app arranca sin ellas, upload.service.ts valida su
+  // presencia recién al momento de subir una imagen real. La ANON_KEY no es
+  // secreta (Supabase la expone igual en cualquier cliente), pero acá se usa
+  // solo desde el backend — nunca llega al navegador.
+  SUPABASE_URL:      z.string().optional(),
+  SUPABASE_ANON_KEY: z.string().optional(),
+
   // Login social — opcionales, la app arranca sin ellas. social.provider.ts
   // valida su presencia recién al momento de verificar un login real.
   // GOOGLE_CLIENT_ID es el mismo valor público que VITE_GOOGLE_CLIENT_ID del
