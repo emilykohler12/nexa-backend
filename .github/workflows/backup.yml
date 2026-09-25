@@ -1,0 +1,31 @@
+name: Backup diario de la base de datos
+
+# Corre solo una vez al día (03:00 ART = 06:00 UTC) y también se puede
+# disparar a mano desde la pestaña Actions ("Run workflow") para probar
+# el proceso de restore sin esperar al cron.
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar cliente de PostgreSQL
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      # --no-owner/--no-acl: el rol que crea la base al restaurar en otro
+      # lugar no necesariamente se llama igual que en Supabase, así evita
+      # que el restore falle por permisos que no existen del otro lado.
+      - name: Generar el dump
+        run: pg_dump "${{ secrets.DATABASE_URL }}" --no-owner --no-acl -F c -f nexa-backup.dump
+
+      # Se guarda como artifact del propio run (no en el repo) — así nunca
+      # queda un dump con datos de clientas en el historial de git.
+      - name: Subir el dump como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-backup-${{ github.run_id }}
+          path: nexa-backup.dump
+          retention-days: 30
