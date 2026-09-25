@@ -31,9 +31,13 @@ export function initSentry() {
 }
 
 export function sentryErrorHandler() {
-  return Sentry.Handlers.errorHandler();
+  return Sentry.expressErrorHandler();
 }
 
+// En @sentry/node v8+ el tracing de requests es automático (instrumentación
+// basada en OpenTelemetry, activada por Sentry.init()) — ya no existe un
+// middleware de request handler separado, así que este queda como no-op para
+// no tener que tocar app.ts (que sigue llamando app.use(sentryRequestHandler())).
 export function sentryRequestHandler() {
-  return Sentry.Handlers.requestHandler();
+  return (_req: unknown, _res: unknown, next: () => void) => next();
 }

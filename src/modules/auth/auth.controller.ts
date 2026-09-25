@@ -1,5 +1,6 @@
 // src/modules/auth/auth.controller.ts
 import type { Request, Response, NextFunction } from 'express'
+import { z }                   from 'zod'
 import { authService }         from './auth.service'
 import { bcryptProvider }      from './providers/bcrypt.provider'
 import { authRepository }      from './auth.repository'
@@ -35,14 +36,7 @@ function clearTokenCookies(res: Response): void {
   res.clearCookie('refresh_token', { ...COOKIE_BASE, path: '/api/auth/refresh' })
 }
 
-function validate<T>(
-  schema: {
-    safeParse: (d: unknown) =>
-      | { success: true; data: T }
-      | { success: false; error: { issues: { message: string }[] } }
-  },
-  data: unknown,
-): T {
+function validate<S extends z.ZodType>(schema: S, data: unknown): z.infer<S> {
   const result = schema.safeParse(data)
   if (!result.success) {
     throw new AppError(

@@ -12,7 +12,7 @@ function getId(req: Request): string {
   return id
 }
 
-function parseBody<T>(schema: z.ZodType<T>, body: unknown): T {
+function parseBody<S extends z.ZodType>(schema: S, body: unknown): z.infer<S> {
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
     throw new AppError(HTTP.BAD_REQUEST, parsed.error.issues[0].message, 'VALIDATION_ERROR')
@@ -181,7 +181,10 @@ export const appointmentController = {
   create: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const input = parseBody(createBookingSchema, req.body)
-      const appointment = await appointmentService.createForClient(req.user!.id, input)
+      // El cast es por una rareza del inferido de zod con este tsconfig (marca
+      // professionalId opcional en el tipo mostrado) — zod ya lo validó como
+      // presente en parseBody, esto solo corrige la anotación de tipo.
+      const appointment = await appointmentService.createForClient(req.user!.id, input as Parameters<typeof appointmentService.createForClient>[1])
       res.status(HTTP.CREATED).json({ appointment })
     } catch (err) { next(err) }
   },
@@ -189,7 +192,7 @@ export const appointmentController = {
   createCombo: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const input = parseBody(comboBookingSchema, req.body)
-      const result = await appointmentService.createComboForClient(req.user!.id, input)
+      const result = await appointmentService.createComboForClient(req.user!.id, input as Parameters<typeof appointmentService.createComboForClient>[1])
       // Se devuelve además `appointments` suelto por compatibilidad con el front viejo.
       res.status(HTTP.CREATED).json({ ...result })
     } catch (err) { next(err) }
@@ -248,7 +251,7 @@ export const appointmentController = {
   rescheduleMine: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const input = parseBody(bookingSchema, req.body)
-      const appointment = await appointmentService.rescheduleForClient(req.user!.id, getId(req), input)
+      const appointment = await appointmentService.rescheduleForClient(req.user!.id, getId(req), input as Parameters<typeof appointmentService.rescheduleForClient>[2])
       res.json({ appointment })
     } catch (err) { next(err) }
   },
@@ -256,7 +259,7 @@ export const appointmentController = {
   updateDetailsMine: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const input = parseBody(detailsSchema, req.body)
-      const appointment = await appointmentService.updateDetailsForClient(req.user!.id, getId(req), input)
+      const appointment = await appointmentService.updateDetailsForClient(req.user!.id, getId(req), input as Parameters<typeof appointmentService.updateDetailsForClient>[2])
       res.json({ appointment })
     } catch (err) { next(err) }
   },
