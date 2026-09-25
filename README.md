@@ -1,5 +1,7 @@
 # Nexa — Sistema de Gestión de Turnos para Estudio de Belleza (Prototipo v1)
 
+Creado por: Emily Noralí Kohler
+
 ## 1. Qué Hace Este Prototipo
 
 ### Caso de Uso Vertical Implementado
