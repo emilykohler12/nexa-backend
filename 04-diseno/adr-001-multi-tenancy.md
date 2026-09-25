@@ -1,7 +1,13 @@
 # ADR-001: Estrategia de Multi-Tenancy
 
+> ⚠️ **SUPERADO.** Este documento reflejaba la idea original de un SaaS
+> multi-tenant clásico. La decisión final y su justificación completa están en
+> [`00-gestion/ADR-001-estrategia-multi-tenancy.md`](../00-gestion/ADR-001-estrategia-multi-tenancy.md)
+> (single-tenant con plantilla, no la Alternativa A de este documento). Se deja
+> este archivo como registro histórico de la evaluación intermedia.
+
 **Fecha:** 2026-09-20  
-**Estado:** ACEPTADO  
+**Estado:** SUPERADO — ver `00-gestion/ADR-001-estrategia-multi-tenancy.md`  
 **Impacto:** ALTO
 
 ---
