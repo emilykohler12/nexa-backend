@@ -48,11 +48,18 @@ async function resolvePromotionGroup(promotionId: string, lines: OrderItemInput[
     }
     const n = lines[0].quantity
     const realTotal = promoItems.reduce((s, i) => s + i.price, 0) || 1
-    return promoItems.map(item => ({
-      productId: item.id,
-      quantity:  n,
-      unitPrice: Math.round(item.price * (Number(promo.price) / realTotal)),
-    }))
+    // El último ítem se lleva el resto en vez de redondearse como los demás,
+    // así la suma de unitPrice da EXACTO promo.price (redondear cada uno por
+    // separado puede perder o ganar $1 en la suma total del combo).
+    let assignedSoFar = 0
+    return promoItems.map((item, idx) => {
+      const isLast = idx === promoItems.length - 1
+      const unitPrice = isLast
+        ? Number(promo.price) - assignedSoFar
+        : Math.round(item.price * (Number(promo.price) / realTotal))
+      assignedSoFar += unitPrice
+      return { productId: item.id, quantity: n, unitPrice }
+    })
   }
 
   if (promo.kind === 'buy_x_pay_y') {
@@ -85,7 +92,7 @@ export const orderService = {
     delivery: { type: 'pickup' | 'delivery'; address?: string | null }
     phone?: string | null
     notes?: string | null
-    paymentMethod?: 'mercadopago' | null
+    paymentMethod?: 'mercadopago' | 'whatsapp' | null
   }) => {
     const client = await prisma.user.findUnique({ where: { id: clientId } })
     if (!client) throw new AppError(HTTP.NOT_FOUND, 'Usuario no encontrado', 'NOT_FOUND')
@@ -170,11 +177,11 @@ export const orderService = {
       include: { items: true },
     })
 
-    const paymentLabels: Record<string, string> = { mercadopago: 'Mercado Pago' }
+    const paymentLabels: Record<string, string> = { mercadopago: 'Mercado Pago', whatsapp: 'Coordinado por WhatsApp' }
     const paymentLabel = data.paymentMethod ? paymentLabels[data.paymentMethod] ?? null : null
 
     await activityService.log({
-      action: 'Compra de producto', module: 'store',
+      action: 'Compra de producto', module: 'store', level: 'success',
       detail: `${client.name} compró ${lineItems.map(li => `${li.quantity}x ${li.productName}`).join(', ')} — $${totalPrice.toLocaleString('es-AR')}`
         + (paymentLabel ? ` (pago: ${paymentLabel})` : ''),
     })
@@ -206,6 +213,9 @@ export const orderService = {
     }
     if (order.paymentStatus === 'paid') {
       throw new AppError(HTTP.BAD_REQUEST, 'Este pedido ya está pago', 'ALREADY_PAID')
+    }
+    if (order.paymentMethod === 'whatsapp') {
+      throw new AppError(HTTP.BAD_REQUEST, 'Este pedido se coordina por WhatsApp, no por Mercado Pago', 'WHATSAPP_PAYMENT')
     }
 
     const { checkoutUrl } = await paymentService.createPreference({
@@ -278,7 +288,7 @@ export const orderService = {
       })
       if (oversold.length > 0) {
         await activityService.log({
-          action: 'Stock negativo tras pago', module: 'store',
+          action: 'Stock negativo tras pago', module: 'store', level: 'error',
           detail: `Pedido ${id}: ${oversold.map(p => `${p.name} (${p.stock})`).join(', ')} — revisá el stock.`,
         })
       }
@@ -288,15 +298,89 @@ export const orderService = {
       await prisma.order.update({ where: { id }, data: { paymentStatus, mpPaymentId } })
     }
 
+    const viaWhatsapp = mpPaymentId.startsWith('whatsapp-manual-')
     await activityService.log({
-      action: 'Pago de pedido recibido', module: 'payments',
-      detail: `Pedido ${id} — Mercado Pago informó estado "${status}"`,
+      action: viaWhatsapp ? 'Pago de pedido confirmado por WhatsApp' : 'Pago de pedido recibido', module: 'payments',
+      level: ['approved', 'paid'].includes(paymentStatus) ? 'success' : 'warning',
+      detail: viaWhatsapp
+        ? `Pedido ${id} — el admin confirmó el pago coordinado por WhatsApp`
+        : `Pedido ${id} — Mercado Pago informó estado "${status}"`,
     })
+  },
+
+  listForAdmin: async () => {
+    const orders = await prisma.order.findMany({
+      include: { items: { include: { product: true } }, client: true },
+      orderBy: { createdAt: 'desc' },
+    })
+    return orders.map(o => ({
+      id: o.id,
+      clientName:  o.client.name,
+      clientPhone: o.client.phone ?? '',
+      items: o.items.map(li => ({
+        productName: li.product.name,
+        quantity:    li.quantity,
+        unitPrice:   Number(li.unitPrice),
+      })),
+      total:         Number(o.totalPrice),
+      delivery:      { type: o.deliveryType as 'pickup' | 'delivery', address: o.deliveryAddress },
+      phone:         o.phone,
+      notes:         o.notes,
+      paymentMethod: o.paymentMethod,
+      paymentStatus: o.paymentStatus,
+      status:        o.status as 'pending' | 'confirmed' | 'ready' | 'delivered' | 'cancelled',
+      createdAt:     o.createdAt.toISOString(),
+    }))
+  },
+
+  // Control manual del admin sobre un pedido: el estado de entrega (para
+  // marcarlo "retirado"/"entregado") y el estado de pago (para completar a
+  // mano lo que el medio de pago no confirma solo — WhatsApp, o corregir un
+  // estado de Mercado Pago). Pasar a paymentStatus 'paid' reusa
+  // applyPaymentResult (mismo descuento de stock, misma idempotencia) con un
+  // id sintético; cualquier otro valor solo actualiza el campo.
+  updateForAdmin: async (id: string, data: { status?: string; paymentStatus?: string }) => {
+    const order = await prisma.order.findUnique({ where: { id } })
+    if (!order) throw new AppError(HTTP.NOT_FOUND, 'Pedido no encontrado', 'NOT_FOUND')
+
+    if (data.paymentStatus && data.paymentStatus !== order.paymentStatus) {
+      if (data.paymentStatus === 'paid') {
+        if (order.paymentMethod !== 'whatsapp') {
+          throw new AppError(HTTP.BAD_REQUEST, 'Solo se pueden marcar como pagos los pedidos coordinados por WhatsApp', 'NOT_WHATSAPP_PAYMENT')
+        }
+        await orderService.applyPaymentResult(id, `whatsapp-manual-${Date.now()}`, 'approved')
+      } else {
+        await prisma.order.update({ where: { id }, data: { paymentStatus: data.paymentStatus } })
+        await activityService.log({
+          action: 'Estado de pago del pedido actualizado', module: 'payments', level: 'warning',
+          detail: `Pedido ${id}: ${order.paymentStatus} → ${data.paymentStatus}`,
+        })
+      }
+    }
+
+    if (data.status && data.status !== order.status) {
+      await prisma.order.update({ where: { id }, data: { status: data.status } })
+      await activityService.log({
+        action: 'Estado del pedido actualizado', module: 'store', level: 'warning',
+        detail: `Pedido ${id} (${order.deliveryType === 'pickup' ? 'retiro en local' : 'envío'}): ${order.status} → ${data.status}`,
+      })
+    }
+
+    const fresh = await prisma.order.findUnique({ where: { id } })
+    return { status: fresh!.status, paymentStatus: fresh!.paymentStatus }
   },
 
   listForClient: async (clientId: string) => {
     const orders = await prisma.order.findMany({
-      where:   { clientId },
+      where: {
+        clientId,
+        // Un pedido de Mercado Pago que nunca se confirmó (el cliente abrió el
+        // checkout y no llegó a pagar, o ni lo abrió) no es una compra — no
+        // tiene sentido que aparezca en "Historial de tus compras" como si lo
+        // fuera. Uno coordinado por WhatsApp SÍ se muestra pendiente: ese
+        // quedó reservado de verdad, solo falta que el admin confirme el pago.
+        NOT: { paymentMethod: 'mercadopago', paymentStatus: 'pending' },
+      },
       include: { items: { include: { product: true } } },
       orderBy: { createdAt: 'desc' },
     })

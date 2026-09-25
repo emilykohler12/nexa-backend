@@ -7,6 +7,7 @@ import { HTTP }         from '../../app/constants/http'
 import { z }            from 'zod'
 import { dateSchema, timeSchema } from '../../app/validators/datetime'
 import { clientNotificationService } from '../clients/client-notification.service'
+import { appointmentService } from '../appointments/appointment.service'
 
 const specialSlotSchema = z.object({
   id:               z.string().optional(),
@@ -111,6 +112,16 @@ export const serviceController = {
     try {
       const services = await serviceModel.findActive()
       res.json({ services })
+    } catch (err) { next(err) }
+  },
+
+  // Vista previa de a quién le tocaría un turno si el cliente elige "cualquier
+  // profesional disponible" — para mostrar el nombre real en la confirmación
+  // de la reserva en vez del texto genérico.
+  getPreferredProfessional: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const preview = await appointmentService.previewAnyProfessional(getId(req))
+      res.json(preview)
     } catch (err) { next(err) }
   },
 

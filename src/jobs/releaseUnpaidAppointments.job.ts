@@ -20,6 +20,9 @@
 //  - Señas ya pagas ('partial') o reembolsadas ('refunded').
 //  - Combos: la seña vive en la primera pata; si esa pata queda impaga, se
 //    cancela TODO el grupo (no se puede dejar medio combo en pie).
+//  - Señas coordinadas por WhatsApp (depositMethod 'whatsapp'): no pasan por
+//    Mercado Pago, así que se quedan en 'pending' hasta que el admin las marca
+//    pagas a mano — no hay "tiempo límite" que valga acá.
 import { prisma }          from '../app/database/prisma'
 import { activityService } from '../modules/activity/activity.service'
 
@@ -31,13 +34,21 @@ const EXPIRE_AFTER_MINUTES = 20
 export async function runReleaseUnpaidAppointmentsJob(): Promise<{ released: number }> {
   const cutoff = new Date(Date.now() - EXPIRE_AFTER_MINUTES * 60 * 1000)
 
+  // OJO: "depositMethod: { not: 'whatsapp' }" NO alcanza para excluir esos
+  // turnos — en SQL, `<> 'whatsapp'` es NULL (no true) cuando la columna es
+  // NULL (el caso normal, turnos por Mercado Pago), así que ese filtro solo
+  // dejaría pasar turnos que EXPLÍCITAMENTE tengan 'whatsapp'... al revés de
+  // lo que queremos. Por eso el OR explícito con `null` incluido.
   const staleFilter = {
     status:        'confirmed' as const,
     depositAmount: { gt: 0 },
     createdAt:     { lt: cutoff },
-    OR: [
-      { paymentStatus: 'pending', mpPaymentId: null },
-      { paymentStatus: { in: ['rejected', 'cancelled'] } },
+    AND: [
+      { OR: [{ depositMethod: null }, { depositMethod: { not: 'whatsapp' } }] },
+      { OR: [
+          { paymentStatus: 'pending', mpPaymentId: null },
+          { paymentStatus: { in: ['rejected', 'cancelled'] } },
+        ] },
     ],
   }
 

@@ -8,6 +8,7 @@ const router = Router()
 
 // Pública — la página home la usa para mostrar servicios
 router.get('/', serviceController.getActive)
+router.get('/:id/preferred-professional', serviceController.getPreferredProfessional)
 
 // Admin — requiere autenticación y rol admin
 router.get(    '/all',        authenticate, requireRole('admin'), serviceController.getAll)

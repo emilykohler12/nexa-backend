@@ -51,7 +51,6 @@ const schema = z.object({
   // exponen en el JS del navegador) — se usa acá para confirmar que el
   // access_token que llega fue emitido para ESTA app y no para otra.
   GOOGLE_CLIENT_ID:  z.string().optional(),
-  FACEBOOK_APP_ID:   z.string().optional(),
   // URL pública (túnel de VS Code / ngrok) a la que Mercado Pago manda los
   // webhooks en desarrollo. Sin esto, el webhook nunca llega — los pagos se
   // pueden crear igual, pero nunca se confirman solos. Un valor vacío en el

@@ -23,7 +23,12 @@ const createOrderSchema = z.object({
   }),
   phone:         z.string().max(30).nullable().optional(),
   notes:         z.string().max(1000).nullable().optional(),
-  paymentMethod: z.enum(['mercadopago']).nullable().optional(),
+  paymentMethod: z.enum(['mercadopago', 'whatsapp']).nullable().optional(),
+})
+
+const updateOrderSchema = z.object({
+  status:        z.enum(['pending', 'confirmed', 'ready', 'delivered', 'cancelled']).optional(),
+  paymentStatus: z.enum(['pending', 'paid', 'rejected', 'cancelled', 'refunded']).optional(),
 })
 
 export const orderController = {
@@ -59,6 +64,25 @@ export const orderController = {
   verifyPayment: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const result = await orderService.verifyPayment(req.user!.id, getId(req))
+      res.json(result)
+    } catch (err) { next(err) }
+  },
+
+  // Admin
+  listForAdmin: async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const orders = await orderService.listForAdmin()
+      res.json({ orders })
+    } catch (err) { next(err) }
+  },
+
+  updateForAdmin: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = updateOrderSchema.safeParse(req.body)
+      if (!parsed.success) {
+        throw new AppError(HTTP.BAD_REQUEST, parsed.error.issues[0].message, 'VALIDATION_ERROR')
+      }
+      const result = await orderService.updateForAdmin(getId(req), parsed.data)
       res.json(result)
     } catch (err) { next(err) }
   },

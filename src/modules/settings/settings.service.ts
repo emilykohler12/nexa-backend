@@ -107,6 +107,24 @@ export const settingsService = {
     return mapBusinessSettings(row)
   },
 
+  // Precios de referencia para "retiro de esmalte de otro salón" según el
+  // tipo de servicio (ej. Capping $3000, Softgel $5000) — el admin los
+  // configura una vez acá y después solo elige uno al registrar el retiro en
+  // un turno puntual (ver appointment.service.ts, registerPolishRemoval).
+  getPolishRemovalRules: async (): Promise<{ id: string; label: string; price: number }[]> => {
+    const row = await getOrCreateBusinessSettings()
+    return (row.polishRemovalRules as unknown as { id: string; label: string; price: number }[]) ?? []
+  },
+
+  updatePolishRemovalRules: async (rules: { id: string; label: string; price: number }[]) => {
+    const current = await getOrCreateBusinessSettings()
+    await prisma.businessSettings.update({
+      where: { id: current.id },
+      data:  { polishRemovalRules: rules as any },
+    })
+    return rules
+  },
+
   updateBusinessSettings: async (data: any) => {
     const current = await getOrCreateBusinessSettings()
     const updated = await prisma.businessSettings.update({

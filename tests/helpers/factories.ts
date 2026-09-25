@@ -161,6 +161,7 @@ export async function createAppointmentDirect(overrides: {
   date: string; time: string
   status?: string; paymentStatus?: string; depositAmount?: number; servicePrice?: number
   duration?: number; comboGroupId?: string | null; arrivedAt?: Date | null
+  depositMethod?: string | null
 }) {
   const service = await prisma.service.findUniqueOrThrow({ where: { id: overrides.serviceId } })
   return prisma.appointment.create({
@@ -173,6 +174,7 @@ export async function createAppointmentDirect(overrides: {
       duration:       overrides.duration ?? service.duration,
       servicePrice:   overrides.servicePrice ?? service.price,
       depositAmount:  overrides.depositAmount ?? 0,
+      depositMethod:  overrides.depositMethod ?? null,
       status:         overrides.status ?? 'confirmed',
       paymentStatus:  overrides.paymentStatus ?? 'pending',
       comboGroupId:   overrides.comboGroupId ?? null,

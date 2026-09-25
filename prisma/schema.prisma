@@ -226,6 +226,11 @@ model Appointment {
   duration       Int
   servicePrice   Decimal  @map("service_price") @db.Decimal(10, 2)
   depositAmount  Decimal  @default(0) @map("deposit_amount") @db.Decimal(10, 2)
+  // Cómo se coordina la seña: null/'mercadopago' (flujo normal, checkout
+  // automático) | 'whatsapp' (el cliente eligió coordinarla por WhatsApp — el
+  // turno se guarda igual, pero el pago lo confirma el admin a mano y el job
+  // de liberación por falta de pago lo excluye, ver releaseUnpaidAppointments.job.ts).
+  depositMethod  String?  @map("deposit_method") @db.VarChar(20)
   status         String   @default("pending") @db.VarChar(20)
   paymentStatus  String   @default("pending") @map("payment_status") @db.VarChar(20)
   // Id del pago en Mercado Pago que confirmó la seña — se completa recién
@@ -288,6 +293,14 @@ model Appointment {
   // es la clienta del turno).
   balanceCollectedById  String?   @map("balance_collected_by_id") @db.Uuid
   balanceCollectedBy    User?     @relation("BalanceCollectedBy", fields: [balanceCollectedById], references: [id])
+  // Solo para cuando la clienta marcó "tenía esmaltado de otro salón para
+  // retirar" (Appointment.hasOtherSalonPolish) — un precio de referencia que
+  // el admin carga (a mano o eligiendo una regla configurada en Configuración)
+  // PURAMENTE para llevar un control interno. Nunca suma a servicePrice, al
+  // saldo pendiente, ni a ningún KPI del dashboard — ese cobro ya está
+  // incluido en el total que el admin carga en el cobro de saldo normal.
+  polishRemovalLabel String?  @map("polish_removal_label") @db.VarChar(100)
+  polishRemovalPrice Decimal? @map("polish_removal_price") @db.Decimal(10, 2)
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -501,6 +514,12 @@ model BusinessSettings {
   twitter     String?  @db.VarChar(255)
   whatsapp    String?  @db.VarChar(30)
   policies    String[] @default([])
+  // Precios de referencia para "retiro de esmalte de otro salón", por tipo de
+  // servicio (ej. Capping $3000, Softgel $5000) — [{id, label, price}]. Solo
+  // sirve para que el admin elija un valor ya cargado al registrar el retiro
+  // en un turno puntual (ver Appointment.polishRemoval*); nunca se usa para
+  // calcular ningún total solo.
+  polishRemovalRules Json @default("[]") @map("polish_removal_rules")
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("business_settings")

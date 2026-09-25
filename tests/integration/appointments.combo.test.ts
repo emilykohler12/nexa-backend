@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import request from 'supertest'
 import { app } from '../../src/app/app'
 import { prisma } from '../../src/app/database/prisma'
-import { createClientUser, createProfessionalUser, createService, tomorrowStr } from '../helpers/factories'
+import { createClientUser, createProfessionalUser, createAdminUser, createService, tomorrowStr } from '../helpers/factories'
 import { cookieFor } from '../helpers/auth'
 
 async function createComboService(componentIds: string[], price = 15000) {
@@ -123,5 +123,40 @@ describe('reserva de combos simultáneos', () => {
 
     const sibling = await prisma.appointment.findUnique({ where: { id: legs[1].id } })
     expect(sibling?.status).not.toBe('cancelled')
+  })
+
+  it('el admin cancelando UNA pata desde su panel cancela el grupo entero (ambas patas) — el front debe refetchear, no parchear solo el id tocado', async () => {
+    const client = await createClientUser()
+    const admin  = await createAdminUser()
+    const pro1   = await createProfessionalUser()
+    const pro2   = await createProfessionalUser()
+    const svc1   = await createService({ name: 'Manicura' })
+    const svc2   = await createService({ name: 'Pedicura' })
+    const combo  = await createComboService([svc1.id, svc2.id])
+    const date   = tomorrowStr()
+
+    const created = await request(app)
+      .post('/api/client/appointments/combo')
+      .set('Cookie', cookieFor(client))
+      .send({
+        comboServiceId: combo.id, simultaneous: true,
+        components: [
+          { serviceId: svc1.id, professionalId: pro1.id, date, time: '10:00' },
+          { serviceId: svc2.id, professionalId: pro2.id, date, time: '10:00' },
+        ],
+      })
+    const legs = await prisma.appointment.findMany({ where: { comboGroupId: created.body.comboGroupId } })
+
+    // El admin cancela SOLO la primera pata desde su panel...
+    const res = await request(app)
+      .patch(`/api/admin/appointments/${legs[0].id}`)
+      .set('Cookie', cookieFor(admin))
+      .send({ status: 'cancelled' })
+    expect(res.status).toBe(200)
+
+    // ...pero el backend cancela TODO el grupo — la otra pata también queda
+    // cancelada, aunque el admin nunca la tocó directamente.
+    const sibling = await prisma.appointment.findUnique({ where: { id: legs[1].id } })
+    expect(sibling?.status).toBe('cancelled')
   })
 })

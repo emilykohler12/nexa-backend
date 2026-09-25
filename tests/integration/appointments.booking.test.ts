@@ -132,6 +132,25 @@ describe('reserva de turnos', () => {
     expect(res.body.appointment.professionalId).toBe(free.id)
   })
 
+  it('preferred-professional muestra a quien menos carga tiene, sin necesitar login', async () => {
+    const busy = await createProfessionalUser({ name: 'Ocupada' })
+    const free = await createProfessionalUser({ name: 'Libre' })
+    const svc  = await createService()
+    await linkProfessionalService(busy.id, svc.id)
+    await linkProfessionalService(free.id, svc.id)
+
+    const other = await createClientUser()
+    await request(app)
+      .post('/api/client/appointments')
+      .set('Cookie', cookieFor(other))
+      .send({ serviceId: svc.id, professionalId: busy.id, date: tomorrowStr(), time: '09:00', termsAccepted: true })
+
+    const res = await request(app).get(`/api/services/${svc.id}/preferred-professional`)
+    expect(res.status).toBe(200)
+    expect(res.body.professionalId).toBe(free.id)
+    expect(res.body.professionalName).toBe('Libre')
+  })
+
   it('rechaza reservar si la clienta está bloqueada', async () => {
     const client = await createClientUser({ blocked: true })
     const pro    = await createProfessionalUser()

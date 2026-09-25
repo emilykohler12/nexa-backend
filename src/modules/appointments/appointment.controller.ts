@@ -31,6 +31,11 @@ const balancePaymentSchema = z.object({
   amount: z.coerce.number().positive('El monto tiene que ser mayor a cero'),
 })
 
+const polishRemovalSchema = z.object({
+  label: z.string().trim().min(1, 'Elegí o escribí un nombre').max(100),
+  price: z.coerce.number().min(0).max(999999),
+})
+
 const bookingSchema = z.object({
   serviceId:      z.string().uuid('ID de servicio inválido'),
   professionalId: professionalIdSchema,
@@ -47,11 +52,16 @@ const promotionIdSchema = z.string().uuid('ID de promoción inválido').nullable
 // en la confirmación de la reserva (cubre además cuentas creadas antes de este
 // requisito). Solo en la creación, no en `rescheduleMine` — reprogramar no es
 // "confirmar una reserva nueva" y ya aceptó al reservar la primera vez.
+// Cómo el cliente coordina el pago de la seña — 'mercadopago' (default,
+// checkout automático) o 'whatsapp' (el admin la marca paga a mano después).
+const depositMethodSchema = z.enum(['mercadopago', 'whatsapp']).optional()
+
 const createBookingSchema = bookingSchema.extend({
   termsAccepted: z.boolean().refine(v => v === true, {
     message: 'Tenés que aceptar los Términos de Servicio y la Política de Privacidad',
   }),
-  promotionId: promotionIdSchema,
+  promotionId:   promotionIdSchema,
+  depositMethod: depositMethodSchema,
 })
 
 const comboBookingSchema = z.object({
@@ -63,6 +73,7 @@ const comboBookingSchema = z.object({
     date:           dateSchema,
     time:           timeSchema,
   })).min(1, 'El combo necesita al menos un servicio'),
+  depositMethod: depositMethodSchema,
 })
 
 const specialBookingSchema = z.object({
@@ -329,6 +340,21 @@ export const appointmentController = {
     try {
       const input = parseBody(balancePaymentSchema, req.body)
       const appointment = await appointmentService.registerBalancePaymentForAdmin(req.user!.id, getId(req), input)
+      res.json({ appointment })
+    } catch (err) { next(err) }
+  },
+
+  registerPolishRemoval: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const input = parseBody(polishRemovalSchema, req.body)
+      const appointment = await appointmentService.registerPolishRemoval(getId(req), input)
+      res.json({ appointment })
+    } catch (err) { next(err) }
+  },
+
+  markDepositPaid: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const appointment = await appointmentService.registerWhatsappDepositPaid(getId(req))
       res.json({ appointment })
     } catch (err) { next(err) }
   },

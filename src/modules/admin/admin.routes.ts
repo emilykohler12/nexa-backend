@@ -6,6 +6,7 @@ import { promotionController }   from '../promotions/promotion.controller'
 import { autoPromotionController } from '../promotions/autoPromotion.controller'
 import { specialEventController } from '../specialEvents/specialEvent.controller'
 import { reviewController }      from '../reviews/review.controller'
+import { orderController }       from '../orders/order.controller'
 import { authMiddleware } from '../auth/middleware/auth.middleware'
 import { requireRole }    from '../auth/middleware/guest.middleware'
 
@@ -33,6 +34,8 @@ router.post('/appointments',      appointmentController.createForAdmin)
 router.patch('/appointments/:id', appointmentController.updateForAdmin)
 router.patch('/appointments/:id/arrival', appointmentController.markArrivalForAdmin)
 router.patch('/appointments/:id/balance-payment', appointmentController.registerBalancePaymentForAdmin)
+router.patch('/appointments/:id/polish-removal', appointmentController.registerPolishRemoval)
+router.patch('/appointments/:id/deposit-paid',   appointmentController.markDepositPaid)
 
 router.get('/activity',  adminController.getActivity)
 router.get('/dashboard', adminController.getDashboard)
@@ -58,5 +61,8 @@ router.delete('/special-events/:id', specialEventController.delete)
 
 router.patch('/reviews/:id/approve', reviewController.approve)
 router.patch('/reviews/:id/reject',  reviewController.reject)
+
+router.get  ('/orders',      orderController.listForAdmin)
+router.patch('/orders/:id',  orderController.updateForAdmin)
 
 export { router as adminRoutes }

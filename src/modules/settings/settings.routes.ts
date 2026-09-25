@@ -14,5 +14,7 @@ router.get('/schedule',   settingsController.getSchedule)
 router.patch('/schedule', settingsController.updateSchedule)
 router.get('/payments',   settingsController.getPayments)
 router.patch('/payments', settingsController.updatePayments)
+router.get('/polish-removal-rules',   settingsController.getPolishRemovalRules)
+router.patch('/polish-removal-rules', settingsController.updatePolishRemovalRules)
 
 export { router as settingsRoutes }

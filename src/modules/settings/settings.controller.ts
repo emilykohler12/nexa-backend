@@ -25,6 +25,13 @@ const updateScheduleSchema = z.object({
   holidays: z.array(holidaySchema),
 })
 
+const polishRemovalRuleSchema = z.object({
+  id:    z.string().min(1),
+  label: z.string().trim().min(1, 'El nombre es obligatorio').max(100),
+  price: z.coerce.number().min(0).max(999999),
+})
+const updatePolishRemovalRulesSchema = z.object({ rules: z.array(polishRemovalRuleSchema) })
+
 export const settingsController = {
 
   getBusiness: async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -101,6 +108,24 @@ export const settingsController = {
     try {
       const stats = await settingsService.getPublicStats()
       res.json(stats)
+    } catch (err) { next(err) }
+  },
+
+  getPolishRemovalRules: async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const rules = await settingsService.getPolishRemovalRules()
+      res.json({ rules })
+    } catch (err) { next(err) }
+  },
+
+  updatePolishRemovalRules: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = updatePolishRemovalRulesSchema.safeParse({ rules: req.body.rules ?? [] })
+      if (!parsed.success) {
+        throw new AppError(HTTP.BAD_REQUEST, parsed.error.issues[0].message, 'VALIDATION_ERROR')
+      }
+      const rules = await settingsService.updatePolishRemovalRules(parsed.data.rules)
+      res.json({ rules })
     } catch (err) { next(err) }
   },
 }

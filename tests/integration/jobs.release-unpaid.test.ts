@@ -8,7 +8,7 @@ async function createStale(overrides: {
   clientId: string; professionalId: string; serviceId: string
   createdMinutesAgo: number
   depositAmount?: number; paymentStatus?: string; mpPaymentId?: string | null
-  comboGroupId?: string | null
+  comboGroupId?: string | null; depositMethod?: string | null
 }) {
   const future = hoursFromNow(72)
   return prisma.appointment.create({
@@ -16,6 +16,7 @@ async function createStale(overrides: {
       clientId: overrides.clientId, professionalId: overrides.professionalId, serviceId: overrides.serviceId,
       date: future.date, time: future.time, duration: 60, servicePrice: 10000,
       depositAmount:  overrides.depositAmount ?? 5000,
+      depositMethod:  overrides.depositMethod ?? null,
       status:         'confirmed',
       paymentStatus:  overrides.paymentStatus ?? 'pending',
       mpPaymentId:    overrides.mpPaymentId ?? null,
@@ -80,6 +81,19 @@ describe('job de liberación de turnos con seña impaga', () => {
     await createStale({
       clientId: client.id, professionalId: pro.id, serviceId: svc.id, createdMinutesAgo: 30,
       paymentStatus: 'partial',
+    })
+
+    const result = await runReleaseUnpaidAppointmentsJob()
+    expect(result.released).toBe(0)
+  })
+
+  it('NO toca una seña coordinada por WhatsApp, aunque esté pendiente hace rato', async () => {
+    const client = await createClientUser()
+    const pro    = await createProfessionalUser()
+    const svc    = await createService()
+    await createStale({
+      clientId: client.id, professionalId: pro.id, serviceId: svc.id, createdMinutesAgo: 60,
+      depositMethod: 'whatsapp',
     })
 
     const result = await runReleaseUnpaidAppointmentsJob()
