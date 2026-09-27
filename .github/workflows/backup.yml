@@ -12,8 +12,17 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Instalar cliente de PostgreSQL
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      # El postgresql-client que trae Ubuntu por defecto (v16) es más viejo que
+      # el Postgres de Supabase (v17.x) — pg_dump se niega a volcar un server
+      # más nuevo que él mismo. Se instala la v17 desde el repo oficial de
+      # PostgreSQL (PGDG) para que coincida.
+      - name: Instalar cliente de PostgreSQL 17 (misma versión que Supabase)
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          sudo sh -c 'echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
 
       # --no-owner/--no-acl: el rol que crea la base al restaurar en otro
       # lugar no necesariamente se llama igual que en Supabase, así evita
