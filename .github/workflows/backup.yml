@@ -27,8 +27,11 @@ jobs:
       # --no-owner/--no-acl: el rol que crea la base al restaurar en otro
       # lugar no necesariamente se llama igual que en Supabase, así evita
       # que el restore falle por permisos que no existen del otro lado.
+      # Ruta completa al binario de la v17 (no "pg_dump" a secas): el runner
+      # ya trae la v16 preinstalada y esa sigue siendo la que resuelve el PATH
+      # aunque se instale la v17 al lado.
       - name: Generar el dump
-        run: pg_dump "${{ secrets.DATABASE_URL }}" --no-owner --no-acl -F c -f nexa-backup.dump
+        run: /usr/lib/postgresql/17/bin/pg_dump "${{ secrets.DATABASE_URL }}" --no-owner --no-acl -F c -f nexa-backup.dump
 
       # Se guarda como artifact del propio run (no en el repo) — así nunca
       # queda un dump con datos de clientas en el historial de git.
