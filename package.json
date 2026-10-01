@@ -45,7 +45,9 @@
     "start": "node dist/app/server.js",
     "test": "cross-env NODE_ENV=test vitest run",
     "test:watch": "cross-env NODE_ENV=test vitest",
+    "test:migrate": "node -e \"require('dotenv').config({ path: '.env.test', quiet: true }); require('child_process').execSync('npx prisma migrate deploy', { stdio: 'inherit' })\"",
     "typecheck": "tsc --noEmit",
-    "typecheck:all": "tsc -p tsconfig.test.json --noEmit"
+    "typecheck:all": "tsc -p tsconfig.test.json --noEmit",
+    "seed:demo": "tsx scripts/seed-demo.ts"
   }
 }
