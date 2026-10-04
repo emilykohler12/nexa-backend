@@ -20,9 +20,9 @@ export function initSentry() {
     profileSessionSampleRate: 1.0,
     profileLifecycle: "trace",
     beforeSend(event) {
-      if (event.exception) {
-        const error = event.exception[0]?.value;
-        if (error?.includes?.("ValidationError")) return null;
+      const exception = event.exception?.values?.[0];
+      if (exception?.type === "ValidationError" || exception?.value?.includes("ValidationError")) {
+        return null;
       }
       if (event.tags?.["http.status_code"] === 404) return null;
       return event;
