@@ -34,12 +34,17 @@ resolver en el momento, sin tener que investigar desde cero.
 
 ## "La base de datos se cayó / hay que restaurar"
 
-1. Los backups diarios están en GitHub → este repo → pestaña **Actions** → workflow "Backup diario de la base de datos" → cada corrida tiene un artifact descargable (`nexa-backup-<id>.dump`), se guardan 30 días.
-2. Para restaurar en una base nueva (ej. si hay que recrear el proyecto de Supabase):
+1. Los backups diarios están en GitHub → este repo → pestaña **Actions** → workflow "Backup diario de la base de datos" → cada corrida tiene un artifact descargable (`nexa-backup-<id>`, un zip con `nexa-backup.dump.gpg` adentro), se guardan 30 días.
+2. El dump está **cifrado** (el repo es público y cualquiera puede bajar los artifacts). Para descifrarlo hace falta la contraseña del backup — la misma que está cargada en GitHub → Settings → Secrets → `BACKUP_PASSPHRASE` (GitHub no deja leerla, así que tiene que estar guardada en tu gestor de contraseñas):
+   ```bash
+   gpg --decrypt -o nexa-backup.dump nexa-backup.dump.gpg
+   ```
+   (`gpg` viene con Git for Windows: correlo desde Git Bash. Pide la contraseña.)
+3. Para restaurar en una base nueva (ej. si hay que recrear el proyecto de Supabase):
    ```bash
    pg_restore --no-owner --no-acl -d "postgresql://usuario:pass@host:puerto/postgres" nexa-backup.dump
    ```
-3. **Probá el restore en una base de prueba antes de necesitarlo de verdad** (ver sección de abajo) — un backup nunca probado no es un backup confiable.
+4. **Probá el restore en una base de prueba antes de necesitarlo de verdad** (ver sección de abajo) — un backup nunca probado no es un backup confiable.
 
 ## Variables de entorno que tienen que estar en Render
 
@@ -53,7 +58,7 @@ social y no tener todavía el chatbot — no hace falta cargarlas.)
 
 ## Cómo probar un restore (hacer esto al menos una vez)
 
-1. Descargá el artifact más reciente del workflow de backup.
+1. Descargá el artifact más reciente del workflow de backup, descomprimilo y descifralo con `gpg --decrypt -o nexa-backup.dump nexa-backup.dump.gpg`.
 2. Creá una base Postgres nueva y vacía en cualquier lado (otro proyecto de Supabase free, o local con `docker run postgres`).
 3. `pg_restore --no-owner --no-acl -d "<connection-string-de-la-base-de-prueba>" nexa-backup.dump`
 4. Conectate con un cliente de Postgres (o `npx prisma studio` apuntando `DATABASE_URL` a esa base) y confirmá que las tablas y datos están.

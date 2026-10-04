@@ -33,11 +33,28 @@ jobs:
       - name: Generar el dump
         run: /usr/lib/postgresql/17/bin/pg_dump "${{ secrets.DATABASE_URL }}" --no-owner --no-acl -F c -f nexa-backup.dump
 
+      # El repo es público: cualquier usuario de GitHub puede bajar los
+      # artifacts. Por eso el dump se cifra (AES256) con la contraseña del
+      # secret BACKUP_PASSPHRASE y el archivo sin cifrar se borra antes de
+      # subir nada. Si el secret falta, el job falla en vez de subir el dump
+      # en claro.
+      - name: Cifrar el dump
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "Falta el secret BACKUP_PASSPHRASE — no se sube el backup sin cifrar." >&2
+            exit 1
+          fi
+          gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --symmetric --cipher-algo AES256 -o nexa-backup.dump.gpg nexa-backup.dump <<< "$BACKUP_PASSPHRASE"
+          rm nexa-backup.dump
+
       # Se guarda como artifact del propio run (no en el repo) — así nunca
       # queda un dump con datos de clientas en el historial de git.
-      - name: Subir el dump como artifact
+      - name: Subir el dump cifrado como artifact
         uses: actions/upload-artifact@v4
         with:
           name: nexa-backup-${{ github.run_id }}
-          path: nexa-backup.dump
+          path: nexa-backup.dump.gpg
           retention-days: 30
