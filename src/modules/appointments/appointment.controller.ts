@@ -5,6 +5,7 @@ import { appointmentService, APPOINTMENT_STATUSES, BALANCE_PAYMENT_METHODS } fro
 import { AppError }           from '../../app/middlewares/errorHandler'
 import { HTTP }               from '../../app/constants/http'
 import { dateSchema, timeSchema } from '../../app/validators/datetime'
+import { COMPANION_RELATIONS } from '../../app/constants/companion'
 
 function getId(req: Request): string {
   const { id } = req.params
@@ -85,8 +86,10 @@ const specialBookingSchema = z.object({
 
 const detailsSchema = z.object({
   allergies:     z.string().max(2000).nullable().optional(),
-  accompanied:   z.boolean().optional(),
-  companionName: z.string().max(150).nullable().optional(),
+  // RF-12 — sin campo de nombre: z.object descarta cualquier clave extra
+  // (p. ej. un companionName viejo) en vez de guardarla.
+  hasCompanion:      z.boolean().optional(),
+  companionRelation: z.enum(COMPANION_RELATIONS).nullable().optional(),
   designPreference: z.object({
     type:  z.enum(['image', 'text']),
     value: z.string().nullable(),

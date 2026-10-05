@@ -8,6 +8,7 @@ import { AppError }      from '../../app/middlewares/errorHandler'
 import { HTTP }          from '../../app/constants/http'
 import { fullName }      from '../../app/utils/fullName'
 import { PRIVACY_POLICY_VERSION } from '../../app/constants/legal'
+import type { CompanionRelation } from '../../app/constants/companion'
 import { settingsService, computeDeposit } from '../settings/settings.service'
 import { activityService } from '../activity/activity.service'
 import { paymentService } from '../payments/payment.service'
@@ -71,8 +72,8 @@ type AppointmentRow = Prisma.AppointmentGetPayload<{ include: typeof APPOINTMENT
 function detailsOf(a: AppointmentRow) {
   return {
     allergies:        a.allergies ?? null,
-    accompanied:      a.accompanied ?? false,
-    companionName:    a.companionName ?? null,
+    hasCompanion:      a.hasCompanion,
+    companionRelation: a.companionRelation ?? null,
     designPreference: a.designType
       ? { type: a.designType as 'image' | 'text', value: a.designValue ?? null }
       : null,
@@ -1370,8 +1371,8 @@ export const appointmentService = {
     id: string,
     data: {
       allergies?:     string | null
-      accompanied?:   boolean
-      companionName?: string | null
+      hasCompanion?:      boolean
+      companionRelation?: CompanionRelation | null
       designPreference?: { type: 'image' | 'text'; value: string | null } | null
       hasOtherSalonPolish?:     boolean | null
       isNailReconstruction?:    boolean | null
@@ -1401,8 +1402,8 @@ export const appointmentService = {
       where: { id },
       data: {
         allergies:     data.allergies ?? null,
-        accompanied:   data.accompanied ?? false,
-        companionName: data.accompanied ? (data.companionName ?? null) : null,
+        hasCompanion:      data.hasCompanion ?? false,
+        companionRelation: data.hasCompanion ? (data.companionRelation ?? null) : null,
         designType:    data.designPreference?.type  ?? null,
         designValue:   data.designPreference?.value ?? null,
         hasOtherSalonPolish:     data.hasOtherSalonPolish     ?? null,

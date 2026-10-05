@@ -247,8 +247,10 @@ model Appointment {
   clientNotes    String?  @map("client_notes") @db.Text
   internalNotes  String?  @map("internal_notes") @db.Text
   allergies      String?  @db.Text
-  accompanied    Boolean?
-  companionName  String?  @map("companion_name") @db.VarChar(150)
+  // RF-12 — solo la condición de acompañante y el vínculo (lista cerrada,
+  // COMPANION_RELATIONS); nunca nombre, edad ni documento de quien acompaña.
+  hasCompanion      Boolean @default(false) @map("has_companion")
+  companionRelation String? @map("companion_relation") @db.VarChar(20)
   designType     String?  @map("design_type") @db.VarChar(10)
   designValue    String?  @map("design_value") @db.Text
   hasOtherSalonPolish     Boolean? @map("has_other_salon_polish")
