@@ -15,6 +15,7 @@ import type { LoginDto }            from './dto/login.dto'
 import type { ForgotPasswordDto }   from './dto/forgotPassword.dto'
 import type { ResetPasswordDto }    from './dto/resetPassword.dto'
 import type { AuthUser, TokenPair } from './types/auth.types'
+import { PRIVACY_POLICY_VERSION } from '../../app/constants/legal'
 
 function loadTemplate(name: string, replacements: Record<string, string>): string {
   const candidates = [
@@ -80,6 +81,7 @@ export const authService = {
       name: dto.name, lastName: dto.lastName, email: dto.email, passwordHash,
       role: 'client', phone: dto.phone, gender: dto.gender, verificationToken,
       termsAcceptedAt: new Date(),
+      termsVersion:    PRIVACY_POLICY_VERSION,
     })
 
     const html = loadTemplate('verifyEmail', {

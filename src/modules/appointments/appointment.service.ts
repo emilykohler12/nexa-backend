@@ -7,6 +7,7 @@ import { prisma }        from '../../app/database/prisma'
 import { AppError }      from '../../app/middlewares/errorHandler'
 import { HTTP }          from '../../app/constants/http'
 import { fullName }      from '../../app/utils/fullName'
+import { PRIVACY_POLICY_VERSION } from '../../app/constants/legal'
 import { settingsService, computeDeposit } from '../settings/settings.service'
 import { activityService } from '../activity/activity.service'
 import { paymentService } from '../payments/payment.service'
@@ -681,7 +682,7 @@ export const appointmentService = {
 
     // RF-06.01 — (re)graba la aceptación de Términos/Política al confirmar la
     // reserva. Cubre tanto el registro reciente como cuentas viejas sin este dato.
-    await prisma.user.update({ where: { id: clientId }, data: { termsAcceptedAt: new Date() } })
+    await prisma.user.update({ where: { id: clientId }, data: { termsAcceptedAt: new Date(), termsVersion: PRIVACY_POLICY_VERSION } })
 
     const service = await prisma.service.findUnique({ where: { id: input.serviceId } })
     if (!service || service.status !== 'active') {
