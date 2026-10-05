@@ -493,7 +493,7 @@ model PaymentSettings {
   id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   depositAmount     Decimal @default(5000) @map("deposit_amount") @db.Decimal(10, 2)
   depositPercent    Boolean @default(false) @map("deposit_percent")
-  cancellationHours Int     @default(24) @map("cancellation_hours")
+  cancellationHours Int     @default(12) @map("cancellation_hours")
   refundPolicy      String  @default("full") @map("refund_policy") @db.VarChar(20)
 
   @@map("payment_settings")

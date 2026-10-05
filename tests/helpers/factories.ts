@@ -148,7 +148,7 @@ export function minutesAgo(minutes: number): { date: string; time: string } {
 }
 
 // Fecha/hora dentro de N horas, como {date, time} — para armar turnos "lejos"
-// o "cerca" del corte de cancelación (24hs por default).
+// o "cerca" del corte de cancelación (12hs por default, RF-04).
 export function hoursFromNow(hours: number): { date: string; time: string } {
   const d = new Date(Date.now() + hours * 60 * 60 * 1000)
   return { date: localDateStr(d), time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` }

@@ -9,7 +9,7 @@ import {
 import { cookieFor } from '../helpers/auth'
 
 describe('cancelación', () => {
-  it('reembolsa si se cancela con más margen que el corte (24hs por default)', async () => {
+  it('reembolsa si se cancela con más margen que el corte (12hs por default, RF-04)', async () => {
     const client = await createClientUser()
     const pro    = await createProfessionalUser()
     const svc    = await createService({ price: 10000 })
@@ -29,7 +29,7 @@ describe('cancelación', () => {
     expect(res.body.appointment.paymentStatus).toBe('refunded')
   })
 
-  it('NO reembolsa si se cancela dentro del corte de 24hs', async () => {
+  it('NO reembolsa si se cancela dentro del corte de 12hs', async () => {
     const client = await createClientUser()
     const pro    = await createProfessionalUser()
     const svc    = await createService({ price: 10000 })
@@ -46,6 +46,43 @@ describe('cancelación', () => {
     expect(res.status).toBe(200)
     expect(res.body.refunded).toBe(false)
     expect(res.body.appointment.paymentStatus).toBe('partial')
+  })
+
+  // RF-04: el corte es 12hs. Con 18hs de aviso se devuelve (con 24hs no se devolvería).
+  it('reembolsa si se cancela con 18hs de aviso (corte de 12hs)', async () => {
+    const client = await createClientUser()
+    const pro    = await createProfessionalUser()
+    const svc    = await createService({ price: 10000 })
+    const at     = hoursFromNow(18)
+    const appt   = await createAppointmentDirect({
+      clientId: client.id, professionalId: pro.id, serviceId: svc.id,
+      date: at.date, time: at.time, paymentStatus: 'partial', depositAmount: 5000,
+    })
+
+    const res = await request(app)
+      .patch(`/api/client/appointments/${appt.id}/cancel`)
+      .set('Cookie', cookieFor(client))
+
+    expect(res.status).toBe(200)
+    expect(res.body.refunded).toBe(true)
+  })
+
+  it('NO reembolsa si se cancela con 11hs de aviso (corte de 12hs)', async () => {
+    const client = await createClientUser()
+    const pro    = await createProfessionalUser()
+    const svc    = await createService({ price: 10000 })
+    const at     = hoursFromNow(11)
+    const appt   = await createAppointmentDirect({
+      clientId: client.id, professionalId: pro.id, serviceId: svc.id,
+      date: at.date, time: at.time, paymentStatus: 'partial', depositAmount: 5000,
+    })
+
+    const res = await request(app)
+      .patch(`/api/client/appointments/${appt.id}/cancel`)
+      .set('Cookie', cookieFor(client))
+
+    expect(res.status).toBe(200)
+    expect(res.body.refunded).toBe(false)
   })
 
   it('rechaza cancelar un turno ya cancelado', async () => {
