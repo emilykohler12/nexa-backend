@@ -4,6 +4,7 @@ import { AppError } from '../../app/middlewares/errorHandler'
 import { HTTP }     from '../../app/constants/http'
 import { activityService } from '../activity/activity.service'
 import { paymentService }  from '../payments/payment.service'
+import { fullName } from '../../app/utils/fullName'
 
 type OrderItemInput = { productId: string; quantity: number; promotionId?: string | null }
 type PromotionItem  = { id: string; name: string; price: number }
@@ -182,7 +183,7 @@ export const orderService = {
 
     await activityService.log({
       action: 'Compra de producto', module: 'store', level: 'success',
-      detail: `${client.name} compró ${lineItems.map(li => `${li.quantity}x ${li.productName}`).join(', ')} — $${totalPrice.toLocaleString('es-AR')}`
+      detail: `${fullName(client)} compró ${lineItems.map(li => `${li.quantity}x ${li.productName}`).join(', ')} — $${totalPrice.toLocaleString('es-AR')}`
         + (paymentLabel ? ` (pago: ${paymentLabel})` : ''),
     })
 
@@ -219,7 +220,7 @@ export const orderService = {
     }
 
     const { checkoutUrl } = await paymentService.createPreference({
-      title:             `Pedido — ${order.client.name}`,
+      title:             `Pedido — ${fullName(order.client)}`,
       amount:            Number(order.totalPrice),
       externalReference: `order:${order.id}`,
       payerEmail:        order.client.email,
@@ -315,7 +316,7 @@ export const orderService = {
     })
     return orders.map(o => ({
       id: o.id,
-      clientName:  o.client.name,
+      clientName:  fullName(o.client),
       clientPhone: o.client.phone ?? '',
       items: o.items.map(li => ({
         productName: li.product.name,

@@ -6,6 +6,7 @@ import path from 'path'
 import { prisma }        from '../../app/database/prisma'
 import { AppError }      from '../../app/middlewares/errorHandler'
 import { HTTP }          from '../../app/constants/http'
+import { fullName }      from '../../app/utils/fullName'
 import { settingsService, computeDeposit } from '../settings/settings.service'
 import { activityService } from '../activity/activity.service'
 import { paymentService } from '../payments/payment.service'
@@ -83,6 +84,15 @@ function detailsOf(a: AppointmentRow) {
   }
 }
 
+// RF-02 — el libro pide que el turno recién reservado figure "pendiente de seña".
+// El estado persistido sigue siendo 'confirmed' (ocupa el horario y lo usan el
+// índice único, el job de impagos y los calendarios); la etiqueta se deriva:
+// confirmado + seña > 0 todavía sin pagar => 'pending_deposit'.
+function displayStatusOf(a: { status: string; paymentStatus: string; depositAmount: { toString(): string } | number }): string {
+  if (a.status === 'confirmed' && a.paymentStatus === 'pending' && Number(a.depositAmount) > 0) return 'pending_deposit'
+  return a.status
+}
+
 function toClientView(a: AppointmentRow) {
   return {
     id:                a.id,
@@ -98,6 +108,7 @@ function toClientView(a: AppointmentRow) {
     price:             Number(a.servicePrice),
     depositAmount:     Number(a.depositAmount),
     status:            a.status,
+    displayStatus:     displayStatusOf(a),
     cancelReason:      a.cancelReason,
     paymentStatus:     a.paymentStatus,
     depositMethod:     a.depositMethod,
@@ -134,7 +145,7 @@ function toProfessionalView(a: AppointmentRow, peers: ComboPeer[] | null = null)
     comboGroupId:  a.comboGroupId,
     client: {
       id:        a.client.id,
-      name:      a.client.name,
+      name:      fullName(a.client),
       phone:     a.client.phone ?? '',
       email:     a.client.email,
       photo:     null as string | null,
@@ -147,6 +158,7 @@ function toProfessionalView(a: AppointmentRow, peers: ComboPeer[] | null = null)
     date:           a.date,
     time:           a.time,
     status:         a.status,
+    displayStatus:  displayStatusOf(a),
     cancelReason:   a.cancelReason,
     paymentStatus:  a.paymentStatus,
     arrivedAt:      a.arrivedAt ? a.arrivedAt.toISOString() : null,
@@ -168,8 +180,8 @@ function toAdminView(a: AppointmentRow, peers: ComboPeer[] | null = null) {
   return {
     id:               a.id,
     comboGroupId:     a.comboGroupId,
-    title:            a.client.name,
-    clientName:       a.client.name,
+    title:            fullName(a.client),
+    clientName:       fullName(a.client),
     clientPhone:      a.client.phone ?? '',
     clientEmail:      a.client.email,
     professionalId:   a.professionalId,
@@ -181,6 +193,7 @@ function toAdminView(a: AppointmentRow, peers: ComboPeer[] | null = null) {
     start,
     end,
     status:            a.status,
+    displayStatus:     displayStatusOf(a),
     cancelReason:      a.cancelReason,
     paymentStatus:     a.paymentStatus,
     depositMethod:     a.depositMethod,
@@ -212,7 +225,7 @@ async function notifyProfessionalOfNewAppointment(a: AppointmentRow) {
   await notificationService.notify(a.professionalId, {
     type:  'new_appointment',
     title: 'Nuevo turno',
-    body:  `${a.client.name} reservó ${a.service.name} para el ${a.date} a las ${a.time}.`,
+    body:  `${fullName(a.client)} reservó ${a.service.name} para el ${a.date} a las ${a.time}.`,
   })
   try {
     await mailProvider.send(
@@ -220,7 +233,7 @@ async function notifyProfessionalOfNewAppointment(a: AppointmentRow) {
       'Nuevo turno agendado — Nexa',
       loadTemplate('appointmentCreated', {
         PROFESSIONAL_NAME: a.professional.name,
-        CLIENT_NAME:        a.client.name,
+        CLIENT_NAME:        fullName(a.client),
         SERVICE_NAME:        a.service.name,
         DATE:                formatDate(a.date),
         TIME:                a.time,
@@ -230,7 +243,7 @@ async function notifyProfessionalOfNewAppointment(a: AppointmentRow) {
     console.error('[mail] error notificando nuevo turno:', err.message)
     await activityService.log({
       action: 'No se pudo enviar el mail de aviso de turno nuevo', module: 'system', level: 'warning',
-      detail: `${a.service.name} — ${a.client.name} con ${a.professional.name} el ${a.date} ${a.time}: ${err.message}`,
+      detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}: ${err.message}`,
     })
   }
 }
@@ -238,7 +251,7 @@ async function notifyProfessionalOfNewAppointment(a: AppointmentRow) {
 async function afterCreate(a: AppointmentRow) {
   await activityService.log({
     action: 'Nuevo turno', module: 'appointments', level: 'success',
-    detail: `${a.service.name} — ${a.client.name} con ${a.professional.name} el ${a.date} ${a.time}`,
+    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}`,
   })
   await notifyProfessionalOfNewAppointment(a)
 }
@@ -254,7 +267,7 @@ async function afterCreateGroup(legs: AppointmentRow[]) {
   const summary = legs.map(l => `${l.service.name} con ${l.professional.name}`).join(', ')
   await activityService.log({
     action: 'Nuevo turno simultáneo', module: 'appointments', level: 'success',
-    detail: `${legs[0].client.name} el ${legs[0].date} ${legs[0].time}: ${summary}`,
+    detail: `${fullName(legs[0].client)} el ${legs[0].date} ${legs[0].time}: ${summary}`,
   })
   for (const leg of legs) await notifyProfessionalOfNewAppointment(leg)
 }
@@ -262,19 +275,19 @@ async function afterCreateGroup(legs: AppointmentRow[]) {
 async function afterCancel(a: AppointmentRow, emailClient: boolean) {
   await activityService.log({
     action: 'Turno cancelado', module: 'appointments', level: 'warning',
-    detail: `${a.service.name} — ${a.client.name} con ${a.professional.name} el ${a.date} ${a.time}`,
+    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}`,
   })
   await notificationService.notify(a.professionalId, {
     type:  'cancelled_appointment',
     title: 'Turno cancelado',
-    body:  `El turno de ${a.client.name} (${a.service.name}, ${a.date} ${a.time}) fue cancelado.`,
+    body:  `El turno de ${fullName(a.client)} (${a.service.name}, ${a.date} ${a.time}) fue cancelado.`,
   })
   if (emailClient) {
     mailProvider.send(
       a.client.email,
       'Tu turno fue cancelado — Nexa',
       loadTemplate('appointmentCancelled', {
-        CLIENT_NAME:  a.client.name,
+        CLIENT_NAME:  fullName(a.client),
         SERVICE_NAME: a.service.name,
         DATE:         formatDate(a.date),
         TIME:         a.time,
@@ -292,14 +305,14 @@ async function logStatusChange(a: AppointmentRow, from: string, to: string, acto
     userName: actorName,
     action:   'Cambio de estado de turno',
     module:   'appointments',
-    detail:   `${a.service.name} — ${a.client.name} con ${a.professional.name} el ${a.date} ${a.time}: "${from}" → "${to}"`,
+    detail:   `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}: "${from}" → "${to}"`,
   })
 }
 
 async function afterReschedule(a: AppointmentRow, previousDate?: string | null, previousTime?: string | null) {
   const detail = previousDate && previousTime
-    ? `${a.service.name} — ${a.client.name} con ${a.professional.name}: ${previousDate} ${previousTime} → ${a.date} ${a.time}`
-    : `${a.service.name} — ${a.client.name} con ${a.professional.name} → ${a.date} ${a.time}`
+    ? `${a.service.name} — ${fullName(a.client)} con ${a.professional.name}: ${previousDate} ${previousTime} → ${a.date} ${a.time}`
+    : `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} → ${a.date} ${a.time}`
 
   await activityService.log({
     action: 'Turno reprogramado', module: 'appointments', level: 'warning',
@@ -308,14 +321,14 @@ async function afterReschedule(a: AppointmentRow, previousDate?: string | null, 
   await notificationService.notify(a.professionalId, {
     type:  'rescheduled_appointment',
     title: 'Turno reprogramado',
-    body:  `${a.client.name} reprogramó ${a.service.name} para el ${a.date} a las ${a.time}.`,
+    body:  `${fullName(a.client)} reprogramó ${a.service.name} para el ${a.date} a las ${a.time}.`,
   })
   mailProvider.send(
     a.professional.email,
     'Turno reprogramado — Nexa',
     loadTemplate('appointmentRescheduled', {
       PROFESSIONAL_NAME: a.professional.name,
-      CLIENT_NAME:        a.client.name,
+      CLIENT_NAME:        fullName(a.client),
       SERVICE_NAME:        a.service.name,
       DATE:                formatDate(a.date),
       TIME:                a.time,
@@ -329,18 +342,18 @@ async function afterReschedule(a: AppointmentRow, previousDate?: string | null, 
 async function afterStaffReschedule(a: AppointmentRow, previousDate: string, previousTime: string) {
   await activityService.log({
     action: 'Turno reprogramado', module: 'appointments', level: 'warning',
-    detail: `${a.service.name} — ${a.client.name} con ${a.professional.name}: ${previousDate} ${previousTime} → ${a.date} ${a.time}`,
+    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name}: ${previousDate} ${previousTime} → ${a.date} ${a.time}`,
   })
   await notificationService.notify(a.professionalId, {
     type:  'rescheduled_appointment',
     title: 'Turno reprogramado',
-    body:  `El turno de ${a.client.name} (${a.service.name}) se reprogramó para el ${a.date} a las ${a.time}.`,
+    body:  `El turno de ${fullName(a.client)} (${a.service.name}) se reprogramó para el ${a.date} a las ${a.time}.`,
   })
   mailProvider.send(
     a.client.email,
     'Tu turno fue reprogramado — Nexa',
     loadTemplate('appointmentRescheduledByStaff', {
-      CLIENT_NAME:    a.client.name,
+      CLIENT_NAME:    fullName(a.client),
       SERVICE_NAME:   a.service.name,
       PREVIOUS_DATE:  formatDate(previousDate),
       PREVIOUS_TIME:  previousTime,
@@ -411,7 +424,7 @@ async function registerBalancePayment(
     userName: updated.balanceCollectedBy?.name ?? 'Admin',
     action: 'Cobro de saldo registrado',
     module: 'payments',
-    detail: `${updated.service.name} — ${updated.client.name} con ${updated.professional.name}: $${data.amount} en ${methodLabel} (turno ${appointment.id})`,
+    detail: `${updated.service.name} — ${fullName(updated.client)} con ${updated.professional.name}: $${data.amount} en ${methodLabel} (turno ${appointment.id})`,
   })
 
   return updated
@@ -998,7 +1011,7 @@ export const appointmentService = {
         })
         await activityService.log({
           action: 'Seña coordinada por WhatsApp marcada como paga', module: 'payments',
-          detail: `Combo — ${legs[0].client.name}: ${legs.map(l => l.service.name).join(', ')}`,
+          detail: `Combo — ${fullName(legs[0].client)}: ${legs.map(l => l.service.name).join(', ')}`,
         })
         await afterCreateGroup(legs.map(l => ({ ...l, paymentStatus: 'partial' })))
       }
@@ -1024,7 +1037,7 @@ export const appointmentService = {
     })
     await activityService.log({
       action: 'Seña coordinada por WhatsApp marcada como paga', module: 'payments',
-      detail: `${updated.service.name} — ${updated.client.name} con ${updated.professional.name}`,
+      detail: `${updated.service.name} — ${fullName(updated.client)} con ${updated.professional.name}`,
     })
     await afterCreate(updated)
     return toAdminView(updated, null)
@@ -1114,7 +1127,7 @@ export const appointmentService = {
         })
 
         const updatedSlots = slots.map((s, i) =>
-          i === slotIndex ? { ...s, appointmentId: created.id, clientName: created.client.name } : s
+          i === slotIndex ? { ...s, appointmentId: created.id, clientName: fullName(created.client) } : s
         )
         await tx.service.update({
           where: { id: input.serviceId },
@@ -1516,7 +1529,7 @@ export const appointmentService = {
       const next = list.find(a => a.date >= today && ['pending', 'confirmed'].includes(a.status))
       return {
         id:            first.client.id,
-        name:          first.client.name,
+        name:          fullName(first.client),
         email:         first.client.email,
         phone:         first.client.phone ?? '',
         photo:         null as string | null,
@@ -1530,6 +1543,7 @@ export const appointmentService = {
           price:         Number(a.servicePrice),
           notes:         a.internalNotes ?? '',
           status:        a.status,
+          displayStatus: displayStatusOf(a),
           internalNotes: a.internalNotes ?? null,
         })),
         nextAppointment: next ? next.date : null,
@@ -1547,7 +1561,7 @@ export const appointmentService = {
     return rows.map(a => ({
       id:      a.id,
       service: a.service.name,
-      client:  a.client.name,
+      client:  fullName(a.client),
       date:    a.date,
       time:    a.time,
       price:   Number(a.servicePrice),
@@ -1715,7 +1729,7 @@ export const appointmentService = {
     })
     await activityService.log({
       action: 'Retiro de esmalte registrado', module: 'appointments',
-      detail: `${updated.service.name} — ${updated.client.name}: ${data.label} ($${data.price}, solo a modo de control)`,
+      detail: `${updated.service.name} — ${fullName(updated.client)}: ${data.label} ($${data.price}, solo a modo de control)`,
     })
     const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
     return toAdminView(updated, peers)

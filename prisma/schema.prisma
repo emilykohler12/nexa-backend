@@ -23,6 +23,10 @@ enum Gender {
 model User {
   id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name              String    @db.VarChar(100)
+  // RF-02 — apellido en un campo propio. Nullable: las cuentas creadas antes
+  // de este cambio (y las de profesionales) no lo tienen; el alta de clienta
+  // lo exige desde la validación (register.dto.ts).
+  lastName          String?   @map("last_name") @db.VarChar(100)
   email             String    @unique @db.VarChar(255)
   passwordHash      String    @map("password_hash") @db.VarChar(255)
   role              UserRole  @default(client)

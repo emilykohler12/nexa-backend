@@ -1,20 +1,25 @@
 import { describe, it, expect } from 'vitest'
 import request from 'supertest'
 import { app } from '../../src/app/app'
+import { prisma } from '../../src/app/database/prisma'
 import { createClientUser, createProfessionalUser, TEST_PASSWORD } from '../helpers/factories'
 import { cookieFor } from '../helpers/auth'
 
 describe('auth', () => {
   it('registra una clienta nueva y devuelve cookies de sesión', async () => {
     const res = await request(app).post('/api/auth/register').send({
-      name:  'Nueva Clienta',
-      email: 'nueva@test.local',
+      name:     'Nueva',
+      lastName: 'Clienta',
+      phone:    '1155550000',
+      email:    'nueva@test.local',
       password: 'Password123',
       termsAccepted: true,
     })
 
     expect(res.status).toBe(201)
     expect(res.body.user.email).toBe('nueva@test.local')
+    expect(res.body.user.name).toBe('Nueva')
+    expect(res.body.user.lastName).toBe('Clienta')
     expect(res.body.user.role).toBe('client')
     expect(res.headers['set-cookie']).toBeDefined()
     const cookies = res.headers['set-cookie'] as unknown as string[]
@@ -24,14 +29,41 @@ describe('auth', () => {
   it('rechaza el registro con un email ya usado', async () => {
     await createClientUser({ email: 'repetido@test.local' })
     const res = await request(app).post('/api/auth/register').send({
-      name: 'Otra', email: 'repetido@test.local', password: 'Password123', termsAccepted: true,
+      name: 'Otra', lastName: 'Persona', phone: '1155550001', email: 'repetido@test.local', password: 'Password123', termsAccepted: true,
     })
     expect(res.status).toBe(409)
   })
 
+  // RF-02 — el alta exige nombre, apellido y teléfono celular por separado.
+  it('rechaza el registro sin apellido', async () => {
+    const res = await request(app).post('/api/auth/register').send({
+      name: 'Sin', phone: '1155550002', email: 'sinapellido@test.local', password: 'Password123', termsAccepted: true,
+    })
+    expect(res.status).toBe(422)
+    expect(await prisma.user.count({ where: { email: 'sinapellido@test.local' } })).toBe(0)
+  })
+
+  it('rechaza el registro sin teléfono', async () => {
+    const res = await request(app).post('/api/auth/register').send({
+      name: 'Sin', lastName: 'Telefono', email: 'sintelefono@test.local', password: 'Password123', termsAccepted: true,
+    })
+    expect(res.status).toBe(422)
+    expect(await prisma.user.count({ where: { email: 'sintelefono@test.local' } })).toBe(0)
+  })
+
+  it('guarda nombre y apellido en columnas separadas', async () => {
+    await request(app).post('/api/auth/register').send({
+      name: 'Ana', lastName: 'Pérez', phone: '1155550003', email: 'ana@test.local', password: 'Password123', termsAccepted: true,
+    })
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: 'ana@test.local' } })
+    expect(user.name).toBe('Ana')
+    expect(user.lastName).toBe('Pérez')
+    expect(user.phone).toBe('1155550003')
+  })
+
   it('rechaza el registro sin aceptar términos', async () => {
     const res = await request(app).post('/api/auth/register').send({
-      name: 'Sin Terminos', email: 'sinterminos@test.local', password: 'Password123', termsAccepted: false,
+      name: 'Sin', lastName: 'Terminos', phone: '1155550004', email: 'sinterminos@test.local', password: 'Password123', termsAccepted: false,
     })
     expect(res.status).toBe(422)
   })

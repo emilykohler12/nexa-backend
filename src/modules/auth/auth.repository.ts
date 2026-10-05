@@ -27,6 +27,7 @@ export const authRepository = {
 
   create: (data: {
     name: string
+    lastName?: string | null
     email: string
     passwordHash: string
     role: UserRole
@@ -41,6 +42,7 @@ export const authRepository = {
     prisma.user.create({
       data: {
         name:              data.name,
+        lastName:          data.lastName ?? null,
         email:             data.email,
         passwordHash:      data.passwordHash,
         role:              data.role as any,

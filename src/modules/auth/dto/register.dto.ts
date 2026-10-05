@@ -1,10 +1,12 @@
 import { z } from 'zod'
 
 export const registerDto = z.object({
+  // RF-02 — nombre y apellido por separado, y teléfono celular obligatorio.
   name:     z.string().trim().min(2).max(100),
+  lastName: z.string().trim().min(2).max(100),
   email:    z.string().trim().email().toLowerCase(),
   password: z.string().min(8).max(72),
-  phone:    z.string().trim().min(6).max(20).optional(),
+  phone:    z.string().trim().min(6).max(20),
   gender:   z.enum(['male', 'female', 'other', 'prefer_not_to_say']).optional(),
   // RF-06.01 — checkbox obligatorio de Términos de Servicio y Política de Privacidad.
   termsAccepted: z.boolean().refine(v => v === true, {

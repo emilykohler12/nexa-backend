@@ -44,6 +44,7 @@ function loadTemplate(name: string, replacements: Record<string, string>): strin
 function toAuthUser(user: {
   id:              string
   name:            string
+  lastName?:       string | null
   email:           string
   role:            string
   phone?:          string | null
@@ -55,6 +56,7 @@ function toAuthUser(user: {
   return {
     id:              user.id,
     name:            user.name,
+    lastName:        user.lastName ?? null,
     email:           user.email,
     role:            user.role as AuthUser['role'],
     phone:           user.phone ?? null,
@@ -75,7 +77,7 @@ export const authService = {
     const verificationToken = generateSecureToken()
 
     const created = await authRepository.create({
-      name: dto.name, email: dto.email, passwordHash,
+      name: dto.name, lastName: dto.lastName, email: dto.email, passwordHash,
       role: 'client', phone: dto.phone, gender: dto.gender, verificationToken,
       termsAcceptedAt: new Date(),
     })

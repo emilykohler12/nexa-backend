@@ -5,6 +5,7 @@ import { AppError }       from '../../app/middlewares/errorHandler'
 import { HTTP }           from '../../app/constants/http'
 import { bcryptProvider } from '../auth/providers/bcrypt.provider'
 import { activityService } from '../activity/activity.service'
+import { fullName } from '../../app/utils/fullName'
 
 async function computeLoyalty(userId: string) {
   const appointments = await prisma.appointment.findMany({ where: { clientId: userId } })
@@ -18,7 +19,7 @@ async function computeLoyalty(userId: string) {
 }
 
 function mapAdminClient(
-  user: { id: string; name: string; email: string; phone: string | null; gender: string | null; createdAt: Date },
+  user: { id: string; name: string; lastName?: string | null; email: string; phone: string | null; gender: string | null; createdAt: Date },
   client: {
     birthDate: Date | null
     allergies: string | null; preferences: string | null; observations: string | null
@@ -29,7 +30,7 @@ function mapAdminClient(
 ) {
   return {
     id:        user.id,
-    name:      user.name,
+    name:      fullName(user),
     photo:     null as string | null,
     phone:     user.phone ?? '',
     email:     user.email,

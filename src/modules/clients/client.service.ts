@@ -9,13 +9,14 @@ export const clientService = {
   getProfile: async (userId: string): Promise<AuthUser> => {
     const user = await prisma.user.findUnique({
       where:  { id: userId },
-      select: { id: true, name: true, email: true, role: true, phone: true, profileComplete: true, createdAt: true },
+      select: { id: true, name: true, lastName: true, email: true, role: true, phone: true, profileComplete: true, createdAt: true },
     })
     if (!user) throw new AppError(HTTP.NOT_FOUND, 'Usuario no encontrado')
 
     return {
       id:              user.id,
       name:            user.name,
+      lastName:        user.lastName ?? null,
       email:           user.email,
       role:            user.role as AuthUser['role'],
       phone:           user.phone ?? null,
@@ -34,12 +35,13 @@ export const clientService = {
         name:  data.name  ?? undefined,
         phone: data.phone ?? undefined,
       },
-      select: { id: true, name: true, email: true, role: true, phone: true, profileComplete: true, createdAt: true },
+      select: { id: true, name: true, lastName: true, email: true, role: true, phone: true, profileComplete: true, createdAt: true },
     })
 
     return {
       id:              user.id,
       name:            user.name,
+      lastName:        user.lastName ?? null,
       email:           user.email,
       role:            user.role as AuthUser['role'],
       phone:           user.phone ?? null,

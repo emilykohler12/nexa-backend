@@ -12,6 +12,7 @@
 // falta ningún paso extra.
 import { prisma }          from '../app/database/prisma'
 import { activityService } from '../modules/activity/activity.service'
+import { fullName } from '../app/utils/fullName'
 
 const GRACE_MINUTES = 20
 
@@ -44,7 +45,7 @@ export async function runAutoNoShowJob(): Promise<{ marked: number }> {
     await activityService.log({
       action: 'Turno marcado como no show (automático)',
       module: 'appointments',
-      detail: `${a.service.name} — ${a.client.name} con ${a.professional.name} el ${a.date} ${a.time}: sin registro de llegada tras ${GRACE_MINUTES} minutos de la hora pactada.`,
+      detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}: sin registro de llegada tras ${GRACE_MINUTES} minutos de la hora pactada.`,
     })
     marked += 1
   }

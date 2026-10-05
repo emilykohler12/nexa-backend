@@ -25,6 +25,32 @@ describe('reserva de turnos', () => {
     expect(res.body.appointment.paymentStatus).toBe('pending')
   })
 
+  // RF-02 — "pendiente de seña": el estado sigue siendo 'confirmed' (bloquea el
+  // horario), pero la API expone la etiqueta derivada mientras la seña no se pagó.
+  it('un turno con seña sin pagar se expone como pending_deposit; sin seña, como confirmed', async () => {
+    const client = await createClientUser()
+    const pro    = await createProfessionalUser()
+    const svc    = await createService({ price: 12000 })
+    await prisma.paymentSettings.deleteMany()
+    await prisma.paymentSettings.create({ data: { depositAmount: 2000, depositPercent: false } })
+
+    const res = await request(app)
+      .post('/api/client/appointments')
+      .set('Cookie', cookieFor(client))
+      .send({ serviceId: svc.id, professionalId: pro.id, date: tomorrowStr(), time: '11:00', termsAccepted: true })
+    expect(res.status).toBe(201)
+    expect(res.body.appointment.status).toBe('confirmed')
+    expect(res.body.appointment.displayStatus).toBe('pending_deposit')
+
+    await prisma.paymentSettings.updateMany({ data: { depositAmount: 0 } })
+    const free = await request(app)
+      .post('/api/client/appointments')
+      .set('Cookie', cookieFor(client))
+      .send({ serviceId: svc.id, professionalId: pro.id, date: tomorrowStr(), time: '12:00', termsAccepted: true })
+    expect(free.status).toBe(201)
+    expect(free.body.appointment.displayStatus).toBe('confirmed')
+  })
+
   it('rechaza reservar un servicio inactivo', async () => {
     const client = await createClientUser()
     const pro    = await createProfessionalUser()

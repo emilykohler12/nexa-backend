@@ -4,6 +4,7 @@ export type UserRole = 'admin' | 'professional' | 'client'
 export interface AuthUser {
   id:              string
   name:            string
+  lastName?:       string | null
   email:           string
   role:            UserRole
   phone?:          string | null

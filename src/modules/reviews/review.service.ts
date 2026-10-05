@@ -4,6 +4,7 @@ import { prisma }   from '../../app/database/prisma'
 import { AppError } from '../../app/middlewares/errorHandler'
 import { HTTP }     from '../../app/constants/http'
 import { activityService } from '../activity/activity.service'
+import { fullName } from '../../app/utils/fullName'
 
 export type ReviewStatus = 'pending' | 'approved' | 'rejected'
 
@@ -18,7 +19,7 @@ function toReviewView(r: ReviewRow) {
   return {
     id:            r.id,
     clientId:      r.clientId,
-    clientName:    r.client.name,
+    clientName:    fullName(r.client),
     appointmentId: r.appointmentId,
     serviceName:   r.appointment.service.name,
     rating:        r.rating,
@@ -83,7 +84,7 @@ export const reviewService = {
       await activityService.log({
         action:   'Nueva reseña con comentario',
         module:   'reviews',
-        detail:   `${appointment.client.name} calificó "${appointment.service.name}" con ${data.rating} estrellas: "${message}"`,
+        detail:   `${fullName(appointment.client)} calificó "${appointment.service.name}" con ${data.rating} estrellas: "${message}"`,
         reviewId: review.id,
       })
     }
@@ -150,6 +151,6 @@ export const reviewService = {
     })
     return rows
       .filter(r => r.message && r.message.trim().length > 0)
-      .map(r => ({ id: r.id, clientName: r.client.name, rating: r.rating, message: r.message as string }))
+      .map(r => ({ id: r.id, clientName: fullName(r.client), rating: r.rating, message: r.message as string }))
   },
 }
