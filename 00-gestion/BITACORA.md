@@ -474,3 +474,9 @@ Esta bitácora consolida todo el proceso de decisiones del proyecto: arquitectur
 4. **Qué aporté yo, con remisión al repositorio:** -
 5. **Desacuerdos y cómo se resolvieron:** no hubo.
 6. **Herramienta auxiliar usada:** ninguna.
+
+---
+
+## Continuación: AE2 (10/09/2026 al 06/10/2026)
+
+Esta bitácora (AE1) llega hasta el 03/09/2026. Continúa en [`20261006_BitacoraIndividual_KohlerAE2_v5.docx`](20261006_BitacoraIndividual_KohlerAE2_v5.docx), con las decisiones de septiembre y octubre de 2026.
