@@ -81,6 +81,28 @@ export async function createService(overrides: Partial<{
   })
 }
 
+// Franjas horarias de una profesional (professional_availability): por defecto
+// los 7 días (0 = lunes … 6 = domingo) de 09:00 a 18:00.
+export async function setAvailability(
+  professionalUserId: string,
+  ranges: { dayOfWeek: number; startTime: string; endTime: string }[] =
+    [0, 1, 2, 3, 4, 5, 6].map(dayOfWeek => ({ dayOfWeek, startTime: '09:00', endTime: '18:00' })),
+) {
+  const professional = await prisma.professional.findUniqueOrThrow({ where: { userId: professionalUserId } })
+  await prisma.professionalAvailability.deleteMany({ where: { professionalId: professional.id } })
+  await prisma.professionalAvailability.createMany({
+    data: ranges.map(r => ({ professionalId: professional.id, ...r })),
+  })
+}
+
+// Un lunes al menos una semana adelante (YYYY-MM-DD) + N días — para armar
+// turnos dentro de una misma semana (R-04 mide la carga de lunes a domingo).
+export function futureWeekDay(daysAfterMonday = 0): string {
+  const d = new Date()
+  d.setDate(d.getDate() + 7 + ((8 - d.getDay()) % 7) + daysAfterMonday)
+  return localDateStr(d)
+}
+
 // Habilita a una profesional a hacer un servicio — necesario para que la
 // resolución "any profesional" (ANY_PROFESSIONAL_SENTINEL) la encuentre.
 export async function linkProfessionalService(

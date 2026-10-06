@@ -120,7 +120,13 @@ export const serviceController = {
   // de la reserva en vez del texto genérico.
   getPreferredProfessional: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const preview = await appointmentService.previewAnyProfessional(getId(req))
+      // R-04 — la asignación depende del día y la hora pedidos (disponibilidad y carga semanal).
+      const date = String(req.query.date ?? '')
+      const time = String(req.query.time ?? '')
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) {
+        throw new AppError(HTTP.BAD_REQUEST, 'Indicá día (date=YYYY-MM-DD) y hora (time=HH:mm)', 'VALIDATION_ERROR')
+      }
+      const preview = await appointmentService.previewAnyProfessional(getId(req), { date, time })
       res.json(preview)
     } catch (err) { next(err) }
   },

@@ -9,6 +9,7 @@ import { HTTP }          from '../../app/constants/http'
 import { fullName }      from '../../app/utils/fullName'
 import { PRIVACY_POLICY_VERSION } from '../../app/constants/legal'
 import type { CompanionRelation } from '../../app/constants/companion'
+import { backendDayOf, weekRangeOf, isTimeInRanges, isOnVacation } from './availability'
 import { settingsService, computeDeposit } from '../settings/settings.service'
 import { activityService } from '../activity/activity.service'
 import { paymentService } from '../payments/payment.service'
@@ -590,39 +591,78 @@ async function createManualAppointment(professionalId: string, data: {
 
 export const ANY_PROFESSIONAL_SENTINEL = 'any'
 
-// "Cualquiera" — resuelve al profesional activo con el servicio asignado que tenga
-// menos turnos activos (no cancelados) en total. Con un solo candidato no hace falta
-// contar nada. `excludeIds` saca profesionales ya asignados a otro servicio del
-// mismo combo simultáneo (no puede hacer dos a la vez).
+// R-04 (RF-06) — "Cualquiera". Candidatas: profesionales activas, habilitadas
+// para el servicio, con una franja de disponibilidad que cubra ese día y hora,
+// sin vacaciones esa fecha y sin turno activo (ni cancelado ni no_show) a esa
+// misma hora de inicio. Entre ellas, la de menor carga de la SEMANA de la fecha
+// pedida (lunes a domingo, turnos no cancelados ni no_show); a igual carga, la
+// de mayor antigüedad (Professional.createdAt ascendente). Si hay profesionales
+// para el servicio pero ninguna libre en ese horario → 409.
+// `excludeIds` saca profesionales ya asignados a otro servicio del mismo combo
+// simultáneo (no puede hacer dos a la vez); `allowedIds` es la restricción que
+// el admin puede poner por componente de combo.
 async function resolveProfessionalId(
   serviceId: string,
   requestedProfessionalId: string,
+  slot: { date: string; time: string },
   excludeIds: string[] = [],
   allowedIds?: string[],
 ): Promise<string> {
   if (requestedProfessionalId !== ANY_PROFESSIONAL_SENTINEL) return requestedProfessionalId
 
-  const candidates = await prisma.user.findMany({
+  const enabled = await prisma.user.findMany({
     where: {
       role:   { in: ['professional', 'admin'] },
       active: true,
       id:     allowedIds && allowedIds.length > 0 ? { in: allowedIds, notIn: excludeIds } : excludeIds.length > 0 ? { notIn: excludeIds } : undefined,
       professional: { services: { some: { serviceId, active: true } } },
     },
-    select: { id: true },
+    select: {
+      id: true,
+      professional: {
+        select: {
+          createdAt: true, vacationFrom: true, vacationTo: true,
+          availability: { where: { active: true, dayOfWeek: backendDayOf(slot.date) }, select: { startTime: true, endTime: true } },
+        },
+      },
+    },
   })
-  if (candidates.length === 0) {
+  if (enabled.length === 0) {
     throw new AppError(HTTP.BAD_REQUEST, 'No hay profesionales disponibles para este servicio', 'NO_PROFESSIONAL_AVAILABLE')
   }
-  if (candidates.length === 1) return candidates[0].id
 
+  const busy = await prisma.appointment.findMany({
+    where:  { professionalId: { in: enabled.map(u => u.id) }, date: slot.date, time: slot.time, status: { notIn: ['cancelled', 'no_show'] } },
+    select: { professionalId: true },
+  })
+  const busyIds = new Set(busy.map(b => b.professionalId))
+
+  const candidates = enabled.filter(u =>
+    u.professional &&
+    !busyIds.has(u.id) &&
+    !isOnVacation(u.professional, slot.date) &&
+    isTimeInRanges(u.professional.availability, slot.time),
+  )
+  if (candidates.length === 0) {
+    throw new AppError(HTTP.CONFLICT, 'Ninguna profesional está libre en ese día y horario. Elegí otro horario.', 'NO_PROFESSIONAL_FREE')
+  }
+
+  const week   = weekRangeOf(slot.date)
   const counts = await prisma.appointment.groupBy({
     by:     ['professionalId'],
-    where:  { professionalId: { in: candidates.map(c => c.id) }, status: { notIn: ['cancelled'] } },
+    where:  {
+      professionalId: { in: candidates.map(c => c.id) },
+      date:           { gte: week.from, lte: week.to },
+      status:         { notIn: ['cancelled', 'no_show'] },
+    },
     _count: { id: true },
   })
-  const countMap = new Map(counts.map(c => [c.professionalId, c._count.id]))
-  candidates.sort((a, b) => (countMap.get(a.id) ?? 0) - (countMap.get(b.id) ?? 0))
+  const load = new Map(counts.map(c => [c.professionalId, c._count.id]))
+  candidates.sort((a, b) =>
+    (load.get(a.id) ?? 0) - (load.get(b.id) ?? 0)
+    || a.professional!.createdAt.getTime() - b.professional!.createdAt.getTime()
+    || a.id.localeCompare(b.id),
+  )
   return candidates[0].id
 }
 
@@ -690,7 +730,7 @@ export const appointmentService = {
       throw new AppError(HTTP.BAD_REQUEST, 'Servicio no disponible', 'SERVICE_NOT_FOUND')
     }
 
-    const professionalId = await resolveProfessionalId(input.serviceId, input.professionalId)
+    const professionalId = await resolveProfessionalId(input.serviceId, input.professionalId, { date: input.date, time: input.time })
     const professional = await prisma.user.findUnique({ where: { id: professionalId } })
     if (!professional || !['professional', 'admin'].includes(professional.role) || !professional.active) {
       throw new AppError(HTTP.BAD_REQUEST, 'Profesional no disponible', 'PROFESSIONAL_NOT_FOUND')
@@ -796,7 +836,7 @@ export const appointmentService = {
       ) {
         throw new AppError(HTTP.BAD_REQUEST, 'Esa profesional no está habilitada para ese servicio en este turno simultáneo', 'PROFESSIONAL_NOT_ALLOWED')
       }
-      const professionalId = await resolveProfessionalId(component.serviceId, component.professionalId, excludeIds, allowedIds)
+      const professionalId = await resolveProfessionalId(component.serviceId, component.professionalId, { date: component.date, time: component.time }, excludeIds, allowedIds)
       resolvedComponents.push({ ...component, professionalId })
     }
 
@@ -1738,13 +1778,12 @@ export const appointmentService = {
   },
 
   // Le muestra al cliente, en la confirmación, quién se llevaría el turno si
-  // elige "cualquier profesional disponible" — mismo criterio (menor carga)
-  // que resolveProfessionalId usa de verdad al crear el turno. Es solo una
-  // vista previa: puede cambiar si la carga cambia entre este preview y la
-  // reserva real (alguien más reserva mientras tanto), la asignación final
-  // siempre se recalcula en el momento de crear el turno.
-  previewAnyProfessional: async (serviceId: string) => {
-    const professionalId = await resolveProfessionalId(serviceId, ANY_PROFESSIONAL_SENTINEL)
+  // elige "cualquier profesional disponible" — mismo criterio (R-04) que
+  // resolveProfessionalId usa de verdad al crear el turno, para el día y hora
+  // elegidos. Es solo una vista previa: puede cambiar si alguien reserva entre
+  // este preview y la reserva real; la asignación final se recalcula al crear.
+  previewAnyProfessional: async (serviceId: string, slot: { date: string; time: string }) => {
+    const professionalId = await resolveProfessionalId(serviceId, ANY_PROFESSIONAL_SENTINEL, slot)
     const professional = await prisma.user.findUnique({ where: { id: professionalId }, select: { id: true, name: true } })
     if (!professional) throw new AppError(HTTP.NOT_FOUND, 'Profesional no encontrado', 'NOT_FOUND')
     return { professionalId: professional.id, professionalName: professional.name }
