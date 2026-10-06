@@ -1,4 +1,4 @@
-# Nexa — Sistema de Gestión de Turnos para Estudio de Belleza (Prototipo v1.1)
+# Nexa — Sistema de Gestión de Turnos para Estudio de Belleza (Prototipo v1.2)
 
 Creado por: Emily Noralí Kohler
 
@@ -21,7 +21,7 @@ El sistema está dividido en dos repositorios que se clonan uno al lado del otro
 | Instancia | Proyecto Final de Grado — AE2 |
 | Docente | PosDr. Darío Ezequiel Díaz |
 | Grupo de encuadre | Geneyro, Lautaro, y Leal, Thiago |
-| Versión | v1.1 (etiqueta anotada `v1.1` en ambos repos) |
+| Versión | v1.2 (etiqueta anotada `v1.2` en ambos repos; `v1` y `v1.1` se conservan) |
 
 ### 1.2 Versiones exactas del entorno
 
@@ -66,7 +66,8 @@ Vive en el repositorio **nexa-backend**:
 | ADR-001: estrategia de multi-tenancy | `04-diseno/adr-001-multi-tenancy.md` |
 | ADR-002: integridad de la reserva (índice único parcial y `OUT_OF_HOURS`) | `04-diseno/adr-002-validacion-antes-persistencia.md` |
 | ADR-003: JWT para autenticación | `04-diseno/adr-003-jwt-auth.md` |
-| Bitácora de decisiones | `00-gestion/BITACORA.md` |
+| Bitácora de decisiones, AE1 (hasta el 03/09/2026) | `00-gestion/BITACORA.md` |
+| Bitácora de decisiones, AE2 (10/09 al 06/10/2026; continúa la anterior) | `00-gestion/20261006_BitacoraIndividual_KohlerAE2_v5.docx` |
 | Backup y restauración, RUNBOOK y SOP | `00-gestion/` |
 
 ---
@@ -109,7 +110,7 @@ Además, un usuario y contraseña de PostgreSQL con permiso para crear bases (en
 
 Todos los comandos se escriben en una terminal. En Windows sirve Git Bash o PowerShell.
 
-### 4.1 Clonar los dos repositorios en la etiqueta v1.1
+### 4.1 Clonar los dos repositorios en la etiqueta v1.2
 
 Crear una carpeta vacía, entrar y clonar ambos repos **uno al lado del otro**:
 
@@ -119,8 +120,8 @@ mkdir nexa && cd nexa
 git clone https://github.com/emilykohler12/nexa-backend.git
 git clone https://github.com/emilykohler12/nexa-frontend.git
 
-cd nexa-backend  && git checkout v1.1 && cd ..
-cd nexa-frontend && git checkout v1.1 && cd ..
+cd nexa-backend  && git checkout v1.2 && cd ..
+cd nexa-frontend && git checkout v1.2 && cd ..
 ```
 
 Queda así:
@@ -131,7 +132,7 @@ nexa/
 └── nexa-frontend/
 ```
 
-> `git checkout v1.1` muestra un aviso de *"detached HEAD"*: es normal, significa que estás parado en la versión etiquetada.
+> `git checkout v1.2` muestra un aviso de *"detached HEAD"*: es normal, significa que estás parado en la versión etiquetada.
 
 ### 4.2 Instalar dependencias
 
@@ -340,20 +341,20 @@ Test Files  11 passed (11)
 
 ## 8. Declaración de uso de IA
 
-En este proyecto se usó **Claude Code** (Anthropic) como asistente de programación, con los modelos Claude Sonnet 5, Claude Sonnet 5.5, Claude Haiku 4.5 y Claude Opus 5.5. Toda decisión de dominio (entidades, reglas, alcance del MVP, iteraciones) la tomó la autora; el detalle de cada decisión, las alternativas descartadas y en qué intervino la IA está en la bitácora: [`00-gestion/BITACORA.md`](00-gestion/BITACORA.md).
+En este proyecto se usó **Claude Code** (Anthropic) como asistente de programación, con los modelos Claude Sonnet 5, Claude Sonnet 5.5, Claude Haiku 4.5 y Claude Opus 5.5. Toda decisión de dominio (entidades, reglas, alcance del MVP, iteraciones) la tomó la autora; el detalle de cada decisión, las alternativas descartadas y en qué intervino la IA está en la bitácora: [`00-gestion/BITACORA.md`](00-gestion/BITACORA.md) (AE1, hasta el 03/09/2026) y su continuación [`00-gestion/20261006_BitacoraIndividual_KohlerAE2_v5.docx`](00-gestion/20261006_BitacoraIndividual_KohlerAE2_v5.docx) (AE2, del 10/09 al 06/10/2026).
 
 ### 8.1 Cifras (calculadas con `git log`)
 
-Corte: commit `2836e1d` en nexa-backend (2026-10-06) y `ec976da` en nexa-frontend (2026-10-05), antes de la corrección de este README.
+Corte: commit `9bdc3ee` en nexa-backend y `4bf842e` en nexa-frontend (2026-10-06), antes de la corrección de este README.
 
 | | nexa-backend | nexa-frontend |
 |---|---|---|
-| Commits totales | 66 | 55 |
+| Commits totales | 68 | 57 |
 | Con `Co-Authored-By: Claude Sonnet 5` | 24 | 29 |
 | Con `Co-Authored-By: Claude Haiku 4.5` | 4 | 3 |
 | Con `Co-Authored-By: Claude Opus 5.5` | 0 | 0 |
 | **Total con la línea de coautoría** (01/09 al 25/09) | **28** | **32** |
-| Desde el 25/09, **sin** la línea | 32 | 18 |
+| Desde el 25/09, **sin** la línea | 34 | 20 |
 
 Comandos usados:
 
@@ -370,12 +371,12 @@ Desde el 25/09 los commits se firmaron solo con el nombre de la autora, sin la l
 | Modelo | nexa-backend | nexa-frontend |
 |---|---|---|
 | Claude Opus 5.5 | 11 — `a44fddb`, `294b0f9`, `8a195de`, `9d97c8f`, `3aa5b7b`, `42321bd`, `8c9b778`, `c12671b`, `90e8874`, `631db61`, `54933ca` | 8 — `a986ca9`, `c6bd2d9`, `72b3a6c`, `53817d9`, `90a2391`, `1dd6936`, `4107356`, `ec976da` |
-| Claude Sonnet 5.5 | 2 — `92cd761`, `2836e1d` | 0 |
+| Claude Sonnet 5.5 | 4 — `92cd761`, `2836e1d`, `ce550a9`, `9bdc3ee` | 2 — `2e7734f`, `4bf842e` |
 | Claude Sonnet 5 | 9 — `adfe572`, `f4e40cb`, `342b59f`, `f2c9d9f`, `c413f0f`, `f8d0455`, `984862f`, `d7ac9fc`, `3ebba2b` | 5 — `0bede0a`, `174ed11`, `dc7f5df`, `858e2be`, `5b74e37` |
 | Claude Haiku 4.5 | 9 — `f5d2eb4`, `9a8651b`, `57d1928`, `f4ba7e4`, `c6241b9`, `6d76104`, `edb0bc4`, `4a0fecb`, `8fa18f7` | 4 — `245dcc0`, `8aed419`, `40d4d08`, `7bde3e7` |
 | Sin evidencia en las sesiones | 1 — `47f4a96` (autora en el README) | 1 — `087ee9b` (autora en el README) |
 
-Los commits `54933ca` y `ec976da` son los del README v1.1. El commit que corrige este README también se hizo con Claude Code (Claude Sonnet 5.5) y no figura en las cifras de arriba porque no puede citar su propio hash.
+Los commits `54933ca` y `ec976da` son los del README v1.1; `ce550a9` y `2e7734f`, los de la corrección de ese README, y `9bdc3ee` y `4bf842e`, los de la bitácora de la AE2. El commit de este README (v1.2) también se hizo con Claude Code (Claude Sonnet 5.5) y no figura en las cifras de arriba porque no puede citar su propio hash.
 
 ---
 
