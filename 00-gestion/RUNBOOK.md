@@ -53,8 +53,10 @@ resolver en el momento, sin tener que investigar desde cero.
 `ADMIN_PASSWORD`, `ADMIN_NAME`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS`,
 `MAIL_FROM`, `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET`, `SENTRY_DSN`.
 
-(`GOOGLE_CLIENT_ID` y las de `WHATSAPP_*` quedaron sin usar tras remover el login
-social y no tener todavía el chatbot — no hace falta cargarlas.)
+(`GOOGLE_CLIENT_ID` quedó sin usar tras remover el login social. Las `WHATSAPP_*`
+ya no existen: el webhook de Meta se retiró; WhatsApp queda solo como enlace
+externo (botón flotante, seña/pedido coordinados por WhatsApp). Si siguen cargadas
+en Render se pueden borrar.)
 
 ## Cómo probar un restore (hacer esto al menos una vez)
 

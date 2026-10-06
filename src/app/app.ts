@@ -8,7 +8,6 @@ import { env }          from './config/env'
 import { apiRoutes }    from './routes'
 import { errorHandler } from './middlewares/errorHandler'
 import { notFound }     from './middlewares/notFound'
-import { capturarRawBody } from '../modules/whatsapp/middleware/whatsapp-signature.middleware'
 import { initSentry, sentryRequestHandler, sentryErrorHandler } from '../sentry'
 
 // Inicializar Sentry ANTES de crear la app
@@ -64,12 +63,7 @@ if (env.NODE_ENV !== 'test') {
   }))
 }
 
-// verify: capturarRawBody guarda el body crudo en req.rawBody antes de
-// parsearlo — lo necesita el webhook de WhatsApp para validar la firma
-// de Meta (HMAC contra los bytes exactos recibidos). Corre en todas las
-// requests; el costo es despreciable y evita un segundo parser JSON
-// solo para esa ruta.
-app.use(express.json({ limit: '8mb', verify: capturarRawBody }))
+app.use(express.json({ limit: '8mb' }))
 app.use(express.urlencoded({ extended: false }))
 app.use(cookieParser())
 

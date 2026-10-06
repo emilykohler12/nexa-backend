@@ -43,8 +43,7 @@ const TABLES = [
   'inventory_movements', 'orders', 'product_orders', 'auto_promotions', 'auto_promotion_sends',
   'promotions', 'special_events', 'payment_settings', 'business_settings', 'business_schedule_days',
   'business_holidays', 'client_gallery_photos', 'activity_logs', 'reviews',
-  'professional_notifications', 'client_notifications', 'conversaciones_whatsapp',
-  'mensajes_whatsapp_procesados',
+  'professional_notifications', 'client_notifications',
 ]
 
 export async function resetDb(): Promise<void> {

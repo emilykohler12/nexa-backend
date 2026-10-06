@@ -7,8 +7,8 @@ import { orderService } from '../orders/order.service'
 /**
  * POST /api/webhook/mercadopago
  *
- * Mercado Pago llama acá cada vez que cambia el estado de un pago. Igual que
- * con WhatsApp: respondemos 200 de inmediato (Mercado Pago espera una
+ * Mercado Pago llama acá cada vez que cambia el estado de un pago.
+ * Respondemos 200 de inmediato (Mercado Pago espera una
  * respuesta rápida y reintenta si no la recibe), y el procesamiento real
  * sigue después.
  *

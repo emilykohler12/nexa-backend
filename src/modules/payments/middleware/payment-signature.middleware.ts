@@ -51,7 +51,7 @@ export function verificarFirmaMercadoPago(req: Request, res: Response, next: Nex
   const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`
   const firmaEsperada = crypto.createHmac('sha256', secret).update(manifest).digest('hex')
 
-  // Igual que con el webhook de WhatsApp: chequeo la longitud antes de
+  // Chequeo la longitud antes de
   // timingSafeEqual, porque si no coincide tira una excepción en vez de
   // devolver false.
   const bufferRecibido = Buffer.from(firmaRecibida)

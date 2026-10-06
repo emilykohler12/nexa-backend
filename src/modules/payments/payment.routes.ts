@@ -5,7 +5,7 @@ import { verificarFirmaMercadoPago } from './middleware/payment-signature.middle
 
 const router = Router()
 
-// Mercado Pago no firma sobre el cuerpo crudo (a diferencia de WhatsApp) —
+// Mercado Pago no firma sobre el cuerpo crudo —
 // la firma se calcula sobre el id de la notificación + headers, así que no
 // hace falta ningún parser especial acá, el express.json() global alcanza.
 router.post('/mercadopago', verificarFirmaMercadoPago, recibirWebhookMercadoPago)
