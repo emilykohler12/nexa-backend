@@ -1,4 +1,4 @@
-# Nexa — Sistema de Gestión de Turnos para Estudio de Belleza (Prototipo v1)
+# Nexa — Sistema de Gestión de Turnos para Estudio de Belleza (Prototipo v1.1)
 
 Creado por: Emily Noralí Kohler
 
@@ -9,9 +9,29 @@ El sistema está dividido en dos repositorios que se clonan uno al lado del otro
 
 ---
 
-## 1. Qué hace este prototipo
+## 1. Identificación del proyecto y qué hace este prototipo
 
-### Caso de uso vertical: reserva de turno con validación de disponibilidad
+### 1.1 Identificación
+
+| Campo | Dato |
+|---|---|
+| Proyecto | Nexa — Sistema de Gestión de Turnos para Estudio de Belleza (cliente real: Loren Estudio de Belleza) |
+| Autora | Kohler, Emily Noralí — DNI 45.555.841 |
+| Comisión | A |
+| Instancia | Proyecto Final de Grado — AE2 |
+| Docente | PosDr. Darío Ezequiel Díaz |
+| Grupo de encuadre | Geneyro, Lautaro, y Leal, Thiago |
+| Versión | v1.1 (etiqueta anotada `v1.1` en ambos repos) |
+
+### 1.2 Versiones exactas del entorno
+
+| Herramienta | Versión |
+|---|---|
+| Node.js | 24.x (probado con 24.17.0; el CI usa `node-version: 24`) |
+| npm | 11.13.0 |
+| PostgreSQL | 16 o superior — CI con `postgres:16`, producción en Supabase 17.x, probado en local con 18.4 |
+
+### 1.3 Caso de uso vertical: reserva de turno con validación de disponibilidad
 
 Una clienta se registra, elige un servicio, una profesional, una fecha y un horario libre, y confirma la reserva. El recorrido atraviesa las cuatro capas:
 
@@ -24,16 +44,17 @@ Una clienta se registra, elige un servicio, una profesional, una fecha y un hora
 
 **Requisito:** RF-01 — **Regla de negocio:** R-01 (no se puede confirmar un turno si la profesional ya tiene otro turno activo en ese horario).
 
-### Decisión arquitectónica probada
+### 1.4 Decisión arquitectónica probada
 
 La disponibilidad se garantiza en el **backend**, no solo en la interfaz:
 
 - El frontend no ofrece los horarios ya ocupados (`GET /api/professional/:id/availability`).
-- Aunque alguien salte la interfaz y mande la reserva directo a la API, el backend la rechaza con **HTTP 409** (`PROFESSIONAL_SLOT_TAKEN`) y el turno no se guarda. El respaldo final es un índice único parcial en PostgreSQL sobre `(professional_id, date, time)` para turnos no cancelados, que además cubre dos reservas simultáneas.
-- Prueba automatizada: `tests/integration/appointments.booking.test.ts`.
-- Alternativas evaluadas: `04-diseno/adr-002-validacion-antes-persistencia.md`.
+- La fuente de verdad es un **índice único parcial** en PostgreSQL sobre `(professional_id, date, time)` que excluye los turnos `cancelled` y `no_show`. Es atómico: aunque dos reservas lleguen a la vez o alguien salte la interfaz, solo una se guarda y la otra recibe **HTTP 409** (`PROFESSIONAL_SLOT_TAKEN`). No hay consulta previa.
+- La reserva de la clienta (simple, combo y reprogramación) además exige que la hora caiga dentro de las franjas que definió la profesional: si no, **HTTP 400** (`OUT_OF_HOURS`). Los turnos manuales del admin no se validan contra la franja.
+- Pruebas automatizadas: `tests/integration/appointments.booking.test.ts` y `tests/integration/appointments.out-of-hours.test.ts`.
+- Alternativas evaluadas y motivo de la elección: `04-diseno/adr-002-validacion-antes-persistencia.md`.
 
-> **Limitación conocida de v1:** el bloqueo compara la **hora de inicio**. Dos turnos de la misma profesional que empiezan a horas distintas pero se pisan por duración (ej. 16:00 de 90 min y 16:30) todavía no se detectan.
+> **Limitación conocida:** el bloqueo compara la **hora de inicio**. Dos turnos de la misma profesional que empiezan a horas distintas pero se pisan por duración (ej. 16:00 de 90 min y 16:30) todavía no se detectan.
 
 ---
 
@@ -61,8 +82,9 @@ Funciona en Windows, macOS y Linux. Necesitás tener instalado:
 | Programa | Versión | Cómo verificar |
 |---|---|---|
 | Git | 2.x | `git --version` |
-| Node.js | 24.x (incluye npm 11) | `node --version` |
-| PostgreSQL | 16 o superior, corriendo en tu máquina | `psql --version` |
+| Node.js | 24.x (probado con 24.17.0) | `node --version` |
+| npm | 11.x (probado con 11.13.0) | `npm --version` |
+| PostgreSQL | 16 o superior, corriendo en tu máquina (CI: 16, producción: 17.x, probado en 18.4) | `psql --version` |
 
 Además, un usuario y contraseña de PostgreSQL con permiso para crear bases (en una instalación por defecto, el usuario `postgres`).
 
@@ -74,7 +96,7 @@ Además, un usuario y contraseña de PostgreSQL con permiso para crear bases (en
 
 Todos los comandos se escriben en una terminal. En Windows sirve Git Bash o PowerShell.
 
-### 4.1 Clonar los dos repositorios en la etiqueta v1
+### 4.1 Clonar los dos repositorios en la etiqueta v1.1
 
 Crear una carpeta vacía, entrar y clonar ambos repos **uno al lado del otro**:
 
@@ -84,8 +106,8 @@ mkdir nexa && cd nexa
 git clone https://github.com/emilykohler12/nexa-backend.git
 git clone https://github.com/emilykohler12/nexa-frontend.git
 
-cd nexa-backend  && git checkout v1 && cd ..
-cd nexa-frontend && git checkout v1 && cd ..
+cd nexa-backend  && git checkout v1.1 && cd ..
+cd nexa-frontend && git checkout v1.1 && cd ..
 ```
 
 Queda así:
@@ -96,7 +118,7 @@ nexa/
 └── nexa-frontend/
 ```
 
-> `git checkout v1` muestra un aviso de *"detached HEAD"*: es normal, significa que estás parado en la versión etiquetada.
+> `git checkout v1.1` muestra un aviso de *"detached HEAD"*: es normal, significa que estás parado en la versión etiquetada.
 
 ### 4.2 Instalar dependencias
 
@@ -222,7 +244,7 @@ Abrir **http://localhost:5173** en el navegador.
 ### 6.1 Crear una cuenta de clienta
 
 1. En http://localhost:5173 ir a **Ingresar** → pestaña **Registro**.
-2. Completar nombre, email (ej. `maria@test.local`), teléfono, contraseña (ej. `Maria1234!`) y aceptar los términos.
+2. Completar nombre, apellido, teléfono celular (los tres obligatorios, RF-02), email (ej. `maria@test.local`), contraseña (ej. `Maria1234!`) y aceptar los términos. Se guarda la fecha y la versión de la política aceptada (RF-08).
 3. Registrarse. No hace falta verificar el email para reservar.
 
 ### 6.2 Reservar un turno
@@ -235,7 +257,7 @@ Abrir **http://localhost:5173** en el navegador.
 6. Marcar *Acepto los Términos de Servicio y la Política de Privacidad* y elegir **Coordinar el pago por WhatsApp**. Se abre una pestaña de WhatsApp con un mensaje armado: se puede cerrar.
 7. En *"Antes de terminar..."* elegir **Omitir por ahora**.
 
-**Esperado:** en **Mis turnos** → *Próximos* aparece el turno con estado **Confirmado**, la fecha, la hora y el precio.
+**Esperado:** en **Mis turnos** → *Próximos* aparece el turno con estado **Pendiente de seña** (la seña todavía no se pagó; cuando se registra el pago pasa a **Confirmado**), la fecha, la hora y el precio.
 
 ### 6.3 Validación: el horario ya ocupado no se puede volver a reservar
 
@@ -250,7 +272,7 @@ Para comprobar que la regla vive en el backend y no solo en la pantalla, los tes
 psql -U postgres -d nexa_dev -c "SELECT date, time, status, payment_status FROM appointments ORDER BY created_at DESC;"
 ```
 
-**Esperado:** una fila por turno reservado, con `status = confirmed`. Si se reinicia el backend y se recarga **Mis turnos**, el turno sigue estando.
+**Esperado:** una fila por turno reservado, con `status = confirmed` y `payment_status = pending` (en pantalla: "Pendiente de seña"). Si se reinicia el backend y se recarga **Mis turnos**, el turno sigue estando.
 
 ---
 
@@ -276,13 +298,16 @@ npm test
 **Esperado:**
 
 ```
-Test Files  15 passed (15)
-     Tests  110 passed (110)
+Test Files  18 passed (18)
+     Tests  136 passed (136)
 ```
 
 Los tests del caso de uso vertical están en `tests/integration/appointments.booking.test.ts`, entre ellos:
 - *rechaza reservar el mismo horario dos veces con la misma profesional (slot conflict)*
 - *permite la misma hora con OTRA profesional (el conflicto es por profesional, no global)*
+
+Y en `tests/integration/appointments.out-of-hours.test.ts`:
+- *rechaza reservar a las 23:00 con disponibilidad de 09:00 a 18:00*
 
 ### 7.2 Frontend
 
@@ -294,13 +319,53 @@ npm test
 **Esperado:**
 
 ```
-Test Files  8 passed (8)
-     Tests  31 passed (31)
+Test Files  11 passed (11)
+     Tests  39 passed (39)
 ```
 
 ---
 
-## 8. Canal de construcción (CI)
+## 8. Declaración de uso de IA
+
+En este proyecto se usó **Claude Code** (Anthropic) como asistente de programación, con los modelos Claude Sonnet 5, Claude Haiku 4.5 y Claude Opus 5.5. Toda decisión de dominio (entidades, reglas, alcance del MVP, iteraciones) la tomó la autora; el detalle de cada decisión, las alternativas descartadas y en qué intervino la IA está en la bitácora: [`00-gestion/BITACORA.md`](00-gestion/BITACORA.md).
+
+### 8.1 Cifras (calculadas con `git log`)
+
+Corte: commit `631db61` en nexa-backend y `4107356` en nexa-frontend (2026-10-05), antes de este README v1.1.
+
+| | nexa-backend | nexa-frontend |
+|---|---|---|
+| Commits totales | 63 | 54 |
+| Con `Co-Authored-By: Claude Sonnet 5` | 24 | 29 |
+| Con `Co-Authored-By: Claude Haiku 4.5` | 4 | 3 |
+| Con `Co-Authored-By: Claude Opus 5.5` | 0 | 0 |
+| **Total con la línea de coautoría** (01/09 al 25/09) | **28** | **32** |
+| Desde el 25/09, **sin** la línea | 29 | 17 |
+
+Comandos usados:
+
+```bash
+git rev-list --count HEAD
+git log --format='%B' | grep -i "^Co-Authored-By: Claude" | sort | uniq -c
+git log --since='2026-09-25T00:00:00-03:00' -i --invert-grep --grep='Co-Authored-By: Claude' --oneline
+```
+
+### 8.2 Commits sin la línea, hechos con Claude Code
+
+Desde el 25/09 los commits se firmaron solo con el nombre de la autora, sin la línea `Co-Authored-By`. Para no subdeclarar, se cruzó cada uno con el registro de sesiones de Claude Code (el comando `git commit` ejecutado por el asistente y el modelo de esa sesión):
+
+| Modelo | nexa-backend | nexa-frontend |
+|---|---|---|
+| Claude Opus 5.5 | 10 — `a44fddb`, `294b0f9`, `8a195de`, `9d97c8f`, `3aa5b7b`, `42321bd`, `8c9b778`, `c12671b`, `90e8874`, `631db61` | 7 — `a986ca9`, `c6bd2d9`, `72b3a6c`, `53817d9`, `90a2391`, `1dd6936`, `4107356` |
+| Claude Sonnet 5 | 9 — `adfe572`, `f4e40cb`, `342b59f`, `f2c9d9f`, `c413f0f`, `f8d0455`, `984862f`, `d7ac9fc`, `3ebba2b` | 5 — `0bede0a`, `174ed11`, `dc7f5df`, `858e2be`, `5b74e37` |
+| Claude Haiku 4.5 | 9 — `f5d2eb4`, `9a8651b`, `57d1928`, `f4ba7e4`, `c6241b9`, `6d76104`, `edb0bc4`, `4a0fecb`, `8fa18f7` | 4 — `245dcc0`, `8aed419`, `40d4d08`, `7bde3e7` |
+| Sin evidencia en las sesiones | 1 — `47f4a96` (autora en el README) | 1 — `087ee9b` (autora en el README) |
+
+El commit de este README v1.1 también se hizo con Claude Code (Opus 5.5).
+
+---
+
+## 9. Canal de construcción (CI)
 
 Cada push a `main` corre GitHub Actions en los dos repos. El registro de corridas está en:
 
@@ -314,7 +379,7 @@ Cada push a `main` corre GitHub Actions en los dos repos. El registro de corrida
 
 ---
 
-## 9. Build de producción
+## 10. Build de producción
 
 ```bash
 cd nexa-backend  && npm run build   # genera dist/
@@ -323,7 +388,7 @@ cd nexa-frontend && npm run build   # genera dist/
 
 ---
 
-## 10. Solución de problemas
+## 11. Solución de problemas
 
 **`❌ Variables de entorno inválidas: DATABASE_URL ...`**
 Falta el `.env` del backend. Volver al paso 4.4.
