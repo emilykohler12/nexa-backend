@@ -1,190 +1,138 @@
 # ADR-001: Estrategia de Multi-Tenancy
 
-> ⚠️ **SUPERADO.** Este documento reflejaba la idea original de un SaaS
-> multi-tenant clásico. La decisión final y su justificación completa están en
-> [`00-gestion/ADR-001-estrategia-multi-tenancy.md`](../00-gestion/ADR-001-estrategia-multi-tenancy.md)
-> (single-tenant con plantilla, no la Alternativa A de este documento). Se deja
-> este archivo como registro histórico de la evaluación intermedia.
-
-**Fecha:** 2026-09-20  
-**Estado:** SUPERADO — ver `00-gestion/ADR-001-estrategia-multi-tenancy.md`  
+**Fecha:** 2026-09-25
+**Estado:** ACEPTADO (reemplaza una evaluación intermedia del 2026-09-20 que elegía la Alternativa A; queda en el historial de git, commit `84a1782`)
 **Impacto:** ALTO
 
 ---
 
 ## 1. Contexto
 
-El sistema Nexa debe soportar múltiples estudios de belleza (tenants), cada uno con:
-- Sus propios clientes y profesionales
-- Sus propios turnos y órdenes
-- Datos completamente aislados
+Nexa nace para resolver el problema real de Loren Estudio de Belleza (gestión
+de turnos, hoy hecha por WhatsApp y cuaderno). La idea original contemplaba un
+SaaS multi-tenant clásico (un mismo proceso sirviendo a N estudios de belleza
+distintos). Al momento de decidir la arquitectura de datos definitiva, se
+evaluó de nuevo esa premisa contra la realidad del proyecto:
 
-La decisión arquitectónica debe balancear:
-- **Seguridad de datos:** Máximo aislamiento entre tenants
-- **Escalabilidad:** Capacidad de soportar N estudios
-- **Costo operacional:** Infraestructura y complejidad
-- **Complejidad de desarrollo:** Facilidad de mantenimiento
+- Un solo cliente real y validado: Loren.
+- Recursos de un desarrollador único (PIF de grado, no un equipo).
+- Presupuesto de infraestructura acotado (Supabase free tier, Render free/starter).
+- La eventual venta a otros estudios no requiere que corran en el **mismo**
+  proceso/base al mismo tiempo — cada estudio puede tener su propia instancia.
 
----
+## 2. Alternativas consideradas
 
-## 2. Alternativas Consideradas
+### Alternativa A — Base de datos separada por tenant (dentro de un mismo backend)
 
-### Alternativa A: Base de Datos Separada por Tenant
+Un solo backend desplegado, que según un `tenantId` de la request elige
+a qué base de datos conectarse (una por estudio).
 
-```
-tenant-1-db  (PostgreSQL)
-tenant-2-db  (PostgreSQL)
-tenant-3-db  (PostgreSQL)
-```
+**Ventajas:** aislamiento fuerte de datos; un estudio no puede ver datos de otro.
+**Desventajas:** el backend necesita lógica de enrutamiento de conexión por
+tenant (pooling de N conexiones, no 1); un bug en esa capa es un riesgo de
+fuga de datos entre clientes; opera y factura como una operación de
+infraestructura multi-cliente real (backups por tenant, límites de conexión
+de Supabase por proyecto, etc.) — sobre-ingeniería para un solo cliente activo.
 
-**Ventajas:**
-- ✅ Máximo aislamiento de datos
-- ✅ Escalabilidad independiente (cada tenant puede crecer)
-- ✅ Fácil cumplimiento GDPR (borrar 1 BD = borrar todo)
-- ✅ Performance sin contención de recursos
+### Alternativa B — Schema separado por tenant (RLS, una sola base)
 
-**Desventajas:**
-- ❌ Infraestructura más costosa (N BDs = N backups, N conexiones)
-- ❌ Complejidad operacional (gestionar N instancias)
-- ❌ Overhead de deployment/configuración
+Una base de datos, un schema de Postgres por estudio, aislamiento vía
+Row-Level Security.
 
----
+**Ventajas:** más barato que A (una sola base/proyecto de Supabase).
+**Desventajas:** el aislamiento depende 100% de que las políticas de RLS estén
+bien escritas en cada tabla — un error de policy es indistinguible de "andar
+bien" hasta que se filtran datos entre estudios. Exige disciplina y testing de
+seguridad constante que no es viable mantener en solitario a este tamaño de
+equipo.
 
-### Alternativa B: Schema Separado por Tenant (Row-Level Security)
+### Alternativa C — Tabla compartida con columna `businessId` (multi-tenant real, un solo backend)
 
-```
-DATABASE nexa_prod
-  ├─ SCHEMA tenant_1
-  ├─ SCHEMA tenant_2
-  └─ SCHEMA tenant_3
-```
+Todas las tablas (`Appointment`, `Client`, etc.) comparten fila física, y cada
+fila se filtra por `businessId` en cada query.
 
-**Ventajas:**
-- ✅ Aislamiento lógico con BD única
-- ✅ Más flexible que option C
-- ✅ Costo operacional moderado
-- ✅ RLS (Row-Level Security) en Supabase es nativo
-
-**Desventajas:**
-- ⚠️ Riesgo de cross-tenant si RLS falla
-- ⚠️ Shared backups (punto único de fallo)
-
----
-
-### Alternativa C: Tabla Compartida con Columna `businessId`
-
-```
-Appointment
-├─ id
-├─ businessId  ← Aislamiento solo en software
-├─ clientId
-├─ ...
-```
-
-**Ventajas:**
-- ✅ Máxima simplificidad
-- ✅ Mínimo costo infraestructural
-- ✅ Fácil de implementar
-
-**Desventajas:**
-- ❌ Riesgo crítico: 1 fallo de filtro = data leak entre tenants
-- ❌ Backup conjunto de todos (GDPR deletion difícil)
-- ❌ No es verdadero aislamiento
-
----
+**Ventajas:** más simple de programar que A/B a nivel de código de aplicación;
+un solo deploy sirve a todos los clientes.
+**Desventajas:** el riesgo es máximo — **un solo `where` mal escrito en
+cualquiera de las decenas de queries de Prisma del sistema expone datos de un
+estudio a otro**. No hay ninguna barrera a nivel de base de datos que lo
+impida (a diferencia de A o B). Para un sistema que maneja datos personales de
+clientas (nombres, teléfonos, turnos) esto es inaceptable como diseño
+principal.
 
 ## 3. Decisión
 
-**SELECCIONAR: Alternativa A — Base de Datos Separada por Tenant**
+**Arquitectura elegida: single-tenant con plantilla ("una instancia completa
+por cliente", no multi-tenancy en tiempo de ejecución).**
 
-Usando Supabase + Branching (dev/staging) o Neon con multi-DB.
+Cada estudio de belleza que use Nexa tiene su **propio** despliegue completo,
+aislado a nivel de infraestructura, no de código:
+- Su propio proyecto de Supabase (base de datos física separada).
+- Su propio servicio de Render (backend).
+- Su propio proyecto de Vercel (frontend).
+- Su propia configuración de variables de entorno (Mercado Pago, WhatsApp, mail, etc.).
 
----
+El "multi-tenant" no desaparece como objetivo de negocio (Nexa sigue pudiendo
+venderse a otros estudios) — se resuelve **por fuera del runtime**: agregar un
+cliente nuevo es clonar el repositorio (la "plantilla") y repetir el proceso
+de despliegue documentado en este mismo proyecto (ver `00-gestion/SOP.md`),
+no agregar una fila a una tabla de tenants.
 
 ## 4. Justificación
 
-1. **Seguridad es el requisito #1** — No negociable en sistemas con datos personales (turnos, pagos, contactos)
-2. **Regulaciones de privacidad:** GDPR, CCPA, Ley 25.326 (Argentina) requieren aislamiento fuerte
-3. **Auditoría:** Si hay un data leak, queda claro cuál tenant fue afectado
-4. **Escalabilidad futura:** Si uno de los estudios crece, no afecta a otros
-5. **Mercado:** Competidores (Acuity, Calendly) usan BD separadas
+1. **Aislamiento perfecto por construcción, no por disciplina de código:**
+   cada cliente vive en su propia base de datos físicamente separada — el
+   equivalente a la Alternativa A, pero sin la complejidad de que un mismo
+   proceso backend gestione el ruteo entre bases. No existe la clase de bug
+   "un where mal escrito filtra datos entre clientes" — es estructuralmente
+   imposible, no evitada por testing.
+2. **Costo real hoy: uno.** Con un solo cliente activo (Loren), el costo de
+   operar N infraestructuras separadas es exactamente el costo de operar una,
+   que es lo que hoy paga el proyecto. La complejidad de A/B/C (pooling
+   multi-tenant, RLS multi-tenant, filtros por `businessId`) sería costo
+   pagado por adelantado para un escenario (varios clientes simultáneos en un
+   mismo proceso) que todavía no existe.
+3. **Consistente con las capacidades reales del equipo:** un desarrollador
+   único manteniendo el sistema. Las alternativas A/B/C exigen disciplina de
+   seguridad y testing de aislamiento multi-tenant constantes; el modelo
+   elegido elimina esa categoría de riesgo por diseño.
+4. **Escala razonablemente para el modelo de negocio real:** vender Nexa a
+   otro estudio de belleza no es "agregar una fila", pero tampoco es
+   reescribir nada — es repetir un proceso de despliegue ya documentado y
+   probado (Supabase + Render + Vercel), algo que este mismo proyecto
+   ejecutó una vez para Loren y puede repetirse.
+5. **Portabilidad ya validada:** al no depender de funciones exclusivas de
+   Supabase (ver `00-gestion/PROTOCOLO_BACKUP_Y_RESTAURACION.md`, sección de
+   estrategia de salida), migrar la base de un cliente puntual a otro
+   proveedor de Postgres es un procedimiento simple y ya probado con un
+   simulacro real — no hay vendor lock-in agregado por esta decisión.
 
----
-
-## 5. Implementación
-
-### En Desarrollo Local
-
-```bash
-# Per-tenant setup
-DATABASE_URL_TENANT_1="postgresql://user:pass@localhost:5432/nexa_loren_dev"
-DATABASE_URL_TENANT_2="postgresql://user:pass@localhost:5432/nexa_otro_dev"
-
-npx prisma migrate dev --name "init" # Por cada DB
-```
-
-### En Producción (Supabase)
-
-```
-supabase_organization
-  ├─ project_loren         (PostgreSQL separada)
-  ├─ project_otro_studio   (PostgreSQL separada)
-  └─ project_...
-```
-
-Con DNS:
-```
-api.loren.nexa.app        → conexión a DB Loren
-api.otro.nexa.app         → conexión a DB Otro
-```
-
----
-
-## 6. Consecuencias
+## 5. Consecuencias
 
 ### Positivas
-
 | Aspecto | Impacto |
-|--------|--------|
-| Seguridad | Máximo aislamiento ✅✅✅ |
-| Privacidad | Cumplimiento regulatorio ✅✅ |
-| Escalabilidad | Independent per-tenant ✅✅ |
-| Auditoría | Logs y backups separados ✅ |
+|---|---|
+| Seguridad / aislamiento | Máximo posible — separación física, no lógica |
+| Complejidad de código | Mínima — cero lógica de multi-tenancy en el backend |
+| Riesgo de fuga entre clientes | Estructuralmente eliminado |
+| Cumplimiento de privacidad (Ley 25.326, etc.) | Trivial — "borrar los datos de un cliente" es borrar su proyecto entero |
 
 ### Negativas
-
 | Aspecto | Impacto |
-|--------|--------|
-| Costo | 3-5x más caro que BD única ⚠️ |
-| Complexity | Gestión de N conexiones ⚠️ |
-| Ops | Más trabajo en deployment ⚠️ |
-| Desarrollo | Nuevos estudios = nueva DB provision ⚠️ |
+|---|---|
+| Onboarding de un cliente nuevo | Requiere repetir el despliegue completo (documentado en SOP.md), no es instantáneo |
+| Costo por cliente | Cada cliente nuevo suma su propia infraestructura (mitigado: tiers gratuitos de Supabase/Render/Vercel cubren varios clientes chicos) |
+| Actualizaciones de código | Un fix o feature nuevo debe desplegarse por cliente, no una vez para todos |
+
+## 6. Revisión futura
+
+Si Nexa creciera a decenas de estudios simultáneos, esta decisión se
+revisaría a favor de una variante de la Alternativa A (bases separadas, pero
+con automatización de aprovisionamiento) — el punto de quiebre es cuando el
+costo operativo de mantener N despliegues manuales supere el costo de
+desarrollar el ruteo multi-tenant necesario para consolidarlos.
 
 ---
 
-## 7. Plan de Migración (si cambia)
-
-Si en el futuro necesitamos cambiar a Alternativa B (Schemas):
-
-1. Exportar datos de cada DB
-2. Importar a schema distinto en BD única
-3. Implementar RLS en todas las tablas
-4. Validar aislamientos (tests de penetración)
-5. Deprecar BDs viejas
-
-**Downtime estimado:** 2-4 horas por tenant
-
----
-
-## 8. Referencias
-
-- Supabase Multi-Database Guide: https://supabase.com/
-- Neon Multi-Database: https://neon.tech/
-- GDPR Article 25 (Data Protection by Design): https://gdpr-info.eu/
-- Row-Level Security en PostgreSQL: https://www.postgresql.org/docs/current/ddl-rowsecurity.html
-
----
-
-**Revisado por:** Emily Kohler  
-**Fecha de decisión:** 2026-09-20  
-**Próxima revisión:** 2026-12-20
+**Revisado por:** Emily Kohler
+**Fecha de decisión:** 2026-09-25
