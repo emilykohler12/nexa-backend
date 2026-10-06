@@ -666,6 +666,25 @@ async function resolveProfessionalId(
   return candidates[0].id
 }
 
+// Flujo de la clienta (reserva, combo, reprogramación): la hora de inicio tiene
+// que caer dentro de alguna franja que la profesional definió para ese día de
+// la semana, y no en sus vacaciones. Los turnos manuales del admin/profesional
+// NO pasan por acá (pueden cargar un sobreturno a propósito). El índice único
+// parcial sigue siendo la única defensa contra la doble reserva; esto solo
+// evita reservar fuera del horario de trabajo (ADR-002).
+async function assertWithinAvailability(professionalUserId: string, date: string, time: string): Promise<void> {
+  const professional = await prisma.professional.findUnique({
+    where:  { userId: professionalUserId },
+    select: {
+      vacationFrom: true, vacationTo: true,
+      availability: { where: { active: true, dayOfWeek: backendDayOf(date) }, select: { startTime: true, endTime: true } },
+    },
+  })
+  if (!professional || isOnVacation(professional, date) || !isTimeInRanges(professional.availability, time)) {
+    throw new AppError(HTTP.BAD_REQUEST, 'Ese horario está fuera de la disponibilidad de la profesional. Elegí otro horario.', 'OUT_OF_HOURS')
+  }
+}
+
 // El índice único parcial que evita doble reserva no es un @@unique de Prisma (tiene
 // un WHERE), así que la violación llega como PrismaClientUnknownRequestError sin
 // err.code — se detecta por el nombre de la constraint en el mensaje.
@@ -735,6 +754,7 @@ export const appointmentService = {
     if (!professional || !['professional', 'admin'].includes(professional.role) || !professional.active) {
       throw new AppError(HTTP.BAD_REQUEST, 'Profesional no disponible', 'PROFESSIONAL_NOT_FOUND')
     }
+    await assertWithinAvailability(professionalId, input.date, input.time)
 
     const paymentSettings = await settingsService.getPaymentSettings()
     const price   = input.promotionId ? await resolveServicePromotion(input.promotionId, input.serviceId) : Number(service.price)
@@ -837,6 +857,7 @@ export const appointmentService = {
         throw new AppError(HTTP.BAD_REQUEST, 'Esa profesional no está habilitada para ese servicio en este turno simultáneo', 'PROFESSIONAL_NOT_ALLOWED')
       }
       const professionalId = await resolveProfessionalId(component.serviceId, component.professionalId, { date: component.date, time: component.time }, excludeIds, allowedIds)
+      await assertWithinAvailability(professionalId, component.date, component.time)
       resolvedComponents.push({ ...component, professionalId })
     }
 
@@ -1366,6 +1387,7 @@ export const appointmentService = {
     if (!professional || !['professional', 'admin'].includes(professional.role) || !professional.active) {
       throw new AppError(HTTP.BAD_REQUEST, 'Profesional no disponible', 'PROFESSIONAL_NOT_FOUND')
     }
+    await assertWithinAvailability(input.professionalId, input.date, input.time)
 
     const paymentSettings = await settingsService.getPaymentSettings()
     const price   = Number(service.price)

@@ -49,7 +49,13 @@ export async function createProfessionalUser(overrides: Partial<{
       active:        overrides.active ?? true,
     },
   })
-  await prisma.professional.create({ data: { userId: user.id } })
+  const professional = await prisma.professional.create({ data: { userId: user.id } })
+  // Disponibilidad de jornada completa los 7 días: la reserva de la clienta exige
+  // que la hora caiga en una franja (OUT_OF_HOURS). Los tests que necesitan otra
+  // franja la reemplazan con setAvailability().
+  await prisma.professionalAvailability.createMany({
+    data: [0, 1, 2, 3, 4, 5, 6].map(dayOfWeek => ({ professionalId: professional.id, dayOfWeek, startTime: '00:00', endTime: '24:00' })),
+  })
   return user
 }
 
