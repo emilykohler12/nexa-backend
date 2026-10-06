@@ -29,7 +29,7 @@ El sistema está dividido en dos repositorios que se clonan uno al lado del otro
 |---|---|
 | Node.js | 24.x (probado con 24.17.0; el CI usa `node-version: 24`) |
 | npm | 11.13.0 |
-| PostgreSQL | 16 o superior — CI con `postgres:16`, producción en Supabase 17.x, probado en local con 18.4 |
+| PostgreSQL | 16 (versión de referencia: el CI corre con `postgres:16`). Producción en Supabase 17.x; también probado en local con 18.4 |
 
 ### 1.3 Caso de uso vertical: reserva de turno con validación de disponibilidad
 
@@ -54,7 +54,20 @@ La disponibilidad se garantiza en el **backend**, no solo en la interfaz:
 - Pruebas automatizadas: `tests/integration/appointments.booking.test.ts` y `tests/integration/appointments.out-of-hours.test.ts`.
 - Alternativas evaluadas y motivo de la elección: `04-diseno/adr-002-validacion-antes-persistencia.md`.
 
-> **Limitación conocida:** el bloqueo compara la **hora de inicio**. Dos turnos de la misma profesional que empiezan a horas distintas pero se pisan por duración (ej. 16:00 de 90 min y 16:30) todavía no se detectan.
+> **Limitación conocida:** el bloqueo compara la **hora de inicio**. Dos turnos de la misma profesional que empiezan a horas distintas pero se pisan por duración (ej. 16:00 de 90 min y 16:30) todavía no se detectan. Está registrada como una iteración nueva a planificar.
+
+### 1.5 Dónde está la documentación
+
+Vive en el repositorio **nexa-backend**:
+
+| Documento | Ubicación |
+|---|---|
+| Catálogo de requisitos (versión vigente) | `03-requisitos/20261005_CatalogoRequisitos_Kohler_v5.xlsx` |
+| ADR-001: estrategia de multi-tenancy | `04-diseno/adr-001-multi-tenancy.md` |
+| ADR-002: integridad de la reserva (índice único parcial y `OUT_OF_HOURS`) | `04-diseno/adr-002-validacion-antes-persistencia.md` |
+| ADR-003: JWT para autenticación | `04-diseno/adr-003-jwt-auth.md` |
+| Bitácora de decisiones | `00-gestion/BITACORA.md` |
+| Backup y restauración, RUNBOOK y SOP | `00-gestion/` |
 
 ---
 
@@ -62,15 +75,15 @@ La disponibilidad se garantiza en el **backend**, no solo en la interfaz:
 
 | Capa | Tecnología | Versión |
 |---|---|---|
-| Runtime | Node.js | 24.x |
-| API | Express | 5.x |
-| ORM | Prisma | 6.x |
-| Base de datos | PostgreSQL | 16 o superior |
-| Validación | Zod | 4.x |
-| Tests backend | Vitest + Supertest | 5.x / 7.x |
+| Runtime | Node.js | 24.x (probado con 24.17.0) |
+| API | Express | 5.2.1 |
+| ORM | Prisma | 6.19.3 |
+| Base de datos | PostgreSQL | 16 |
+| Validación | Zod | 4.6.5 |
+| Tests backend | Vitest + Supertest | 5.0.1 / 7.3.0 |
 | Autenticación | JWT en cookies httpOnly | — |
-| Frontend | React + Vite | 19.x / 8.x |
-| Estilos | Tailwind CSS | 4.x |
+| Frontend | React + Vite | 19.2.7 / 8.1.0 |
+| Estilos | Tailwind CSS | 4.3.1 |
 | CI | GitHub Actions | — |
 
 ---
@@ -83,8 +96,8 @@ Funciona en Windows, macOS y Linux. Necesitás tener instalado:
 |---|---|---|
 | Git | 2.x | `git --version` |
 | Node.js | 24.x (probado con 24.17.0) | `node --version` |
-| npm | 11.x (probado con 11.13.0) | `npm --version` |
-| PostgreSQL | 16 o superior, corriendo en tu máquina (CI: 16, producción: 17.x, probado en 18.4) | `psql --version` |
+| npm | 11.13.0 | `npm --version` |
+| PostgreSQL | 16, corriendo en tu máquina (el CI usa 16; producción usa 17.x; también probado con 18.4) | `psql --version` |
 
 Además, un usuario y contraseña de PostgreSQL con permiso para crear bases (en una instalación por defecto, el usuario `postgres`).
 
@@ -231,7 +244,7 @@ npm run dev
 **Esperado:**
 
 ```
-VITE v8.x  ready in ... ms
+VITE v8.1.0  ready in ... ms
 ➜  Local:   http://localhost:5173/
 ```
 
@@ -327,27 +340,27 @@ Test Files  11 passed (11)
 
 ## 8. Declaración de uso de IA
 
-En este proyecto se usó **Claude Code** (Anthropic) como asistente de programación, con los modelos Claude Sonnet 5, Claude Haiku 4.5 y Claude Opus 5.5. Toda decisión de dominio (entidades, reglas, alcance del MVP, iteraciones) la tomó la autora; el detalle de cada decisión, las alternativas descartadas y en qué intervino la IA está en la bitácora: [`00-gestion/BITACORA.md`](00-gestion/BITACORA.md).
+En este proyecto se usó **Claude Code** (Anthropic) como asistente de programación, con los modelos Claude Sonnet 5, Claude Sonnet 5.5, Claude Haiku 4.5 y Claude Opus 5.5. Toda decisión de dominio (entidades, reglas, alcance del MVP, iteraciones) la tomó la autora; el detalle de cada decisión, las alternativas descartadas y en qué intervino la IA está en la bitácora: [`00-gestion/BITACORA.md`](00-gestion/BITACORA.md).
 
 ### 8.1 Cifras (calculadas con `git log`)
 
-Corte: commit `631db61` en nexa-backend y `4107356` en nexa-frontend (2026-10-05), antes de este README v1.1.
+Corte: commit `2836e1d` en nexa-backend (2026-10-06) y `ec976da` en nexa-frontend (2026-10-05), antes de la corrección de este README.
 
 | | nexa-backend | nexa-frontend |
 |---|---|---|
-| Commits totales | 63 | 54 |
+| Commits totales | 66 | 55 |
 | Con `Co-Authored-By: Claude Sonnet 5` | 24 | 29 |
 | Con `Co-Authored-By: Claude Haiku 4.5` | 4 | 3 |
 | Con `Co-Authored-By: Claude Opus 5.5` | 0 | 0 |
 | **Total con la línea de coautoría** (01/09 al 25/09) | **28** | **32** |
-| Desde el 25/09, **sin** la línea | 29 | 17 |
+| Desde el 25/09, **sin** la línea | 32 | 18 |
 
 Comandos usados:
 
 ```bash
 git rev-list --count HEAD
 git log --format='%B' | grep -i "^Co-Authored-By: Claude" | sort | uniq -c
-git log --since='2026-09-25T00:00:00-03:00' -i --invert-grep --grep='Co-Authored-By: Claude' --oneline
+git log --since='2026-09-25T00:00:00-03:00' -i --invert-grep --grep='^Co-Authored-By: Claude' --oneline
 ```
 
 ### 8.2 Commits sin la línea, hechos con Claude Code
@@ -356,12 +369,13 @@ Desde el 25/09 los commits se firmaron solo con el nombre de la autora, sin la l
 
 | Modelo | nexa-backend | nexa-frontend |
 |---|---|---|
-| Claude Opus 5.5 | 10 — `a44fddb`, `294b0f9`, `8a195de`, `9d97c8f`, `3aa5b7b`, `42321bd`, `8c9b778`, `c12671b`, `90e8874`, `631db61` | 7 — `a986ca9`, `c6bd2d9`, `72b3a6c`, `53817d9`, `90a2391`, `1dd6936`, `4107356` |
+| Claude Opus 5.5 | 11 — `a44fddb`, `294b0f9`, `8a195de`, `9d97c8f`, `3aa5b7b`, `42321bd`, `8c9b778`, `c12671b`, `90e8874`, `631db61`, `54933ca` | 8 — `a986ca9`, `c6bd2d9`, `72b3a6c`, `53817d9`, `90a2391`, `1dd6936`, `4107356`, `ec976da` |
+| Claude Sonnet 5.5 | 2 — `92cd761`, `2836e1d` | 0 |
 | Claude Sonnet 5 | 9 — `adfe572`, `f4e40cb`, `342b59f`, `f2c9d9f`, `c413f0f`, `f8d0455`, `984862f`, `d7ac9fc`, `3ebba2b` | 5 — `0bede0a`, `174ed11`, `dc7f5df`, `858e2be`, `5b74e37` |
 | Claude Haiku 4.5 | 9 — `f5d2eb4`, `9a8651b`, `57d1928`, `f4ba7e4`, `c6241b9`, `6d76104`, `edb0bc4`, `4a0fecb`, `8fa18f7` | 4 — `245dcc0`, `8aed419`, `40d4d08`, `7bde3e7` |
 | Sin evidencia en las sesiones | 1 — `47f4a96` (autora en el README) | 1 — `087ee9b` (autora en el README) |
 
-El commit de este README v1.1 también se hizo con Claude Code (Opus 5.5).
+Los commits `54933ca` y `ec976da` son los del README v1.1. El commit que corrige este README también se hizo con Claude Code (Claude Sonnet 5.5) y no figura en las cifras de arriba porque no puede citar su propio hash.
 
 ---
 
