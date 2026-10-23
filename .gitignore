@@ -5,3 +5,6 @@ dist/
 !.env.example
 !.env.test.example
 /src/generated/prisma
+
+# Configuración local de Claude Code (permisos acumulados con rutas de la máquina)
+.claude/settings.local.json
