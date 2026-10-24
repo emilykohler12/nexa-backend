@@ -13,13 +13,9 @@
 import { prisma }          from '../app/database/prisma'
 import { activityService } from '../modules/activity/activity.service'
 import { fullName } from '../app/utils/fullName'
+import { todayArgentinaStr, appointmentInstant } from '../app/utils/argentinaTime'
 
 const GRACE_MINUTES = 20
-
-function todayLocalStr(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
 
 export async function runAutoNoShowJob(): Promise<{ marked: number }> {
   // Solo turnos de hoy o de días anteriores (por si el job estuvo caído) —
@@ -28,7 +24,7 @@ export async function runAutoNoShowJob(): Promise<{ marked: number }> {
     where: {
       status:    'confirmed',
       arrivedAt: null,
-      date:      { lte: todayLocalStr() },
+      date:      { lte: todayArgentinaStr() },
     },
     include: { client: true, professional: true, service: true },
   })
@@ -37,7 +33,7 @@ export async function runAutoNoShowJob(): Promise<{ marked: number }> {
   let marked = 0
 
   for (const a of candidates) {
-    const scheduled    = new Date(`${a.date}T${a.time}:00`)
+    const scheduled    = appointmentInstant(a.date, a.time)
     const minutesLate  = (now - scheduled.getTime()) / (60 * 1000)
     if (minutesLate < GRACE_MINUTES) continue
 

@@ -22,7 +22,7 @@ export async function recibirWebhookMercadoPago(req: Request, res: Response): Pr
   try {
     const type   = req.query.type as string | undefined
     const dataId = req.query['data.id'] as string | undefined
-    if (type !== 'payment' || !dataId) return
+    if (type !== 'payment' || typeof dataId !== 'string' || !dataId) return
 
     const payment = await paymentService.getPayment(dataId)
     const externalReference = payment.external_reference
