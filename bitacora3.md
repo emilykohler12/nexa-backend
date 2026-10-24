@@ -445,3 +445,16 @@ Registro de cada cambio hecho en la rama `chore/claude-config`. Cada entrada con
 | 4 | Aporte personal | Pidió usar los agentes y terminar lo pendiente. |
 | 5 | Desacuerdo y resolución | Ninguno. Contrato: `POST /api/invitations/register` ya no devuelve `accessToken`; `PATCH /api/client/profile` responde 400 si los valores no son válidos; las rutas de admin pueden responder los códigos nuevos (el frontend muestra el mensaje). |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con el subagente `escritor-tests` (escribe y corre tests; no modifica `src/`). Revisión de Emily pendiente. |
+
+## Entrada 35: commit, push y pull request #3 (pendientes del backend)
+
+**Fecha:** 2026-10-24, 16:55 (commit `91d0996`), registrado el 2026-10-24, 16:55.
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Commitear en la rama nueva `fix/pendientes-webhook-hora-login` los cambios de las entradas 32 a 34, pushearla y abrir el pull request #3: https://github.com/emilykohler12/nexa-backend/pull/3. Su **base es `chore/claude-config`** (el PR #2, aún abierto), no `main`. No se mergeó nada. |
+| 2 | Alternativas y criterio de descarte | Base `main`: descartado, mostraría también todos los commits del PR #2 y mezclaría las dos revisiones. Agregar los cambios al PR #2: descartado, ya lleva dos tandas de seguridad con orden de despliegue propio. Esperar a que se mergee el #2: no hace falta, GitHub reorienta el #3 a `main` cuando se mergee el #2. |
+| 3 | Evidencia que la sostiene | `git log` con el nombre de Emily y sin co-autor; `gh pr view 2` informaba el #2 como abierto al crear el #3; antes del commit, suite de 26 archivos y 251 tests en verde y `typecheck:all` sin errores. |
+| 4 | Aporte personal | Pidió "commit, push y PR". Registro: commit `91d0996` y pull request #3. |
+| 5 | Desacuerdo y resolución | Ninguno. **Orden para publicar:** (1) nexa-frontend#1, (2) nexa-backend#2, (3) nexa-backend#3. Este último no cambia rutas ni exige cambios en el frontend. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): ejecutó el commit, el push y la creación del PR con `gh` a pedido de Emily. |
