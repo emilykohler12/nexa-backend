@@ -458,3 +458,16 @@ Registro de cada cambio hecho en la rama `chore/claude-config`. Cada entrada con
 | 4 | Aporte personal | Pidió "commit, push y PR". Registro: commit `91d0996` y pull request #3. |
 | 5 | Desacuerdo y resolución | Ninguno. **Orden para publicar:** (1) nexa-frontend#1, (2) nexa-backend#2, (3) nexa-backend#3. Este último no cambia rutas ni exige cambios en el frontend. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): ejecutó el commit, el push y la creación del PR con `gh` a pedido de Emily. |
+
+## Entrada 36: corrección de la fecha de transición del refresh token
+
+**Fecha:** 2026-10-24, 17:05 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Reemplazar "después del 2026-10-31" por "7 días desde el despliegue en producción" en `CLAUDE.md`, el ADR-003 y las descripciones de los PR #2 y #3 (editadas con `gh pr edit`). |
+| 2 | Alternativas y criterio de descarte | Dejar la fecha fija: descartado, el plazo de 7 días (vida del refresh token) empieza cuando el PR #2 se despliega, y todavía no está mergeado. |
+| 3 | Evidencia que la sostiene | El refresh token dura 7 días (`JWT_REFRESH_EXPIRES_IN`); el formato viejo solo existe en sesiones emitidas antes del despliegue. Búsqueda del texto en el repo y en ambos PR. Las entradas 26 a 31 conservan la fecha anterior como historial. |
+| 4 | Aporte personal | Emily pidió que se le explicara ese punto; al explicarlo apareció el error. |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). |

@@ -143,7 +143,7 @@ así que uno ya usado deja de servir.
    corta de inmediato.
 2. ~~El refresh token se guardaba en texto plano.~~ **Corregido el 2026-10-24:**
    `users.refresh_token` guarda el SHA-256 del token (`auth.repository.ts`), por
-   lo que un backup filtrado no permite abrir sesiones. Durante una transición
+   lo que un backup filtrado no permite abrir sesiones. Durante una transición (contada desde el despliegue en producción)
    de 7 días se sigue aceptando un token guardado en texto plano (el siguiente
    refresh lo pasa a hash); pasado ese plazo hay que quitar esa segunda
    condición de `findByRefreshToken`. Además los tokens llevan `jti`, por lo que
