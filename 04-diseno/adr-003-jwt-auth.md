@@ -184,6 +184,18 @@ así que uno ya usado deja de servir.
    Contrapartida: quien envíe 5 códigos erróneos con el email de otra persona la
    deja 15 minutos sin poder recuperar la contraseña. El código sigue guardado en
    texto plano (dura 15 minutos y se invalida al usarse o al pedir uno nuevo).
+   **Ajustes menores del mismo día (2026-10-24):** (a) un `POST /api/auth/refresh`
+   fallido borra las cookies de sesión; (b) el login con un email inexistente
+   ejecuta igual la comparación de bcrypt, y `forgot-password` ya no espera el
+   envío del mail, para no revelar por el tiempo de respuesta qué cuentas existen
+   (`register` sigue respondiendo `EMAIL_TAKEN`, decisión de usabilidad); (c) las
+   invitaciones no pisan una cuenta admin (`409 ADMIN_ACCOUNT`) ni chocan con una
+   desactivada (`409 ACCOUNT_INACTIVE`), se consumen de forma atómica y entregan
+   las dos cookies sin devolver el access token en el cuerpo; (d) los emails se
+   guardan en minúsculas y se buscan sin distinguir mayúsculas; (e) el rol solo
+   alterna entre profesional y administradora (`400 INVALID_ROLE_CHANGE`); (f) el
+   perfil de la clienta valida nombre (máx. 100) y teléfono (máx. 20); (g) el email
+   ya no se escribe en los logs de recuperación.
 8. El **login social** (Google/Facebook) figura en el RUNBOOK como retirado:
    `auth.routes.ts` ya no expone esas rutas, aunque quedan el DTO y el provider
    sin uso.
@@ -202,6 +214,7 @@ límite por email de `reset-password` (punto 7) sí está activo en test.
 | `tests/integration/auth.test.ts` | Registro con cookies de sesión y validaciones (email repetido, sin apellido, sin teléfono, sin términos); login correcto, con contraseña incorrecta, de usuario inexistente y de usuario inactivo; `/me` con y sin cookie y con token inválido; una clienta y una profesional no entran a rutas de admin |
 | `tests/integration/auth.security.test.ts` | CSRF (formulario de otro sitio, `Origin` ajeno o `null`, pedidos sin `Origin`, formularios ya no interpretados); `logout` con el access token vencido, sin cookies, con token vigente y con token falsificado; refresh token guardado como hash, rotación, reutilización y transición del formato viejo |
 | `tests/integration/auth.password.test.ts` | Cambio de contraseña con contraseña actual (falta, incorrecta, correcta, sin sesión); recuperación con email y código (correcto, otra cuenta, email inexistente, código usado, vencido, uso simultáneo, límite de intentos por email, colisión de códigos) |
+| `tests/integration/auth.minor-fixes.test.ts` | Emails en minúsculas (alta del admin y turno manual), cambio de rol, invitaciones (cuenta admin, cuenta desactivada, registros simultáneos, cookies sin access token en el cuerpo, clienta existente), refresh fallido que limpia cookies y validación del perfil de la clienta |
 | `tests/helpers/auth.ts` | `cookieFor()` firma un `access_token` válido para el resto de los tests |
 
 **Sin cobertura hoy:** las propiedades de las cookies (`httpOnly`, `secure`,

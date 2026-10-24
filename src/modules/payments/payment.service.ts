@@ -6,6 +6,7 @@
 // ese dato (appointment.service.ts / order.service.ts).
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago'
 import { env } from '../../app/config/env'
+import { PAYMENT_CURRENCY } from './paidAmount'
 
 function requireClient(): MercadoPagoConfig {
   if (!env.MERCADOPAGO_ACCESS_TOKEN) {
@@ -44,7 +45,7 @@ export const paymentService = {
           title:       opts.title,
           quantity:    1,
           unit_price:  opts.amount,
-          currency_id: 'ARS',
+          currency_id: PAYMENT_CURRENCY,
         }],
         external_reference: opts.externalReference,
         payer: opts.payerEmail ? { email: opts.payerEmail } : undefined,
@@ -93,7 +94,7 @@ export const paymentService = {
    * Se usa para verificar el pago "a demanda" (cuando el cliente vuelve del
    * checkout o toca "ya pagué"), sin depender de que el webhook haya llegado.
    */
-  findPaymentByReference: async (externalReference: string): Promise<{ id: string; status: string } | null> => {
+  findPaymentByReference: async (externalReference: string): Promise<{ id: string; status: string; amount?: number; currency?: string } | null> => {
     const payment = new Payment(requireClient())
     const search = await payment.search({
       options: { external_reference: externalReference, sort: 'date_created', criteria: 'desc' },
@@ -104,6 +105,7 @@ export const paymentService = {
     const approved = results.find(p => p.status === 'approved')
     const chosen = approved ?? results[0]
     if (!chosen.id || !chosen.status) return null
-    return { id: String(chosen.id), status: chosen.status }
+    // El monto y la moneda reales del pago: quien aplica el resultado los compara con lo esperado.
+    return { id: String(chosen.id), status: chosen.status, amount: chosen.transaction_amount, currency: chosen.currency_id }
   },
 }

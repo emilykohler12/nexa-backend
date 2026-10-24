@@ -28,6 +28,17 @@ export function todayArgentinaStr(at: Date = new Date()): string {
   return argentinaParts(at).date
 }
 
+// Un Date cuyos campos "locales" (getFullYear, getMonth, getDate, getHours...) valen lo que marca
+// el reloj de Argentina en ese instante, sea cual sea la zona del servidor. Es para el código que
+// arma calendarios (rangos de día, semana, mes y año de los dashboards) con esos getters. NO es un
+// instante real: no se compara con fechas de la base ni con Date.now().
+export function argentinaWallClock(at: Date = new Date()): Date {
+  const { date, time } = argentinaParts(at)
+  const [year, month, day] = date.split('-').map(Number)
+  const [hours, minutes]   = time.split(':').map(Number)
+  return new Date(year, month - 1, day, hours, minutes)
+}
+
 // Instante absoluto de un turno guardado como date + time (hora de Argentina).
 export function appointmentInstant(date: string, time: string): Date {
   return new Date(`${date}T${time}:00-03:00`)

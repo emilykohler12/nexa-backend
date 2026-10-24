@@ -5,8 +5,10 @@ import { app } from '../../src/app/app'
 import { prisma } from '../../src/app/database/prisma'
 import { runAutoNoShowJob } from '../../src/jobs/autoNoShow.job'
 import { startScheduledJobs } from '../../src/jobs/scheduler'
+import { runAutoPromotionsJob } from '../../src/jobs/autoPromotions.job'
+import { runInactivityReminderJob } from '../../src/jobs/inactivityReminder.job'
 import {
-  createClientUser, createProfessionalUser, createService, createAppointmentDirect,
+  createClientUser, createProfessionalUser, createAdminUser, createService, createAppointmentDirect,
 } from '../helpers/factories'
 import { cookieFor } from '../helpers/auth'
 
@@ -138,5 +140,91 @@ describe('cron en hora de Argentina', () => {
     } finally {
       schedule.mockRestore()
     }
+  })
+})
+
+// ── Dashboards y jobs diarios: "hoy" en hora de Argentina ─────────────────────────────────
+// A las 22:30 de Argentina el servidor (UTC) ya está en el día siguiente.
+
+
+const NIGHT_ART = '2026-10-25T01:30:00Z' // 22:30 del sábado 24 en Argentina
+
+describe('dashboards en hora de Argentina', () => {
+  it('el dashboard del admin cuenta como de "hoy" un turno de las 22:00 a las 22:30', async () => {
+    setNow(NIGHT_ART)
+    const admin = await createAdminUser()
+    await confirmedAppointment('2026-10-24', '22:00', { status: 'finished', servicePrice: 8000 })
+
+    const res = await request(app).get('/api/admin/dashboard').query({ period: 'day' }).set('Cookie', cookieFor(admin))
+
+    expect(res.status).toBe(200)
+    expect(res.body.dashboard.attendedAppointments).toBe(1)
+  })
+
+  it('el dashboard de la profesional cuenta lo de "hoy" a las 22:30', async () => {
+    setNow(NIGHT_ART)
+    const { pro } = await confirmedAppointment('2026-10-24', '22:00', { status: 'finished', servicePrice: 8000 })
+
+    const res = await request(app).get('/api/professional/dashboard').query({ period: 'day' }).set('Cookie', cookieFor(pro))
+
+    expect(res.status).toBe(200)
+    expect(JSON.stringify(res.body.dashboard)).toContain('8000')
+  })
+
+  it('las estadísticas de la profesional incluyen el turno de "hoy" a las 22:30', async () => {
+    setNow(NIGHT_ART)
+    const { pro } = await confirmedAppointment('2026-10-24', '22:00', { status: 'finished', servicePrice: 8000 })
+
+    const res = await request(app).get('/api/professional/statistics').query({ period: 'day' }).set('Cookie', cookieFor(pro))
+
+    expect(res.status).toBe(200)
+    expect(res.body.statistics.monthServices).toBe(1)
+  })
+})
+
+describe('jobs diarios en hora de Argentina', () => {
+  it('cumpleaños: a las 22:30 del 24 todavía no es el cumpleaños del 25', async () => {
+    setNow(NIGHT_ART)
+    const client = await createClientUser()
+    await prisma.client.update({ where: { userId: client.id }, data: { birthDate: new Date('1990-10-25T00:00:00Z') } })
+    await prisma.autoPromotion.create({
+      data: { name: 'Cumple', trigger: 'birthday', triggerConfig: { daysBefore: 0 }, discountType: 'percent', discountValue: 10 },
+    })
+
+    const result = await runAutoPromotionsJob()
+
+    expect(result.sent).toBe(0)
+  })
+
+  it('cumpleaños: a las 22:30 del 24 sí corresponde avisar un día antes del cumpleaños del 25', async () => {
+    setNow(NIGHT_ART)
+    const client = await createClientUser()
+    await prisma.client.update({ where: { userId: client.id }, data: { birthDate: new Date('1990-10-25T00:00:00Z') } })
+    await prisma.autoPromotion.create({
+      data: { name: 'Cumple', trigger: 'birthday', triggerConfig: { daysBefore: 1 }, discountType: 'percent', discountValue: 10 },
+    })
+
+    expect((await runAutoPromotionsJob()).sent).toBe(1)
+  })
+
+  it('cumpleaños: el día 25 por la mañana (9:00 de Argentina) sí corresponde', async () => {
+    setNow('2026-10-25T12:00:00Z')
+    const client = await createClientUser()
+    await prisma.client.update({ where: { userId: client.id }, data: { birthDate: new Date('1990-10-25T00:00:00Z') } })
+    await prisma.autoPromotion.create({
+      data: { name: 'Cumple', trigger: 'birthday', triggerConfig: { daysBefore: 0 }, discountType: 'percent', discountValue: 10 },
+    })
+
+    expect((await runAutoPromotionsJob()).sent).toBe(1)
+  })
+
+  it('recordatorio de inactividad: el corte de 60 días se cuenta desde la fecha de Argentina', async () => {
+    setNow(NIGHT_ART) // hoy en Argentina: 24/10 → 60 días atrás: 25/08
+    // Último turno el 25/08: tiene exactamente 60 días, todavía no es "más de 60".
+    await confirmedAppointment('2026-08-25', '10:00', { status: 'finished' })
+
+    const result = await runInactivityReminderJob()
+
+    expect(result.eligible).toBe(0)
   })
 })

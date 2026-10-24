@@ -6,6 +6,7 @@ import { activityService } from '../activity/activity.service'
 import { paymentService }  from '../payments/payment.service'
 import { fullName } from '../../app/utils/fullName'
 import { todayArgentinaStr } from '../../app/utils/argentinaTime'
+import { isPaymentAcceptable, type PaidInfo } from '../payments/paidAmount'
 
 type OrderItemInput = { productId: string; quantity: number; promotionId?: string | null }
 type PromotionItem  = { id: string; name: string; price: number }
@@ -240,7 +241,7 @@ export const orderService = {
 
     const found = await paymentService.findPaymentByReference(`order:${id}`)
     if (found) {
-      await orderService.applyPaymentResult(id, found.id, found.status)
+      await orderService.applyPaymentResult(id, found.id, found.status, { amount: found.amount, currency: found.currency })
     }
 
     const fresh = await prisma.order.findUnique({ where: { id }, select: { paymentStatus: true } })
@@ -249,7 +250,7 @@ export const orderService = {
 
   // Llamado desde el webhook de Mercado Pago — el estado ya viene verificado
   // contra la API de Mercado Pago, no confiado del webhook en crudo.
-  applyPaymentResult: async (id: string, mpPaymentId: string, status: string) => {
+  applyPaymentResult: async (id: string, mpPaymentId: string, status: string, paid?: PaidInfo) => {
     const order = await prisma.order.findUnique({ where: { id }, include: { items: true } })
     if (!order) {
       console.warn(`[mercadopago] Webhook para pedido inexistente: ${id}`)
@@ -259,6 +260,11 @@ export const orderService = {
     // Idempotencia — Mercado Pago puede mandar el mismo webhook más de una vez.
     // Si el pedido ya está pago, no volvemos a descontar stock.
     if (order.paymentStatus === 'paid') return
+
+    // Un pago aprobado por menos del total (u otra moneda) no paga el pedido: no se descuenta stock.
+    if (!(await isPaymentAcceptable({
+      kind: 'Pedido', id, mpPaymentId, status, expected: Number(order.totalPrice), paid,
+    }))) return
 
     const paymentStatus = status === 'approved' ? 'paid' : status
 

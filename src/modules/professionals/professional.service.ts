@@ -384,6 +384,11 @@ export const professionalService = {
   toggleRole: async (id: string) => {
     const user = await prisma.user.findUnique({ where: { id } })
     if (!user) throw new AppError(HTTP.NOT_FOUND, 'Usuario no encontrado')
+    // Solo alterna entre profesional y administradora: sin esta guarda, un clic por error sobre
+    // una clienta le daría acceso de administradora.
+    if (user.role !== 'admin' && user.role !== 'professional') {
+      throw new AppError(HTTP.BAD_REQUEST, 'Solo se puede cambiar el rol entre profesional y administradora', 'INVALID_ROLE_CHANGE')
+    }
     const newRole = user.role === 'admin' ? 'professional' : 'admin'
     return prisma.user.update({ where: { id }, data: { role: newRole as any } })
   },

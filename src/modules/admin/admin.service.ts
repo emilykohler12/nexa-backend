@@ -97,10 +97,13 @@ export const adminService = {
   },
 
   createClient: async (data: any) => {
-    if (!data.email || !data.name) {
+    if (typeof data.email !== 'string' || !data.email.trim() || typeof data.name !== 'string' || !data.name.trim()) {
       throw new AppError(HTTP.BAD_REQUEST, 'Nombre y email son obligatorios', 'VALIDATION_ERROR')
     }
-    const exists = await prisma.user.findUnique({ where: { email: data.email } })
+    // El login pasa el email a minúsculas: si se guardara con mayúsculas, la clienta no podría entrar.
+    const email = data.email.trim().toLowerCase()
+    // Insensible a mayúsculas, para detectar también cuentas viejas guardadas con otras mayúsculas.
+    const exists = await prisma.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } })
     if (exists) throw new AppError(HTTP.CONFLICT, 'Ese email ya está en uso', 'EMAIL_TAKEN')
 
     const password = typeof data.password === 'string' && data.password.length >= 8
@@ -110,8 +113,8 @@ export const adminService = {
 
     const user = await prisma.user.create({
       data: {
-        name:          data.name,
-        email:         data.email,
+        name:          data.name.trim(),
+        email,
         passwordHash,
         role:          'client',
         phone:         data.phone ?? null,

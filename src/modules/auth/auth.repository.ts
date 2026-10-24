@@ -14,6 +14,11 @@ export const authRepository = {
   findByEmail: (email: string) =>
     prisma.user.findUnique({ where: { email, active: true } }),
 
+  // Busca una cuenta por email SIN filtrar por activa y sin distinguir mayúsculas: sirve para
+  // detectar una cuenta desactivada o guardada con otras mayúsculas antes de crear otra.
+  findAnyByEmail: (email: string) =>
+    prisma.user.findFirst({ where: { email: { equals: email.trim(), mode: 'insensitive' } } }),
+
   findById: (id: string) =>
     prisma.user.findUnique({ where: { id, active: true } }),
 

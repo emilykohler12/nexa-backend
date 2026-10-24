@@ -16,8 +16,12 @@ export const invitationRepository = {
   findByToken: (token: string) =>
     prisma.invitation.findUnique({ where: { token } }),
 
-  markUsed: (token: string) =>
-    prisma.invitation.update({ where: { token }, data: { used: true } }),
+  // Marca la invitación como usada de forma atómica. Devuelve false si otro pedido la usó
+  // antes, así dos registros simultáneos con el mismo link no crean dos cuentas.
+  consume: async (token: string): Promise<boolean> => {
+    const result = await prisma.invitation.updateMany({ where: { token, used: false }, data: { used: true } })
+    return result.count === 1
+  },
 
   findByEmail: (email: string) =>
     prisma.invitation.findFirst({
