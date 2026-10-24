@@ -354,3 +354,16 @@ Registro de cada cambio hecho en la rama `chore/claude-config`. Cada entrada con
 | 4 | Aporte personal | Pidió "commit y push". |
 | 5 | Desacuerdo y resolución | Ninguno. Antes de mergear a `main`: verificar `FRONTEND_URL` en Render (ver entrada 26). |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): ejecutó el commit y el push a pedido de Emily. |
+
+## Entrada 28: el pull request #1 fue mergeado a `main`
+
+**Fecha:** 2026-10-24, 16:03 (hora del merge, commit `81f06eb`), registrado el 2026-10-24, 16:10.
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Emily mergeó el pull request #1 a `main` (la app lo informa como mergeado por `emilykohler12`). Entraron los commits hasta `13177c6`: configuración de Claude Code, Sentry sin datos sensibles, webhook idempotente, hora de Argentina, ADR-003 reescrito y el script de migraciones. El commit `c4b9fcc` (seguridad del login), pusheado a las 16:09, **quedó fuera** y está solo en `chore/claude-config`. |
+| 2 | Alternativas y criterio de descarte | Esperar al commit de seguridad antes de mergear: Emily decidió mergear antes. Reabrir el PR #1: no es posible una vez mergeado; el commit pendiente necesita un pull request nuevo. |
+| 3 | Evidencia que la sostiene | `gh pr view 1`: estado MERGED, mergeado a las 19:03 UTC (16:03 ART) por `emilykohler12`; `git log origin/main..HEAD` lista únicamente `c4b9fcc`. |
+| 4 | Aporte personal | Decisión y ejecución del merge: Emily. Registro: commit de merge `81f06eb`. |
+| 5 | Desacuerdo y resolución | Ninguno. **Consecuencia:** el merge redespliega el backend en Render con los cambios de hora de Argentina, Sentry y webhook. Quedan por verificar en producción: la zona horaria real del servidor, que el no-show y los mails de las 9:00 sigan comportándose bien, y el estado de las migraciones con el SELECT de `migration-checksums.mjs`. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): detectó el merge al consultar el estado del PR y lo registró. No intervino en el merge. |
