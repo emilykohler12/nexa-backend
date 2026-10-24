@@ -38,7 +38,7 @@ Registro de cada cambio hecho en la rama `chore/claude-config`. Cada entrada con
 |---|---|---|
 | 1 | Qué se decidió | Crear cuatro hooks en Node (`block-protected-files`, `warn-secrets`, `guard-bash`, `typecheck-after-edit`) más `_lib.mjs`, y registrarlos en `.claude/settings.json`. Además se agregó `permissions.deny` para `Read(./.env)` y `Read(./.env.test)`, y el matcher de `guard-bash` incluye `PowerShell` además de `Bash`. |
 | 2 | Alternativas y criterio de descarte | Scripts bash: descartados por pedido (Windows). Typecheck solo de `src/`: innecesario, `tsc -p tsconfig.test.json` cubre `src/` y `tests/` en unos 2 s. Bloquear del todo los secretos sospechosos: descartado, se usa confirmación (`ask`) porque puede haber falsos positivos. `migrate deploy` permitido si la base no es verificable: descartado, se bloquea porque Prisma lee `.env` (base real) y el hook no lo abre. |
-| 3 | Evidencia que la sostiene | Prueba con JSON simulado de 43 casos, todos con el resultado esperado (bloqueo con exit 2, aviso con `permissionDecision: ask`, o paso libre). Ejemplos: `.env` y `.env.test` bloqueados, `.env.example` permitido, migración existente bloqueada y migración nueva permitida, `push origin main` bloqueado, `migrate deploy` bloqueado sin base de pruebas verificable y permitido con `DATABASE_URL` local de pruebas. El hook de `Bash` ya estaba activo y bloqueó un comando mío que contenía el texto del push con force. |
+| 3 | Evidencia que la sostiene | Prueba con JSON simulado de 39 casos (corregido el 2026-10-24: antes decía 43, el recuento real del script es 39), todos con el resultado esperado (bloqueo con exit 2, aviso con `permissionDecision: ask`, o paso libre). Ejemplos: `.env` y `.env.test` bloqueados, `.env.example` permitido, migración existente bloqueada y migración nueva permitida, `push origin main` bloqueado, `migrate deploy` bloqueado sin base de pruebas verificable y permitido con `DATABASE_URL` local de pruebas. El hook de `Bash` ya estaba activo y bloqueó un comando mío que contenía el texto del push con force. |
 | 4 | Aporte personal | Consigna con las reglas a bloquear y los criterios (rama nueva, nada de producción, hooks en `.mjs`). Archivos: `.claude/settings.json`, `.claude/hooks/`. |
 | 5 | Desacuerdo y resolución | Ninguno. Limitación aceptada y a conocer: los hooks de archivos no ven escrituras hechas desde un comando de shell (`sed -i`, redirecciones), y el hook de `Bash` analiza el texto del comando, por lo que puede dar falsos positivos con texto citado. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): escritura de los scripts y ejecución de las pruebas simuladas. Revisión de Emily pendiente. |
@@ -107,3 +107,81 @@ Registro de cada cambio hecho en la rama `chore/claude-config`. Cada entrada con
 | 4 | Aporte personal | Definición del cierre y de la regla de no hacer commit. Archivos: `.gitignore`, `bitacora3.md`. |
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): verificaciones y edición de `.gitignore`. Revisión final de Emily pendiente antes del commit. |
+
+## Entrada 9: commit y push de la rama de configuración (registro retroactivo)
+
+**Fecha:** 2026-10-23, 16:53 (commit) y 16:54 (push), hora de la máquina. Registrado el 2026-10-24, 05:30.
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Commitear en `chore/claude-config` los 16 archivos de la configuración (commit `a0aceac`) y pushear esa rama a `origin`. No se pusheó `main` ni se abrió pull request. |
+| 2 | Alternativas y criterio de descarte | Commitear `.claude/launch.json`: descartado, es configuración de cada máquina. Agregar la línea de co-autor de Claude: descartado por la regla de Emily de commits con su nombre. Pushear a `main`: descartado, redespliega Render. |
+| 3 | Evidencia que la sostiene | Revisión del diff (695 líneas agregadas) y escaneo sin secretos reales; `git log` y el reflog del remoto confirman el commit y el push. |
+| 4 | Aporte personal | Pidió revisar y commitear, y después pushear la rama. Registro: commit `a0aceac` en el repositorio. |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): preparó el commit y ejecutó el push a pedido explícito de Emily. |
+
+## Entrada 10: `launch.json` ignorado en `.gitignore`
+
+**Fecha:** 2026-10-24, 05:30 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Agregar `.claude/launch.json` a `.gitignore`. |
+| 2 | Alternativas y criterio de descarte | Versionarlo: descartado, su entrada del frontend supone que `../nexa-frontend` existe y es configuración de la app de Claude de cada máquina. |
+| 3 | Evidencia que la sostiene | `git check-ignore -v .claude/launch.json` lo reconoce como ignorado y `git status` dejó de listarlo. |
+| 4 | Aporte personal | Decisión de Emily ("hacelo así"). Archivo: `.gitignore`. |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): edición de `.gitignore`. |
+
+## Entrada 11: conector de Supabase apagado en la sesión
+
+**Fecha:** 2026-10-24, 05:30 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Apagar el conector de Supabase de la cuenta en esta sesión (no es un cambio en el repositorio). La aplicación lo deja además apagado por defecto en sesiones nuevas. |
+| 2 | Alternativas y criterio de descarte | Dejarlo encendido: descartado, sus herramientas (`execute_sql`, `apply_migration`) pueden alcanzar el proyecto de producción y los hooks del proyecto no las cubren. Regla de permisos que bloquee esas herramientas: descartada por ahora, depende de un identificador propio de la cuenta. |
+| 3 | Evidencia que la sostiene | `session_connectors_status` lo listaba conectado con 29 herramientas; la respuesta de la aplicación confirmó que queda desactivado en la sesión y por defecto. |
+| 4 | Aporte personal | Decisión de Emily ("apagalo en esta sesión"). |
+| 5 | Desacuerdo y resolución | Ninguno. Si hace falta usarlo en otro proyecto, se vuelve a encender desde los conectores. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): llamó a la herramienta de conectores con la aprobación de Emily. |
+
+## Entrada 12: borrado de `evolver.config.json`
+
+**Fecha:** 2026-10-24, 05:30 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Borrar `evolver.config.json` del backend con `git rm` (queda preparado, sin commit) y quitar su mención de `CLAUDE.md`. |
+| 2 | Alternativas y criterio de descarte | Dejarlo: descartado, nada lo usa. Borrar también el del frontend: no se hizo, es otro repositorio y no se pidió. |
+| 3 | Evidencia que la sostiene | Búsqueda de "evolver" sin distinguir mayúsculas en todo el repo (menos `node_modules`, `dist` y `.git`), en `package.json`, workflows, scripts, configuraciones de TypeScript y Vitest y `.claude/`: no hay ninguna referencia al archivo. Las coincidencias en `src/` y `tests/` son la palabra "devolver". El paquete no está en las dependencias. Solo lo agregó el commit `a1ab21f`, y `05-entregas/` está vacía. Quedó una mención en texto dentro de `00-gestion/20261006_BitacoraIndividual_KohlerAE2_v5.docx` (es documentación, no se editó). Se puede recuperar con `git checkout a1ab21f -- evolver.config.json`. |
+| 4 | Aporte personal | Pidió revisar que nada lo llame y borrarlo. |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): búsqueda y borrado. |
+
+## Entrada 13: reglas de Context7 y de bitácora en `CLAUDE.md` y en la memoria
+
+**Fecha:** 2026-10-24, 05:30 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Agregar a `CLAUDE.md` la sección "Forma de trabajar": consultar Context7 siempre que se pueda antes de escribir código que use librerías del stack, y anotar todo cambio en `bitacora3.md`. Guardar ambas reglas como memorias de Claude Code. |
+| 2 | Alternativas y criterio de descarte | Dejar las reglas solo en la conversación: descartado, se perderían en la próxima sesión. Obligar a usar Context7 incluso para lógica de negocio: descartado, no sirve para eso. |
+| 3 | Evidencia que la sostiene | Pedido de Emily del 2026-10-24. El servidor `context7` del proyecto figura conectado con 2 herramientas (`resolve-library-id` y `query-docs`). Todavía no se usó en una consulta real. |
+| 4 | Aporte personal | Las dos reglas son decisión de Emily. Archivos: `CLAUDE.md` y dos memorias en la carpeta de memoria del proyecto. |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): redacción de las reglas y de las memorias. |
+
+## Entrada 14: hook de comandos más preciso (`.claude/hooks/guard-bash.mjs`)
+
+**Fecha:** 2026-10-24, 05:30 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Reescribir el hook de comandos para (a) no bloquear texto que solo cita un comando (heredocs, here-strings de PowerShell, `echo`/`printf`, mensajes de `git commit`) y (b) bloquear desde la terminal la lectura o escritura de `.env`/`.env.*` y la escritura de `package-lock.json`, `dist/`, `src/generated/` y migraciones existentes (`sed -i`, redirecciones, `tee`, `rm`, `mv`, `cp`, `Set-Content`, etc.). El contenido de `bash -c "…"` sigue analizándose. Borrar `dist/` sigue permitido (limpieza de build). |
+| 2 | Alternativas y criterio de descarte | Ignorar todo el texto entre comillas: descartado, dejaría pasar `bash -c "git push origin main"`. Reglas `deny` de permisos para `sed -i`: descartadas, no distinguen el archivo. Bloquear también `rm` de `dist/`: descartado, molestaría en el uso normal. |
+| 3 | Evidencia que la sostiene | Script de 56 casos con JSON simulado (reglas anteriores, falsos positivos que ahora pasan, evasiones que ahora se bloquean y usos normales): primera corrida 2 fallos (el destino de `echo … > ".env.test"` y `sh -c '… --force'`), corregidos; segunda corrida todo en orden. Los otros tres hooks siguen sin fallos (39 casos). Limitación que sigue: un intérprete (`node -e`, `python -c`) puede escribir archivos sin pasar por estas reglas. |
+| 4 | Aporte personal | Pidió resolver los puntos ciegos de los hooks. Archivo: `.claude/hooks/guard-bash.mjs`. |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): reescritura del hook y pruebas. Revisión de Emily pendiente. |

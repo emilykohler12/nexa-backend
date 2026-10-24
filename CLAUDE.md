@@ -10,7 +10,6 @@ API REST de Nexa (gestión de turnos de Loren Estudio de Belleza). Es el Proyect
 - `prisma/schema.prisma` y `prisma/migrations/`. `scripts/seed-demo.ts`. `src/generated/prisma` es generado.
 - `tests/integration/*.test.ts`, `tests/helpers/{auth,factories}.ts`, `tests/setup.ts`.
 - `00-gestion/` a `05-entregas/` es documentación académica y de gestión que forma parte de la entrega: no editarla salvo pedido expreso.
-- `evolver.config.json`: resto de otra herramienta, ningún código lo usa. No borrar sin que Emily lo decida.
 
 ## Comandos
 
@@ -48,6 +47,11 @@ Necesitan un PostgreSQL de pruebas apuntado por `.env.test` (copiar de `.env.tes
 ## Contrato con el frontend
 
 `nexa-frontend` está en `../nexa-frontend` y consume esta API (`VITE_API_URL`) con cookies. Cualquier cambio de ruta, método, código de error o forma de respuesta hay que avisarlo antes de dar la tarea por terminada, con la lista de archivos del frontend afectados (ver skill `cambio-de-contrato`).
+
+## Forma de trabajar
+
+- **Context7 siempre que se pueda.** Antes de escribir o cambiar código que dependa de una librería (Express 5, Prisma 6, zod 4, Vitest, Supertest, multer, node-cron, Mercado Pago, Sentry, Supabase), consultar su documentación vigente con el MCP `context7` (`resolve-library-id` y después `query-docs`). No usarlo para lógica de negocio propia. En las consultas no pegar código del proyecto ni datos reales.
+- **Bitácora obligatoria.** Todo cambio en el código, la configuración o GitHub (ediciones, borrados, commits, push, ramas, pull requests) se anota en `bitacora3.md` con fecha y hora exactas y los seis elementos: qué se decidió, alternativas y criterio de descarte, evidencia, aporte personal, desacuerdo y resolución, y herramienta auxiliar. Las entradas se agregan al final, en el mismo cambio que las motiva.
 
 ## Antes de dar algo por terminado
 

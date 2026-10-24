@@ -8,3 +8,6 @@ dist/
 
 # Configuración local de Claude Code (permisos acumulados con rutas de la máquina)
 .claude/settings.local.json
+
+# Configuración de la app de Claude para arrancar servidores (es de cada máquina)
+.claude/launch.json
