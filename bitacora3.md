@@ -367,3 +367,16 @@ Registro de cada cambio hecho en la rama `chore/claude-config`. Cada entrada con
 | 4 | Aporte personal | Decisión y ejecución del merge: Emily. Registro: commit de merge `81f06eb`. |
 | 5 | Desacuerdo y resolución | Ninguno. **Consecuencia:** el merge redespliega el backend en Render con los cambios de hora de Argentina, Sentry y webhook. Quedan por verificar en producción: la zona horaria real del servidor, que el no-show y los mails de las 9:00 sigan comportándose bien, y el estado de las migraciones con el SELECT de `migration-checksums.mjs`. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): detectó el merge al consultar el estado del PR y lo registró. No intervino en el merge. |
+
+## Entrada 29: pull request #2 (seguridad del login)
+
+**Fecha:** 2026-10-24, 16:11 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Abrir el pull request #2 contra `main`, desde `chore/claude-config`: https://github.com/emilykohler12/nexa-backend/pull/2. Contiene `c4b9fcc` (seguridad del login) y `4a572e6` (bitácora, entrada 28), más este registro. No se mergeó. |
+| 2 | Alternativas y criterio de descarte | Reutilizar el PR #1: imposible, ya estaba mergeado. Crear una rama nueva desde `main`: innecesario, `main` ya contiene todo lo anterior y la rama solo suma estos commits. |
+| 3 | Evidencia que la sostiene | `gh pr create` devolvió la URL; `git log origin/main..HEAD` listaba solo `c4b9fcc` y `4a572e6`; la aplicación reporta el PR abierto con el seguimiento de CI y Auto-fix activos. La descripción detalla qué corrige, qué cambia, el control de `FRONTEND_URL` antes de mergear, los 16 tests nuevos y lo pendiente. |
+| 4 | Aporte personal | Pidió abrir el PR nuevo. Registro: pull request #2. |
+| 5 | Desacuerdo y resolución | Ninguno. El merge queda a decisión de Emily, después de verificar `FRONTEND_URL` en Render; al mergear se redespliega el backend. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): creó el PR con `gh` a pedido de Emily. Auto-fix corrige y pushea ante fallos del CI o conflictos; ante comentarios de revisión no actúa sin confirmación. |
