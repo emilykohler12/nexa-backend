@@ -315,3 +315,146 @@ Registro de cada cambio hecho en la rama `chore/claude-config`. Cada entrada con
 | 4 | Aporte personal | Pidió resolver el punto del checksum. La notas previas de Emily ("checksum = sha256 del migration.sql tal como está en git") quedaron confirmadas. Archivos: `scripts/migration-checksums.mjs`, `.claude/skills/nueva-migracion/SKILL.md`. |
 | 5 | Desacuerdo y resolución | Ninguno. **Pendiente de Emily:** correr el SELECT en el SQL Editor de Supabase para confirmar el estado real de producción; este registro solo verifica la base de pruebas. `00-gestion/SOP.md` indica `migrate deploy` con la cadena de Supabase, lo que no coincide con lo que se pudo hacer desde su PC; no se editó. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): consulta de solo lectura a la base de pruebas, escritura del script y de la skill, y consulta a Context7. Revisión de Emily pendiente. |
+
+## Entrada 25: commit y push del script de migraciones
+
+**Fecha:** 2026-10-24, 15:43 (commit `13177c6`), registrado el 2026-10-24, 15:43.
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Commitear y pushear a `chore/claude-config` el script `migration-checksums.mjs`, la skill `nueva-migracion` actualizada y la entrada 24. El push actualiza el pull request #1. |
+| 2 | Alternativas y criterio de descarte | Esperar a juntar más cambios en un solo commit: descartado, es una herramienta independiente que Emily necesita ya para verificar Supabase. |
+| 3 | Evidencia que la sostiene | `git log` muestra `13177c6` con el nombre de Emily y sin co-autor. El pull request #1 figura sin conflictos, con 1 chequeo del CI en verde y ninguno fallando al momento del push. |
+| 4 | Aporte personal | Pidió "commit y push". Registro: commit `13177c6`. |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): ejecutó el commit y el push a pedido de Emily. |
+
+## Entrada 26: seguridad del login, primera tanda (CSRF, cierre de sesión y refresh token)
+
+**Fecha:** 2026-10-24, 16:09 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | (a) Quitar `express.urlencoded` y agregar `src/app/middlewares/trustedOrigin.ts`, que rechaza con `403 FORBIDDEN_ORIGIN` los pedidos que cambian datos y traen un `Origin` distinto de `FRONTEND_URL`. (b) `POST /api/auth/logout` deja de exigir `authenticate`: identifica a la usuaria por la firma del access token aunque esté vencido (`verifyAccessEvenIfExpired`) y siempre limpia las cookies. (c) El refresh token se guarda como SHA-256, con una transición de 7 días que acepta el formato viejo. (d) Los tokens llevan `jwtid` (jti). Test nuevo: `tests/integration/auth.security.test.ts` (16 casos). Se actualizaron el ADR-003 y `CLAUDE.md`. |
+| 2 | Alternativas y criterio de descarte | Token anti-CSRF por pedido: descartado, exige cambios en el frontend y el chequeo de `Origin` cubre el vector con una pieza chica. Exigir `Content-Type: application/json` en todos los POST: descartado, rompería los POST sin cuerpo del frontend (logout, refresh, pagos). Cambiar `SameSite` a `Lax`: descartado, con frontend y backend en dominios distintos el navegador no mandaría la sesión. Migrar ya todos los refresh tokens a hash borrando los viejos: descartado, desloguearía a todas; se prefirió la transición. Tabla de sesiones (varios dispositivos): descartada por ahora, es un cambio de diseño mayor. |
+| 3 | Evidencia que la sostiene | Informe del subagente `revisor-seguridad-api` (verificado por mí leyendo el código). Los tests reprodujeron los ataques antes del arreglo (12 de 16 fallaban): un formulario de otro sitio cambiaba la contraseña de una clienta (respuesta 200) y creaba una invitación de profesional desde una cuenta admin (201); `logout` con el access token vencido respondía 401 sin cerrar la sesión; el refresh token se guardaba tal cual; y dos tokens emitidos en el mismo segundo salían idénticos. Documentación (Context7): `req.body` queda `undefined` sin parser que coincida; `jwt.sign` admite `jwtid` y `jwt.verify` admite `ignoreExpiration`. Después del arreglo: 16 de 16, tres corridas seguidas; suite completa de 22 archivos y 173 tests en verde; `typecheck:all` sin errores. |
+| 4 | Aporte personal | Aprobó la primera tanda ("OK") y fijó que el frontend no se toque sin su permiso. Archivos: `app.ts`, `trustedOrigin.ts`, `jwt.provider.ts`, `auth.repository.ts`, `auth.controller.ts`, `auth.routes.ts`, `auth.security.test.ts`, ADR-003, `CLAUDE.md`. |
+| 5 | Desacuerdo y resolución | Ninguno. **Efectos al desplegar:** las sesiones abiertas siguen funcionando (transición); no hay migraciones ni cambios de rutas ni de formato de respuesta. **Verificar en producción:** que `FRONTEND_URL` en Render sea exactamente el origen que usan las usuarias (CORS ya lo exigía, pero ahora una diferencia también bloquearía los POST con 403). El pedido de pago y el webhook de Mercado Pago no traen `Origin` y pasan. **Pendiente (segunda tanda, con cambios en el frontend):** contraseña actual en `change-password` y email en `reset-password`. Después del 2026-10-31 quitar la aceptación del refresh token en texto plano. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): usó el subagente `revisor-seguridad-api` (solo lectura), Context7 para Express y jsonwebtoken, y escribió el arreglo y los tests. Revisión de Emily pendiente. |
+
+## Entrada 27: commit y push de la primera tanda de seguridad del login
+
+**Fecha:** 2026-10-24, 16:09 (hora de la máquina). El hash del commit figura en `git log` con el mensaje "Seguridad del login: CSRF, cierre de sesión y refresh token".
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Commitear y pushear a `chore/claude-config` los cambios de la entrada 26 junto con las entradas 25 a 27 de la bitácora. El push actualiza el pull request #1. |
+| 2 | Alternativas y criterio de descarte | Abrir un pull request aparte para la seguridad del login: descartado por ahora, Emily pidió seguir en el PR #1 y el commit queda separado para poder revertirlo. |
+| 3 | Evidencia que la sostiene | Suite completa en verde antes del commit (22 archivos, 173 tests) y `typecheck:all` sin errores. |
+| 4 | Aporte personal | Pidió "commit y push". |
+| 5 | Desacuerdo y resolución | Ninguno. Antes de mergear a `main`: verificar `FRONTEND_URL` en Render (ver entrada 26). |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): ejecutó el commit y el push a pedido de Emily. |
+
+## Entrada 28: el pull request #1 fue mergeado a `main`
+
+**Fecha:** 2026-10-24, 16:03 (hora del merge, commit `81f06eb`), registrado el 2026-10-24, 16:10.
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Emily mergeó el pull request #1 a `main` (la app lo informa como mergeado por `emilykohler12`). Entraron los commits hasta `13177c6`: configuración de Claude Code, Sentry sin datos sensibles, webhook idempotente, hora de Argentina, ADR-003 reescrito y el script de migraciones. El commit `c4b9fcc` (seguridad del login), pusheado a las 16:09, **quedó fuera** y está solo en `chore/claude-config`. |
+| 2 | Alternativas y criterio de descarte | Esperar al commit de seguridad antes de mergear: Emily decidió mergear antes. Reabrir el PR #1: no es posible una vez mergeado; el commit pendiente necesita un pull request nuevo. |
+| 3 | Evidencia que la sostiene | `gh pr view 1`: estado MERGED, mergeado a las 19:03 UTC (16:03 ART) por `emilykohler12`; `git log origin/main..HEAD` lista únicamente `c4b9fcc`. |
+| 4 | Aporte personal | Decisión y ejecución del merge: Emily. Registro: commit de merge `81f06eb`. |
+| 5 | Desacuerdo y resolución | Ninguno. **Consecuencia:** el merge redespliega el backend en Render con los cambios de hora de Argentina, Sentry y webhook. Quedan por verificar en producción: la zona horaria real del servidor, que el no-show y los mails de las 9:00 sigan comportándose bien, y el estado de las migraciones con el SELECT de `migration-checksums.mjs`. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): detectó el merge al consultar el estado del PR y lo registró. No intervino en el merge. |
+
+## Entrada 29: pull request #2 (seguridad del login)
+
+**Fecha:** 2026-10-24, 16:11 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Abrir el pull request #2 contra `main`, desde `chore/claude-config`: https://github.com/emilykohler12/nexa-backend/pull/2. Contiene `c4b9fcc` (seguridad del login) y `4a572e6` (bitácora, entrada 28), más este registro. No se mergeó. |
+| 2 | Alternativas y criterio de descarte | Reutilizar el PR #1: imposible, ya estaba mergeado. Crear una rama nueva desde `main`: innecesario, `main` ya contiene todo lo anterior y la rama solo suma estos commits. |
+| 3 | Evidencia que la sostiene | `gh pr create` devolvió la URL; `git log origin/main..HEAD` listaba solo `c4b9fcc` y `4a572e6`; la aplicación reporta el PR abierto con el seguimiento de CI y Auto-fix activos. La descripción detalla qué corrige, qué cambia, el control de `FRONTEND_URL` antes de mergear, los 16 tests nuevos y lo pendiente. |
+| 4 | Aporte personal | Pidió abrir el PR nuevo. Registro: pull request #2. |
+| 5 | Desacuerdo y resolución | Ninguno. El merge queda a decisión de Emily, después de verificar `FRONTEND_URL` en Render; al mergear se redespliega el backend. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): creó el PR con `gh` a pedido de Emily. Auto-fix corrige y pushea ante fallos del CI o conflictos; ante comentarios de revisión no actúa sin confirmación. |
+
+## Entrada 30: seguridad del login, segunda tanda (contraseña actual y código de recuperación)
+
+**Fecha:** 2026-10-24, 16:26 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Backend:** (a) `POST /api/auth/change-password` exige `{ currentPassword, password }`; si la actual es incorrecta responde `400 INVALID_CURRENT_PASSWORD` y la ruta suma el límite de 10 intentos por IP. (b) `POST /api/auth/reset-password` exige `{ email, token, password }`, busca el código de esa cuenta y responde igual (`400 INVALID_TOKEN`) si el email no existe o el código no es suyo; limita a 5 intentos fallidos cada 15 minutos por email (`429 TOO_MANY_ATTEMPTS`); consume el código con una escritura condicional; y reintenta con otro código si coincide con el de otra usuaria (antes daba un 500). **Frontend** (repositorio `nexa-frontend`, rama nueva `feat/seguridad-login-contrasenas`, sin commitear): el formulario de recuperación manda el email; los formularios de cambio de contraseña del admin (`SecuritySection.tsx`) y de la profesional (`Settings.tsx`) piden y mandan la contraseña actual; `authApi.resetPassword` recibe el email. Tests nuevos: `auth.password.test.ts` (16, backend), `ForgotPasswordModal.test.tsx` (6) y `SecuritySection.test.tsx` (5, frontend). Se actualizaron el ADR-003 y `CLAUDE.md`. |
+| 2 | Alternativas y criterio de descarte | Columna de intentos en `password_resets`: descartada, exige migración y el límite por email resuelve lo mismo sin tocar la base. Límite por IP solamente: descartado, rotando IPs se puede adivinar un código de 6 dígitos. Responder 401 ante la contraseña actual incorrecta: descartado, el cliente HTTP del frontend (`api.ts`) redirige a `/login` ante cualquier 401. Guardar el código de recuperación como hash: postergado, el código dura 15 minutos y los controles anteriores ya cierran la adivinación. Cambiar el nombre del campo `password` por `newPassword`: descartado, mantenerlo permite desplegar el frontend antes que el backend. |
+| 3 | Evidencia que la sostiene | Informe del subagente `revisor-seguridad-api` (verificado por mí). Los tests del backend reprodujeron los fallos antes del arreglo (8 de 16 fallaban: `change-password` sin la actual cambiaba la clave; `reset-password` aceptaba el pedido sin email y con el código de otra cuenta; dos pedidos simultáneos con el mismo código daban `[200, 200]`; la colisión de códigos daba 500) y pasan después, 3 corridas seguidas. Documentación de express-rate-limit (Context7): `skipSuccessfulRequests` no cuenta las respuestas menores a 400 y `ipKeyGenerator` evita el error de IPv6 al usar la IP como respaldo. Resultados: backend 23 archivos y 189 tests en verde con `typecheck:all` sin errores; frontend con la rama nueva: 13 archivos y 50 tests en verde, `typecheck:all` sin errores, build correcto, y los 7 de los 11 tests nuevos fallan contra el código viejo. El lint del frontend queda en 121 problemas, igual que `main` (los 4 errores que sumaron los tests nuevos se corrigieron). |
+| 4 | Aporte personal | Pidió la segunda tanda y confirmó seguir con `nexa-frontend`. Archivos del backend: `auth.controller.ts`, `auth.service.ts`, `auth.repository.ts`, `auth.routes.ts`, `resetPassword.dto.ts`, tests y documentación. Archivos del frontend: los cuatro indicados arriba y dos tests nuevos. |
+| 5 | Desacuerdo y resolución | Ninguno. **Orden de despliegue obligatorio:** primero el frontend (manda los campos nuevos y el backend actual los ignora) y recién después el backend. Como el pull request #2 ya incluye la primera tanda, mergear el #2 despliega también esta tanda: hay que mergear y desplegar antes el PR del frontend. Hasta recargar la página, una pestaña con el frontend viejo verá errores al cambiar o recuperar la contraseña. Para un cambio de contraseña sin sesión, ahora el email es obligatorio. Pendiente: probar a mano ambos formularios en un entorno real. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): usó el subagente `revisor-seguridad-api` (solo lectura), Context7 para express-rate-limit, y escribió el arreglo y los tests en los dos repositorios. Se creó una rama en `nexa-frontend`; no se hizo ningún commit ni push allí. Revisión de Emily pendiente. |
+
+## Entrada 31: commits y pull requests de la segunda tanda de seguridad del login
+
+**Fecha:** 2026-10-24, 16:28 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | (a) En `nexa-frontend`: commit `dffa1b6` en la rama `feat/seguridad-login-contrasenas`, push y pull request #1 contra `main`: https://github.com/emilykohler12/nexa-frontend/pull/1. (b) En `nexa-backend`: commit de la segunda tanda sobre `chore/claude-config` (hash en `git log`, mensaje "Seguridad del login, segunda tanda…") y push, que actualiza el pull request #2. (c) Se agregó a la descripción del pull request #2 un aviso del orden de despliegue (primero el frontend). No se mergeó nada. |
+| 2 | Alternativas y criterio de descarte | Una rama y un PR aparte en el backend, apoyado sobre el #2: descartado por ahora para no multiplicar pull requests; el aviso en el #2 deja explícito el orden. Mergear el PR del frontend de inmediato: decisión de Emily, después de probar los formularios. |
+| 3 | Evidencia que la sostiene | Las salidas de `git push` y `gh pr create`; `git log` con el nombre de Emily y sin co-autor; la descripción de cada PR detalla los cambios, las pruebas y el orden de despliegue. Antes del commit: backend 23 archivos y 189 tests en verde; frontend 13 archivos y 50 tests en verde, build correcto y lint igual que `main`. |
+| 4 | Aporte personal | Pidió "commit y abrir PR". Registro: `dffa1b6` (frontend), pull request #1 del frontend y actualización del #2 del backend. |
+| 5 | Desacuerdo y resolución | Ninguno. **Recordatorio:** orden de despliegue = (1) mergear y desplegar nexa-frontend#1, (2) probar los dos formularios y la recuperación con un código real, (3) mergear nexa-backend#2 con `FRONTEND_URL` verificado en Render. Después del 2026-10-31 quitar la aceptación del refresh token en texto plano. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): ejecutó los commits, los push y la creación y edición de los pull requests con `gh` a pedido de Emily. Auto-fix queda activo solo para el pull request del backend. |
+
+## Entrada 32: webhook de Mercado Pago, monto y moneda, respuesta 500 y logs
+
+**Fecha:** 2026-10-24, 16:44 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | (a) Nuevo `payments/paidAmount.ts`: antes de marcar una seña, una seña de combo (suma de las patas) o un pedido como pagos, se compara el monto y la moneda que informa Mercado Pago con lo esperado; se acepta el monto esperado o uno mayor, en pesos; si no coincide o no se informa, no se registra y queda una entrada de error en la actividad ("Pago con monto distinto al esperado"). Solo se valida lo aprobado y lo que trae datos de Mercado Pago (la seña confirmada a mano por WhatsApp no). (b) `findPaymentByReference` devuelve monto y moneda, y la verificación a demanda (polling) los usa igual que el webhook. (c) El controller del webhook responde 200 **después** de procesar y 500 si falló algo transitorio, para que Mercado Pago reintente; envía el error a Sentry y ya no vuelca el error completo del SDK en los logs. Test nuevo: `payments.webhook-amount.test.ts` (19). |
+| 2 | Alternativas y criterio de descarte | Rechazar también un monto mayor: descartado, si el monto esperado cambió entre el checkout y el pago, cobrar de más no deja a la clienta sin seña. Seguir respondiendo 200 antes de procesar: descartado, un fallo transitorio perdía la confirmación hasta que la clienta consultara. Responder 500 ante un monto distinto: descartado, reintentar no cambia el resultado y Mercado Pago seguiría reintentando. Cobrar la diferencia o reembolsar automáticamente: fuera de alcance, queda para revisión manual. |
+| 3 | Evidencia que la sostiene | Informe del subagente `revisor-seguridad-api` (puntos 3 y 5 y defecto B). Documentación de Mercado Pago (Context7): se espera 200 o 201 en 22 segundos y se reintenta cada 15 minutos hasta recibirlo. Los tests reprodujeron los fallos antes del arreglo (10 de 19: un pago por 1000 se registraba como seña de 5000, un pedido de 3000 quedaba pago con 1000, no había respuesta 500 y el log traía el error completo) y pasan después. |
+| 4 | Aporte personal | Pidió terminar lo pendiente. Archivos: `paidAmount.ts`, `payment.controller.ts`, `payment.service.ts`, `appointment.service.ts`, `order.service.ts`, el test. |
+| 5 | Desacuerdo y resolución | Ninguno. **Riesgo a conocer:** si un pago se cobra por un monto distinto, el dinero entra a Mercado Pago pero la seña no se registra; hay que mirar en la actividad las entradas con nivel de error. La tolerancia es de medio centavo. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): implementación y tests. Revisión de Emily pendiente. |
+
+## Entrada 33: hora de Argentina en jobs de recordatorio y dashboards
+
+**Fecha:** 2026-10-24, 16:44 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Completar la migración al helper de hora argentina: `inactivityReminder` (corte de 60 días desde la fecha de Argentina), `autoPromotions` (cumpleaños y año de la campaña) y los tres servicios de dashboard y estadísticas (`argentinaWallClock()` para los rangos de calendario; los límites contra `createdAt` ahora son instantes reales de Argentina). Se quitaron `pad`, `toDateStr` y `addDays` que quedaron sin uso. Tests: 7 casos nuevos en `timezone-art.test.ts` (ahora 16). |
+| 2 | Alternativas y criterio de descarte | Convertir cada getter local de los dashboards uno por uno: descartado por riesgo; un único "reloj de pared de Argentina" como punto de partida da los mismos rangos sin tocar el cálculo. Tocar `availability.ts`, vacaciones y fechas de nacimiento: no, ya trabajan en UTC puro y son correctos en cualquier zona. |
+| 3 | Evidencia que la sostiene | Informe del subagente `revisor-reservas` (puntos de impacto bajo) verificado leyendo el código. Los 6 tests nuevos de comportamiento fallaban antes (a las 22:30 de Argentina, que en UTC ya es el día siguiente: el dashboard no contaba el turno de "hoy", el aviso de cumpleaños salía un día antes y el recordatorio de inactividad cortaba un día antes) y pasan después. Efecto lateral corregido: los tests viejos de dashboard armaban "hoy" en hora de Argentina y el servicio en UTC, por lo que habrían fallado de 21:00 a 24:00. |
+| 4 | Aporte personal | Pidió terminar lo pendiente de la hora de Argentina. |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
+
+## Entrada 34: menores del login, uso del subagente `escritor-tests` y logs sin emails
+
+**Fecha:** 2026-10-24, 16:44 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | (a) Emails con `trim().toLowerCase()` en el alta del admin y en el turno manual, con búsqueda sin distinguir mayúsculas. (b) `toggleRole` solo alterna profesional y administradora (`400 INVALID_ROLE_CHANGE`). (c) Invitaciones: `409 ADMIN_ACCOUNT`, `409 ACCOUNT_INACTIVE` (antes 500), consumo atómico (`consume`) y las mismas dos cookies que el login sin `accessToken` en el cuerpo (nuevo `auth/utils/cookies.ts`). (d) Un refresh fallido limpia las cookies. (e) El login con un email inexistente ejecuta igual el bcrypt y `forgot-password` no espera el mail. (f) Validación con zod del perfil de la clienta (nombre hasta 100, teléfono hasta 20). (g) Nuevo `maskEmail` en los logs de mail, invitaciones y jobs. Tests: `auth.minor-fixes.test.ts` (33, escrito por el subagente) y `mask-email.test.ts` (3). |
+| 2 | Alternativas y criterio de descarte | Exigir email verificado para iniciar sesión: **no se tocó**, es una decisión de producto de Emily (la bandera `emailVerified` hoy solo se escribe). Tabla de sesiones para varios dispositivos: postergada, cambio de diseño mayor. Hacer `forgot-password` totalmente asíncrono: descartado, los tests y el flujo necesitan que el código ya esté guardado al responder; solo el envío del mail dejó de esperarse. Registrar siempre 201 para ocultar `EMAIL_TAKEN`: descartado por usabilidad. |
+| 3 | Evidencia que la sostiene | Uso del subagente: se le dio una especificación del comportamiento esperado (sin tocar `src/`) y escribió los tests primero. Verificó rutas y cuerpos reales y reportó 8 discrepancias con la descripción (por ejemplo, que un email repetido con otras mayúsculas hoy crea otra cuenta y que `findByEmail` filtra `active` y por eso el 500). Resultado inicial: 13 pasaban (comportamiento que se conserva) y 20 fallaban (lo nuevo). Tras la implementación pasan los 33. El frontend no usa el `accessToken` de la respuesta de invitaciones (búsqueda en `nexa-frontend`). Verificado: el `toggleRole` ya impedía cambiar el propio rol; el informe del revisor se equivocaba en ese punto. |
+| 4 | Aporte personal | Pidió usar los agentes y terminar lo pendiente. |
+| 5 | Desacuerdo y resolución | Ninguno. Contrato: `POST /api/invitations/register` ya no devuelve `accessToken`; `PATCH /api/client/profile` responde 400 si los valores no son válidos; las rutas de admin pueden responder los códigos nuevos (el frontend muestra el mensaje). |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con el subagente `escritor-tests` (escribe y corre tests; no modifica `src/`). Revisión de Emily pendiente. |
+
+## Entrada 35: commit, push y pull request #3 (pendientes del backend)
+
+**Fecha:** 2026-10-24, 16:55 (commit `91d0996`), registrado el 2026-10-24, 16:55.
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Commitear en la rama nueva `fix/pendientes-webhook-hora-login` los cambios de las entradas 32 a 34, pushearla y abrir el pull request #3: https://github.com/emilykohler12/nexa-backend/pull/3. Su **base es `chore/claude-config`** (el PR #2, aún abierto), no `main`. No se mergeó nada. |
+| 2 | Alternativas y criterio de descarte | Base `main`: descartado, mostraría también todos los commits del PR #2 y mezclaría las dos revisiones. Agregar los cambios al PR #2: descartado, ya lleva dos tandas de seguridad con orden de despliegue propio. Esperar a que se mergee el #2: no hace falta, GitHub reorienta el #3 a `main` cuando se mergee el #2. |
+| 3 | Evidencia que la sostiene | `git log` con el nombre de Emily y sin co-autor; `gh pr view 2` informaba el #2 como abierto al crear el #3; antes del commit, suite de 26 archivos y 251 tests en verde y `typecheck:all` sin errores. |
+| 4 | Aporte personal | Pidió "commit, push y PR". Registro: commit `91d0996` y pull request #3. |
+| 5 | Desacuerdo y resolución | Ninguno. **Orden para publicar:** (1) nexa-frontend#1, (2) nexa-backend#2, (3) nexa-backend#3. Este último no cambia rutas ni exige cambios en el frontend. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): ejecutó el commit, el push y la creación del PR con `gh` a pedido de Emily. |

@@ -18,6 +18,7 @@ import { mailProvider } from '../auth/providers/mail.provider'
 import { bcryptProvider } from '../auth/providers/bcrypt.provider'
 import type { SpecialSlot } from '../services/service.model'
 import { todayArgentinaStr, appointmentInstant } from '../../app/utils/argentinaTime'
+import { isPaymentAcceptable, type PaidInfo } from '../payments/paidAmount'
 
 function loadTemplate(name: string, replacements: Record<string, string>): string {
   const candidates = [
@@ -517,9 +518,10 @@ async function comboGroupPeers(comboGroupIds: (string | null)[]): Promise<Map<st
 // o crea uno nuevo. Sin email (frecuente en un walk-in) se genera uno placeholder único,
 // así cada turno manual sin datos de contacto completos igual queda con un cliente propio.
 async function findOrCreateManualClient(name: string, phone: string, email: string): Promise<string> {
-  const trimmedEmail = email.trim()
+  // Minúsculas, como hace el login: si no, la clienta creada a mano no podría entrar después.
+  const trimmedEmail = email.trim().toLowerCase()
   if (trimmedEmail) {
-    const existing = await prisma.user.findUnique({ where: { email: trimmedEmail } })
+    const existing = await prisma.user.findFirst({ where: { email: { equals: trimmedEmail, mode: 'insensitive' } } })
     if (existing) {
       if (existing.role !== 'client') {
         throw new AppError(HTTP.BAD_REQUEST, 'Ese email ya pertenece a una cuenta que no es de cliente', 'EMAIL_NOT_CLIENT')
@@ -1004,7 +1006,7 @@ export const appointmentService = {
     if (legs.every(l => l.paymentStatus === 'partial')) return { paymentStatus: 'partial' }
 
     const found = await paymentService.findPaymentByReference(`group:${comboGroupId}`)
-    if (found) await appointmentService.applyGroupPaymentResult(comboGroupId, found.id, found.status)
+    if (found) await appointmentService.applyGroupPaymentResult(comboGroupId, found.id, found.status, { amount: found.amount, currency: found.currency })
 
     const fresh = await prisma.appointment.findFirst({
       where:  { comboGroupId, status: { not: 'cancelled' } },
@@ -1015,7 +1017,7 @@ export const appointmentService = {
 
   // Aplica el resultado del pago de la seña de un combo a TODAS sus patas.
   // Idempotente (webhook + polling). Al aprobarse, se le avisa a cada profesional.
-  applyGroupPaymentResult: async (comboGroupId: string, mpPaymentId: string, status: string) => {
+  applyGroupPaymentResult: async (comboGroupId: string, mpPaymentId: string, status: string, paid?: PaidInfo) => {
     const legs = await prisma.appointment.findMany({
       where:   { comboGroupId, status: { not: 'cancelled' } },
       include: APPOINTMENT_INCLUDE,
@@ -1025,6 +1027,12 @@ export const appointmentService = {
       return
     }
     if (legs.every(l => l.paymentStatus === 'partial')) return // ya aplicado
+
+    // La seña del combo es única y es la suma de la seña de cada pata.
+    if (!(await isPaymentAcceptable({
+      kind: 'Combo', id: comboGroupId, mpPaymentId, status,
+      expected: legs.reduce((sum, l) => sum + Number(l.depositAmount), 0), paid,
+    }))) return
 
     const paymentStatus = status === 'approved' ? 'partial' : status
     // Escritura condicional: si otro aviso del mismo pago ya aplicó el resultado a
@@ -1256,7 +1264,7 @@ export const appointmentService = {
 
     const found = await paymentService.findPaymentByReference(`appointment:${id}`)
     if (found) {
-      await appointmentService.applyPaymentResult(id, found.id, found.status)
+      await appointmentService.applyPaymentResult(id, found.id, found.status, { amount: found.amount, currency: found.currency })
     }
 
     const fresh = await prisma.appointment.findUnique({ where: { id }, select: { paymentStatus: true } })
@@ -1266,7 +1274,7 @@ export const appointmentService = {
   // Llamado desde el webhook de Mercado Pago y desde verifyPayment — el estado
   // 'status' ya viene verificado contra la API de Mercado Pago, no confiado del
   // webhook en crudo.
-  applyPaymentResult: async (id: string, mpPaymentId: string, status: string) => {
+  applyPaymentResult: async (id: string, mpPaymentId: string, status: string, paid?: PaidInfo) => {
     const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
     if (!appointment) {
       console.warn(`[mercadopago] Webhook para turno inexistente: ${id}`)
@@ -1276,6 +1284,11 @@ export const appointmentService = {
     // Idempotencia — el webhook y el polling pueden llegar los dos. Si la seña
     // ya estaba paga, no re-notificamos al profesional ni re-logueamos.
     if (appointment.paymentStatus === 'partial') return
+
+    // Un pago aprobado por otro monto u otra moneda no es la seña: no se registra.
+    if (!(await isPaymentAcceptable({
+      kind: 'Turno', id, mpPaymentId, status, expected: Number(appointment.depositAmount), paid,
+    }))) return
 
     const paymentStatus = status === 'approved' ? 'partial' : status // 'partial' = seña pagada
 

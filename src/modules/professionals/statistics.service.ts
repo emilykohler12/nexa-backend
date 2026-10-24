@@ -1,5 +1,6 @@
 // src/modules/professionals/statistics.service.ts
 import { prisma } from '../../app/database/prisma'
+import { argentinaWallClock } from '../../app/utils/argentinaTime'
 
 export type PeriodFilter = 'day' | 'week' | 'month' | 'year'
 
@@ -8,7 +9,7 @@ const PALETTE = ['#069494', '#d4af37', '#e57373', '#7986cb', '#4db6ac', '#f06292
 function pad(n: number) { return String(n).padStart(2, '0') }
 function toDateStr(d: Date) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` }
 
-function getRange(period: PeriodFilter, ref = new Date()): { start: Date; end: Date } {
+function getRange(period: PeriodFilter, ref = argentinaWallClock()): { start: Date; end: Date } {
   const start = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate())
   const end = new Date(start)
   switch (period) {
@@ -37,7 +38,9 @@ function getRange(period: PeriodFilter, ref = new Date()): { start: Date; end: D
 export const statisticsService = {
 
   getForProfessional: async (professionalId: string, period: PeriodFilter = 'month') => {
-    const now = new Date()
+    // Reloj de pared de Argentina (no un instante real): los rangos de día, semana, mes y año se
+    // arman con los getters locales, y el servidor corre en UTC.
+    const now = argentinaWallClock()
     const todayStr = toDateStr(now)
     const { start, end } = getRange(period, now)
     const startStr = toDateStr(start)

@@ -9,6 +9,8 @@ import path from 'path'
 import { prisma }          from '../app/database/prisma'
 import { mailProvider }    from '../modules/auth/providers/mail.provider'
 import { activityService } from '../modules/activity/activity.service'
+import { todayArgentinaStr } from '../app/utils/argentinaTime'
+import { maskEmail } from '../app/utils/maskEmail'
 import { autoPromotionModel } from '../modules/promotions/autoPromotion.model'
 
 type ClientRow = { id: string; name: string; email: string; birthDate: Date | null }
@@ -26,13 +28,6 @@ function loadTemplate(name: string, replacements: Record<string, string>): strin
   if (!html) throw new Error(`No se encontró el template "${name}.html". Rutas buscadas:\n${candidates.join('\n')}`)
   for (const [key, value] of Object.entries(replacements)) html = html.replaceAll(`{{${key}}}`, value)
   return html
-}
-
-function pad(n: number) { return String(n).padStart(2, '0') }
-function addDays(base: Date, days: number): Date {
-  const d = new Date(base)
-  d.setDate(d.getDate() + days)
-  return d
 }
 
 function discountText(discountType: string, discountValue: number): string {
@@ -85,10 +80,12 @@ async function matchTrigger(
 ): Promise<{ client: ClientRow; periodKey: string }[]> {
   if (rule.trigger === 'birthday') {
     const daysBefore = rule.triggerConfig.daysBefore ?? 0
-    const target = addDays(new Date(), daysBefore)
-    const targetMonth = target.getMonth()
-    const targetDate  = target.getDate()
-    const year = String(new Date().getFullYear())
+    // Fecha de Argentina de hoy + daysBefore. Argentina no tiene horario de verano, así que sumar
+    // días de 24 horas al instante actual da el mismo reloj de pared.
+    const targetStr   = todayArgentinaStr(new Date(Date.now() + daysBefore * 24 * 60 * 60 * 1000))
+    const targetMonth = Number(targetStr.slice(5, 7)) - 1 // mismo origen (0 = enero) que getUTCMonth()
+    const targetDate  = Number(targetStr.slice(8, 10))
+    const year        = todayArgentinaStr().slice(0, 4)
     return pool
       .filter(c => c.birthDate && c.birthDate.getUTCMonth() === targetMonth && c.birthDate.getUTCDate() === targetDate)
       .map(c => ({ client: c, periodKey: year }))
@@ -151,7 +148,7 @@ export async function runAutoPromotionsJob(): Promise<{ rules: number; sent: num
         sent++
       } catch (err: any) {
         failed++
-        console.error(`[auto-promotions] error mandando "${rule.name}" a ${client.email}:`, err?.message ?? err)
+        console.error(`[auto-promotions] error mandando "${rule.name}" a ${maskEmail(client.email)}:`, err?.message ?? err)
       }
     }
   }

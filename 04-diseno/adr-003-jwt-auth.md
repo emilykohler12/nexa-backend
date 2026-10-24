@@ -12,6 +12,12 @@
 > usan desde el commit inicial (`98c15ea`, 2026-08-25). Esta versión documenta lo
 > que hace el sistema, incluidas sus limitaciones. Las referencias a líneas son
 > de la fecha de la revisión y pueden moverse.
+>
+> **Actualización del mismo día (2026-10-24).** Una revisión de seguridad de la
+> autenticación llevó a tres cambios, descritos en 4.4 y 5: el refresh token se
+> guarda como hash, `logout` funciona con el access token vencido, y los pedidos
+> que cambian datos con un `Origin` ajeno se rechazan (CSRF). Quedan abiertos
+> los demás riesgos de la sección 5.
 
 ---
 
@@ -110,7 +116,11 @@ válida emite un par nuevo y lo guarda: el refresh token se **rota** en cada uso
 así que uno ya usado deja de servir.
 
 ### 4.4 Cierre de sesión e invalidación
-- `logout` borra el refresh token guardado y las dos cookies.
+- `logout` borra el refresh token guardado y las dos cookies. **No exige una
+  sesión vigente** (desde el 2026-10-24): si el access token ya venció, la
+  usuaria se identifica por la firma del token (se ignora solo el vencimiento) y
+  la sesión se cierra igual. Un token ausente o falsificado no cierra la sesión
+  de nadie, y la respuesta es siempre 200 con las cookies limpias.
 - Cambiar o restablecer la contraseña también borra el refresh token
   (`auth.repository.ts:117`), lo que cierra la sesión en cualquier dispositivo
   al vencer el access token.
@@ -131,33 +141,69 @@ así que uno ya usado deja de servir.
    cambiar el rol de una usuaria no corta los access tokens ya emitidos: valen
    hasta 15 minutos. Aceptado por el tamaño del sistema; la renovación sí se
    corta de inmediato.
-2. **El refresh token se guarda en texto plano** en `users.refresh_token`. Quien
-   lea la base podría usarlo hasta que venza. Mitigación posible: guardar solo un
-   hash.
+2. ~~El refresh token se guardaba en texto plano.~~ **Corregido el 2026-10-24:**
+   `users.refresh_token` guarda el SHA-256 del token (`auth.repository.ts`), por
+   lo que un backup filtrado no permite abrir sesiones. Durante una transición
+   de 7 días se sigue aceptando un token guardado en texto plano (el siguiente
+   refresh lo pasa a hash); pasado ese plazo hay que quitar esa segunda
+   condición de `findByRefreshToken`. Además los tokens llevan `jti`, por lo que
+   dos emitidos en el mismo segundo ya no son idénticos.
 3. **Una sola sesión renovable por usuario** (ver 4.4).
-4. **CSRF.** Con `SameSite=None` el navegador manda la cookie en pedidos
-   iniciados desde otro sitio. CORS (`origin` fijo en `FRONTEND_URL`) impide que
-   otro sitio *lea* las respuestas, pero no impide que *envíe* un pedido simple.
-   Hoy no hay un token anti-CSRF y `app.ts:67` mantiene activo
-   `express.urlencoded`, por lo que un formulario HTML de otro sitio podría
-   disparar un `POST` con la cookie de la usuaria. **Pendiente de revisar**: la
-   mitigación mínima es quitar ese parser (el frontend envía JSON) para que las
-   mutaciones solo acepten `application/json`, que obliga a una verificación
-   previa de CORS.
+4. **CSRF** (mitigado el 2026-10-24). Con `SameSite=None` el navegador manda la
+   cookie en pedidos iniciados desde otro sitio, y CORS (`origin` fijo en
+   `FRONTEND_URL`) impide *leer* las respuestas pero no *enviar* un pedido
+   simple. Antes, un formulario HTML de otro sitio podía cambiar la contraseña
+   de una usuaria logueada o, contra una admin, invitar a un profesional. Ahora:
+   (a) se quitó `express.urlencoded`, así que la API no interpreta formularios;
+   (b) `middlewares/trustedOrigin.ts` rechaza con `403 FORBIDDEN_ORIGIN` todo
+   pedido que cambia datos (no GET/HEAD/OPTIONS) cuya cabecera `Origin` no sea la
+   del frontend. Los navegadores siempre envían `Origin` en esos pedidos y un
+   sitio no puede falsearla; los pedidos sin `Origin` (webhook de Mercado Pago,
+   `curl`, tests) pasan porque no arrastran la sesión de un navegador. No se
+   agregó un token anti-CSRF. Riesgo que queda: un navegador que no envíe
+   `Origin`, algo que los navegadores actuales no hacen en pedidos que cambian
+   datos.
 5. **El login no exige email verificado**, y la verificación no limita ninguna
    ruta; no encontré esa comprobación en `auth.service.ts`.
-6. **`POST /api/auth/change-password` no pide la contraseña actual**
-   (`auth.controller.ts:126`): alcanza con una sesión activa. Quien consiga un
-   access token vigente (15 minutos) podría cambiar la contraseña y, como eso
-   borra el refresh token, dejar fuera a la dueña. Mitigación posible: exigir la
-   contraseña actual.
-7. El **login social** (Google/Facebook) figura en el RUNBOOK como retirado:
+6. ~~`POST /api/auth/change-password` no pedía la contraseña actual.~~
+   **Corregido el 2026-10-24:** ahora exige `currentPassword` y la compara con
+   bcrypt. Si es incorrecta responde `400 INVALID_CURRENT_PASSWORD` (no 401:
+   el frontend desloguea ante cualquier 401). La ruta tiene además el límite de
+   10 intentos cada 15 minutos por IP. Cuerpo: `{ currentPassword, password }`.
+   Cambia el contrato; los formularios del admin y de la profesional se
+   actualizaron en `nexa-frontend` (rama `feat/seguridad-login-contrasenas`).
+7. ~~El código de recuperación se buscaba solo por su valor.~~ **Corregido el
+   2026-10-24:** `POST /api/auth/reset-password` recibe `{ email, token, password }`
+   y busca el código **de esa cuenta** (`findPasswordReset(userId, token)`); un
+   email inexistente y un código incorrecto dan el mismo `400 INVALID_TOKEN`.
+   Los intentos **fallidos** se limitan a 5 cada 15 minutos por email
+   (`429 TOO_MANY_ATTEMPTS`; los exitosos no cuentan; el límite está activo
+   también en test). El código se consume con una escritura condicional, por lo
+   que dos pedidos simultáneos no pueden usarlo los dos, y si al generarlo
+   coincide con el de otra usuaria se sortea otro en vez de devolver un 500.
+   Contrapartida: quien envíe 5 códigos erróneos con el email de otra persona la
+   deja 15 minutos sin poder recuperar la contraseña. El código sigue guardado en
+   texto plano (dura 15 minutos y se invalida al usarse o al pedir uno nuevo).
+   **Ajustes menores del mismo día (2026-10-24):** (a) un `POST /api/auth/refresh`
+   fallido borra las cookies de sesión; (b) el login con un email inexistente
+   ejecuta igual la comparación de bcrypt, y `forgot-password` ya no espera el
+   envío del mail, para no revelar por el tiempo de respuesta qué cuentas existen
+   (`register` sigue respondiendo `EMAIL_TAKEN`, decisión de usabilidad); (c) las
+   invitaciones no pisan una cuenta admin (`409 ADMIN_ACCOUNT`) ni chocan con una
+   desactivada (`409 ACCOUNT_INACTIVE`), se consumen de forma atómica y entregan
+   las dos cookies sin devolver el access token en el cuerpo; (d) los emails se
+   guardan en minúsculas y se buscan sin distinguir mayúsculas; (e) el rol solo
+   alterna entre profesional y administradora (`400 INVALID_ROLE_CHANGE`); (f) el
+   perfil de la clienta valida nombre (máx. 100) y teléfono (máx. 20); (g) el email
+   ya no se escribe en los logs de recuperación.
+8. El **login social** (Google/Facebook) figura en el RUNBOOK como retirado:
    `auth.routes.ts` ya no expone esas rutas, aunque quedan el DTO y el provider
    sin uso.
 
-**Límites de velocidad:** `register`, `forgot-password` y `reset-password` tienen
-un límite de 10 intentos cada 15 minutos; `login`, 20 intentos cada 5 minutos
-(`auth.routes.ts`). En test están desactivados.
+**Límites de velocidad:** `register`, `forgot-password`, `reset-password` y
+`change-password` tienen un límite de 10 intentos cada 15 minutos por IP; `login`,
+20 intentos cada 5 minutos (`auth.routes.ts`). En test están desactivados. El
+límite por email de `reset-password` (punto 7) sí está activo en test.
 
 ---
 
@@ -166,11 +212,13 @@ un límite de 10 intentos cada 15 minutos; `login`, 20 intentos cada 5 minutos
 | Archivo | Qué cubre |
 |---|---|
 | `tests/integration/auth.test.ts` | Registro con cookies de sesión y validaciones (email repetido, sin apellido, sin teléfono, sin términos); login correcto, con contraseña incorrecta, de usuario inexistente y de usuario inactivo; `/me` con y sin cookie y con token inválido; una clienta y una profesional no entran a rutas de admin |
+| `tests/integration/auth.security.test.ts` | CSRF (formulario de otro sitio, `Origin` ajeno o `null`, pedidos sin `Origin`, formularios ya no interpretados); `logout` con el access token vencido, sin cookies, con token vigente y con token falsificado; refresh token guardado como hash, rotación, reutilización y transición del formato viejo |
+| `tests/integration/auth.password.test.ts` | Cambio de contraseña con contraseña actual (falta, incorrecta, correcta, sin sesión); recuperación con email y código (correcto, otra cuenta, email inexistente, código usado, vencido, uso simultáneo, límite de intentos por email, colisión de códigos) |
+| `tests/integration/auth.minor-fixes.test.ts` | Emails en minúsculas (alta del admin y turno manual), cambio de rol, invitaciones (cuenta admin, cuenta desactivada, registros simultáneos, cookies sin access token en el cuerpo, clienta existente), refresh fallido que limpia cookies y validación del perfil de la clienta |
 | `tests/helpers/auth.ts` | `cookieFor()` firma un `access_token` válido para el resto de los tests |
 
-**Sin cobertura hoy:** `POST /api/auth/refresh`, `logout`, el cambio de
-contraseña, y las propiedades de las cookies (`httpOnly`, `secure`, `sameSite`).
-Son los casos que más conviene agregar.
+**Sin cobertura hoy:** las propiedades de las cookies (`httpOnly`, `secure`,
+`sameSite`), que dependen de `NODE_ENV=production`.
 
 ---
 

@@ -1,5 +1,6 @@
 // src/modules/admin/dashboard.service.ts
 import { prisma } from '../../app/database/prisma'
+import { argentinaWallClock, todayArgentinaStr, appointmentInstant } from '../../app/utils/argentinaTime'
 
 export type PeriodFilter = 'day' | 'week' | 'month' | 'year'
 
@@ -34,7 +35,7 @@ function minutesOf(range: { startTime: string; endTime: string }): number {
   return Math.max(0, (eh * 60 + em) - (sh * 60 + sm))
 }
 
-function getRange(period: PeriodFilter, ref = new Date()): { start: Date; end: Date } {
+function getRange(period: PeriodFilter, ref = argentinaWallClock()): { start: Date; end: Date } {
   const start = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate())
   const end = new Date(start)
   switch (period) {
@@ -65,7 +66,10 @@ export const dashboardService = {
   compute: async (period: PeriodFilter) => {
     const { start, end } = getRange(period)
     const startStr = toDateStr(start), endStr = toDateStr(end)
-    const todayStr = toDateStr(new Date())
+    const todayStr = todayArgentinaStr()
+    // Límites reales (instantes) del período en hora de Argentina, para comparar con createdAt.
+    const rangeStart = appointmentInstant(startStr, '00:00')
+    const rangeEnd   = new Date(appointmentInstant(endStr, '23:59').getTime() + 59_999)
 
     const [allInRange, newClientUsers, professionals, holidaysInRange] = await Promise.all([
       prisma.appointment.findMany({
@@ -75,7 +79,7 @@ export const dashboardService = {
       // "Nuevos" = se registraron en el período Y llegaron a reservar al menos
       // un turno (si solo se registró pero nunca reservó, no cuenta acá).
       prisma.user.findMany({
-        where:  { role: 'client', createdAt: { gte: start, lte: endOfDay(end) }, appointmentsAsClient: { some: {} } },
+        where:  { role: 'client', createdAt: { gte: rangeStart, lte: rangeEnd }, appointmentsAsClient: { some: {} } },
         select: { id: true },
       }),
       prisma.professional.findMany({
@@ -199,7 +203,7 @@ export const dashboardService = {
 
     // ── Productos más vendidos (pedidos de tienda pagados) ─────────────
     const productOrders = await prisma.productOrder.findMany({
-      where:   { createdAt: { gte: start, lte: endOfDay(end) }, order: { paymentStatus: 'paid' } },
+      where:   { createdAt: { gte: rangeStart, lte: rangeEnd }, order: { paymentStatus: 'paid' } },
       include: { product: { select: { name: true } } },
     })
     const byProduct = new Map<string, { name: string; quantity: number; revenue: number }>()

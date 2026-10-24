@@ -1,6 +1,6 @@
 // src/modules/auth/auth.routes.ts
 import { Router }    from 'express'
-import rateLimit     from 'express-rate-limit'
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
 import { authController } from './auth.controller'
 import { authenticate }   from './middleware/auth.middleware'
 import { env }            from '../../app/config/env'
@@ -28,14 +28,36 @@ const loginLimiter = env.NODE_ENV === 'test' ? noopLimiter : rateLimit({
   legacyHeaders:   false,
 })
 
+// El código de recuperación tiene 6 dígitos: se limitan los intentos FALLIDOS por email (los
+// exitosos no cuentan), así que adivinarlo para una cuenta es inviable aunque se roten IPs.
+// A diferencia de los de arriba, este límite NO se apaga en test: se prueba en
+// auth.password.test.ts (la clave es el email, y cada test usa uno distinto).
+// Contrapartida: quien envíe 5 códigos erróneos con el email de otra persona la deja 15
+// minutos sin poder recuperar la contraseña.
+const resetAttemptsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  skipSuccessfulRequests: true,
+  keyGenerator: req => {
+    const email = req.body?.email
+    return typeof email === 'string' && email.trim()
+      ? `reset:${email.trim().toLowerCase()}`
+      : ipKeyGenerator(req.ip ?? '')
+  },
+  message: { error: 'Demasiados intentos con este email. Probá de nuevo en 15 minutos.', code: 'TOO_MANY_ATTEMPTS' },
+  standardHeaders: true,
+  legacyHeaders:   false,
+})
+
 const router = Router()
 
 router.post('/register',        strictLimiter, authController.register)
 router.post('/login',           loginLimiter,  authController.login)
 router.post('/forgot-password', strictLimiter, authController.forgotPassword)
-router.post('/reset-password',  strictLimiter, authController.resetPassword)
-router.post('/change-password', authenticate, authController.changePassword)
-router.post('/logout',          authenticate,  authController.logout)
+router.post('/reset-password',  strictLimiter, resetAttemptsLimiter, authController.resetPassword)
+router.post('/change-password', strictLimiter, authenticate, authController.changePassword)
+// Sin authenticate a propósito: tiene que poder cerrar la sesión con el access token vencido.
+router.post('/logout',          authController.logout)
 router.get( '/me',              authenticate,  authController.me)
 router.post('/refresh',                        authController.refresh)
 router.get( '/verify-email',                   authController.verifyEmail)

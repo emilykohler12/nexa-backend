@@ -3,6 +3,7 @@ import type { Request, Response, NextFunction } from 'express'
 import { z }                   from 'zod'
 import { authService }         from './auth.service'
 import { bcryptProvider }      from './providers/bcrypt.provider'
+import { jwtProvider }         from './providers/jwt.provider'
 import { authRepository }      from './auth.repository'
 import { registerDto }         from './dto/register.dto'
 import { loginDto }            from './dto/login.dto'
@@ -10,30 +11,15 @@ import { forgotPasswordDto }   from './dto/forgotPassword.dto'
 import { resetPasswordDto }    from './dto/resetPassword.dto'
 import { AppError }            from '../../app/middlewares/errorHandler'
 import { HTTP }                from '../../app/constants/http'
-import { env }                 from '../../app/config/env'
+import { setTokenCookies, clearTokenCookies } from './utils/cookies'
 
-// En producción, frontend (Vercel) y backend (Render) viven en dominios
-// distintos — la cookie es "cross-site" y el navegador solo la manda en ese
-// caso con SameSite=None (que además exige Secure=true, por eso van atados).
-// En desarrollo (mismo origen, sin HTTPS) 'lax' + sin secure es lo correcto.
-const COOKIE_BASE = {
-  httpOnly: true,
-  secure:   env.NODE_ENV === 'production',
-  sameSite: env.NODE_ENV === 'production' ? 'none' as const : 'lax' as const,
-}
-
-function setTokenCookies(res: Response, tokens: { accessToken: string; refreshToken: string }): void {
-  res.cookie('access_token',  tokens.accessToken,  { ...COOKIE_BASE, maxAge: 15 * 60 * 1000 })
-  res.cookie('refresh_token', tokens.refreshToken, {
-    ...COOKIE_BASE,
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-    path:   '/api/auth/refresh',
-  })
-}
-
-function clearTokenCookies(res: Response): void {
-  res.clearCookie('access_token',  { ...COOKIE_BASE })
-  res.clearCookie('refresh_token', { ...COOKIE_BASE, path: '/api/auth/refresh' })
+function userIdFromExpiredAccessToken(token: unknown): string | null {
+  if (typeof token !== 'string' || !token) return null
+  try {
+    return jwtProvider.verifyAccessEvenIfExpired(token).sub
+  } catch {
+    return null
+  }
 }
 
 function validate<S extends z.ZodType>(schema: S, data: unknown): z.infer<S> {
@@ -78,7 +64,11 @@ export const authController = {
 
   logout: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      if (req.user) await authService.logout(req.user.id)
+      // La ruta no exige sesión vigente: si el access token venció (15 min) igual hay que
+      // cerrar la sesión. Se identifica a la usuaria por la firma del token, aunque esté
+      // vencido; un token falso o ausente no cierra la sesión de nadie.
+      const userId = req.user?.id ?? userIdFromExpiredAccessToken(req.cookies?.access_token)
+      if (userId) await authService.logout(userId)
       clearTokenCookies(res)
       res.status(HTTP.OK).json({ success: true })
     } catch (err) { next(err) }
@@ -91,7 +81,12 @@ export const authController = {
       const { user, tokens } = await authService.refresh(token)
       setTokenCookies(res, tokens)
       res.status(HTTP.OK).json({ user })
-    } catch (err) { next(err) }
+    } catch (err) {
+      // Un refresh fallido deja las cookies inservibles (token vencido, ya usado o robado):
+      // se borran para que el navegador no las siga mandando hasta que venzan.
+      clearTokenCookies(res)
+      next(err)
+    }
   },
 
   verifyEmail: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -127,7 +122,19 @@ export const authController = {
     try {
       if (!req.user) throw new AppError(HTTP.UNAUTHORIZED, 'No autenticado')
 
-      const { password } = req.body
+      const { password, currentPassword } = req.body ?? {}
+
+      // Con una sesión robada o abierta en una compu compartida no alcanza para cambiar la
+      // contraseña: hay que conocer la actual. Si es incorrecta se responde 400 y no 401,
+      // porque el frontend desloguea ante cualquier 401.
+      if (!currentPassword || typeof currentPassword !== 'string') {
+        throw new AppError(HTTP.BAD_REQUEST, 'Ingresá tu contraseña actual', 'VALIDATION_ERROR')
+      }
+      const account = await authRepository.findById(req.user.id)
+      if (!account) throw new AppError(HTTP.UNAUTHORIZED, 'Sesión inválida', 'SESSION_INVALID')
+      if (!(await bcryptProvider.compare(currentPassword, account.passwordHash))) {
+        throw new AppError(HTTP.BAD_REQUEST, 'La contraseña actual no es correcta', 'INVALID_CURRENT_PASSWORD')
+      }
 
       if (!password || typeof password !== 'string') {
         throw new AppError(HTTP.BAD_REQUEST, 'La contraseña es requerida', 'VALIDATION_ERROR')

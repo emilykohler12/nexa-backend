@@ -10,6 +10,8 @@ import path from 'path'
 import { prisma }   from '../app/database/prisma'
 import { mailProvider }    from '../modules/auth/providers/mail.provider'
 import { activityService } from '../modules/activity/activity.service'
+import { todayArgentinaStr } from '../app/utils/argentinaTime'
+import { maskEmail } from '../app/utils/maskEmail'
 
 const INACTIVITY_DAYS = 60
 const COOLDOWN_DAYS   = 60
@@ -38,8 +40,6 @@ function loadTemplate(name: string, replacements: Record<string, string>): strin
   return html
 }
 
-function pad(n: number) { return String(n).padStart(2, '0') }
-function toDateStr(d: Date) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` }
 function daysAgo(n: number): Date {
   const d = new Date()
   d.setDate(d.getDate() - n)
@@ -47,7 +47,8 @@ function daysAgo(n: number): Date {
 }
 
 export async function runInactivityReminderJob(): Promise<{ eligible: number; sent: number; failed: number }> {
-  const cutoffDateStr   = toDateStr(daysAgo(INACTIVITY_DAYS)) // turnos con date < esto = "60+ días"
+  // Fecha de Argentina de hace 60 días (los turnos guardan su fecha en hora de Argentina).
+  const cutoffDateStr   = todayArgentinaStr(daysAgo(INACTIVITY_DAYS)) // turnos con date < esto = "60+ días"
   const cutoffCreatedAt = daysAgo(INACTIVITY_DAYS)            // sin ningún turno, pero registrado antes de esto
   const cooldownSince   = daysAgo(COOLDOWN_DAYS)
 
@@ -93,7 +94,7 @@ export async function runInactivityReminderJob(): Promise<{ eligible: number; se
       sent++
     } catch (err: any) {
       failed++
-      console.error(`[inactivity-reminder] error mandando mail a ${user.email}:`, err?.message ?? err)
+      console.error(`[inactivity-reminder] error mandando mail a ${maskEmail(user.email)}:`, err?.message ?? err)
     }
   }
 

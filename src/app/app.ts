@@ -8,6 +8,7 @@ import { env }          from './config/env'
 import { apiRoutes }    from './routes'
 import { errorHandler } from './middlewares/errorHandler'
 import { notFound }     from './middlewares/notFound'
+import { requireTrustedOrigin } from './middlewares/trustedOrigin'
 import { initSentry, sentryRequestHandler, sentryErrorHandler } from '../sentry'
 
 // Inicializar Sentry ANTES de crear la app
@@ -63,8 +64,13 @@ if (env.NODE_ENV !== 'test') {
   }))
 }
 
+// Pedidos que cambian datos y vienen de otro sitio (CSRF): ver trustedOrigin.ts.
+app.use(requireTrustedOrigin)
+
+// Esta API es solo JSON (y multipart en /api/uploads/image, que lo procesa multer). No se
+// interpretan formularios urlencoded: un formulario HTML de otro sitio es justo lo que usa
+// un ataque CSRF, y el frontend nunca los envía.
 app.use(express.json({ limit: '8mb' }))
-app.use(express.urlencoded({ extended: false }))
 app.use(cookieParser())
 
 // Alias sin /api — el panel de Render suele pedir una ruta de health check

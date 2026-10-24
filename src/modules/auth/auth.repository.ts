@@ -1,11 +1,23 @@
 // src/modules/auth/auth.repository.ts
+import { createHash } from 'node:crypto'
 import { prisma } from '../../app/database/prisma'
 import type { UserRole } from './types/auth.types'
+
+// El refresh token se guarda como SHA-256: si se filtra la base (o un backup), los valores
+// de la columna no sirven para abrir sesión. Se compara por igualdad exacta del hash.
+function hashRefreshToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex')
+}
 
 export const authRepository = {
 
   findByEmail: (email: string) =>
     prisma.user.findUnique({ where: { email, active: true } }),
+
+  // Busca una cuenta por email SIN filtrar por activa y sin distinguir mayúsculas: sirve para
+  // detectar una cuenta desactivada o guardada con otras mayúsculas antes de crear otra.
+  findAnyByEmail: (email: string) =>
+    prisma.user.findFirst({ where: { email: { equals: email.trim(), mode: 'insensitive' } } }),
 
   findById: (id: string) =>
     prisma.user.findUnique({ where: { id, active: true } }),
@@ -19,8 +31,13 @@ export const authRepository = {
     return null
   },
 
+  // TRANSICIÓN (2026-10-24): las sesiones abiertas antes de este cambio tienen el token
+  // guardado en texto plano. Se aceptan una vez más (el refresh siguiente lo guarda como
+  // hash). Pasados 7 días, que es lo que dura el refresh token, quitar la segunda condición.
   findByRefreshToken: (token: string) =>
-    prisma.user.findFirst({ where: { refreshToken: token, active: true } }),
+    prisma.user.findFirst({
+      where: { active: true, OR: [{ refreshToken: hashRefreshToken(token) }, { refreshToken: token }] },
+    }),
 
   findByVerificationToken: (token: string) =>
     prisma.user.findFirst({ where: { verificationToken: token, active: true } }),
@@ -83,7 +100,7 @@ export const authRepository = {
   },
 
   saveRefreshToken: (userId: string, token: string) =>
-    prisma.user.update({ where: { id: userId }, data: { refreshToken: token } }),
+    prisma.user.update({ where: { id: userId }, data: { refreshToken: hashRefreshToken(token) } }),
 
   clearRefreshToken: (userId: string) =>
     prisma.user.update({ where: { id: userId }, data: { refreshToken: null } }),
@@ -108,11 +125,16 @@ export const authRepository = {
     return prisma.passwordReset.create({ data: { userId, token, expiresAt } })
   },
 
-  findPasswordReset: (token: string) =>
-    prisma.passwordReset.findUnique({ where: { token } }),
+  // Busca el código DE ESA usuaria: el mismo código de otra cuenta no cuenta.
+  findPasswordReset: (userId: string, token: string) =>
+    prisma.passwordReset.findFirst({ where: { userId, token } }),
 
-  markPasswordResetUsed: (token: string) =>
-    prisma.passwordReset.update({ where: { token }, data: { used: true } }),
+  // Marca el código como usado de forma atómica. Devuelve false si otro pedido lo usó antes,
+  // así dos pedidos simultáneos con el mismo código no pueden cambiar la contraseña los dos.
+  consumePasswordReset: async (id: string): Promise<boolean> => {
+    const result = await prisma.passwordReset.updateMany({ where: { id, used: false }, data: { used: true } })
+    return result.count === 1
+  },
 
   updatePassword: (userId: string, passwordHash: string) =>
     prisma.user.update({

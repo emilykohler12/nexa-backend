@@ -11,6 +11,7 @@ import { env }                  from '../../app/config/env'
 import type { SendInvitationDto }       from './dto/send-invitation.dto'
 import type { RegisterProfessionalDto } from './dto/register-professional.dto'
 import type { AuthUser, TokenPair }     from '../auth/types/auth.types'
+import { maskEmail }                    from '../../app/utils/maskEmail'
 
 export const invitationService = {
 
@@ -68,7 +69,7 @@ export const invitationService = {
 
     try {
       await mailProvider.send(dto.email, 'Invitación para unirte como profesional — Nexa', html)
-      console.log(`[mail] ✅ Invitación enviada a ${dto.email}`)
+      console.log(`[mail] ✅ Invitación enviada a ${maskEmail(dto.email)}`)
     } catch (err: any) {
       console.error('[mail] ❌ Error enviando invitación:', err.message)
       // No bloqueamos si el email falla — el admin puede copiar el link manualmente
@@ -93,8 +94,23 @@ export const invitationService = {
     if (invitation.used)          throw new AppError(HTTP.BAD_REQUEST, 'Esta invitación ya fue usada', 'TOKEN_USED')
     if (new Date() > invitation.expiresAt) throw new AppError(HTTP.BAD_REQUEST, 'Esta invitación expiró', 'TOKEN_EXPIRED')
 
+    // Una invitación no puede pisar una cuenta de administradora (le cambiaría la contraseña y
+    // la bajaría a profesional), ni chocar con una cuenta desactivada (daba un 500 por email repetido).
+    const existing = await authRepository.findAnyByEmail(invitation.email)
+    if (existing?.role === 'admin') {
+      throw new AppError(HTTP.CONFLICT, 'Ese email pertenece a una cuenta de administradora', 'ADMIN_ACCOUNT')
+    }
+    if (existing && !existing.active) {
+      throw new AppError(HTTP.CONFLICT, 'Ese email pertenece a una cuenta desactivada. Pedile al administrador que la reactive.', 'ACCOUNT_INACTIVE')
+    }
+
+    // Se reclama la invitación ANTES de crear la cuenta: si llegan dos registros a la vez con el
+    // mismo link, solo uno sigue.
+    if (!(await invitationRepository.consume(dto.token))) {
+      throw new AppError(HTTP.BAD_REQUEST, 'Esta invitación ya fue usada', 'TOKEN_USED')
+    }
+
     const passwordHash = await bcryptProvider.hash(dto.password)
-    const existing     = await authRepository.findByEmail(invitation.email)
 
     let dbUser
 
@@ -113,8 +129,6 @@ export const invitationService = {
     }
 
     if (!dbUser) throw new AppError(HTTP.INTERNAL_SERVER_ERROR, 'Error al crear el usuario')
-
-    await invitationRepository.markUsed(dto.token)
 
     const user: AuthUser = {
       id:              dbUser.id,
