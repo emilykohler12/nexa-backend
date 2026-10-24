@@ -12,6 +12,12 @@
 > usan desde el commit inicial (`98c15ea`, 2026-08-25). Esta versión documenta lo
 > que hace el sistema, incluidas sus limitaciones. Las referencias a líneas son
 > de la fecha de la revisión y pueden moverse.
+>
+> **Actualización del mismo día (2026-10-24).** Una revisión de seguridad de la
+> autenticación llevó a tres cambios, descritos en 4.4 y 5: el refresh token se
+> guarda como hash, `logout` funciona con el access token vencido, y los pedidos
+> que cambian datos con un `Origin` ajeno se rechazan (CSRF). Quedan abiertos
+> los demás riesgos de la sección 5.
 
 ---
 
@@ -110,7 +116,11 @@ válida emite un par nuevo y lo guarda: el refresh token se **rota** en cada uso
 así que uno ya usado deja de servir.
 
 ### 4.4 Cierre de sesión e invalidación
-- `logout` borra el refresh token guardado y las dos cookies.
+- `logout` borra el refresh token guardado y las dos cookies. **No exige una
+  sesión vigente** (desde el 2026-10-24): si el access token ya venció, la
+  usuaria se identifica por la firma del token (se ignora solo el vencimiento) y
+  la sesión se cierra igual. Un token ausente o falsificado no cierra la sesión
+  de nadie, y la respuesta es siempre 200 con las cookies limpias.
 - Cambiar o restablecer la contraseña también borra el refresh token
   (`auth.repository.ts:117`), lo que cierra la sesión en cualquier dispositivo
   al vencer el access token.
@@ -131,19 +141,28 @@ así que uno ya usado deja de servir.
    cambiar el rol de una usuaria no corta los access tokens ya emitidos: valen
    hasta 15 minutos. Aceptado por el tamaño del sistema; la renovación sí se
    corta de inmediato.
-2. **El refresh token se guarda en texto plano** en `users.refresh_token`. Quien
-   lea la base podría usarlo hasta que venza. Mitigación posible: guardar solo un
-   hash.
+2. ~~El refresh token se guardaba en texto plano.~~ **Corregido el 2026-10-24:**
+   `users.refresh_token` guarda el SHA-256 del token (`auth.repository.ts`), por
+   lo que un backup filtrado no permite abrir sesiones. Durante una transición
+   de 7 días se sigue aceptando un token guardado en texto plano (el siguiente
+   refresh lo pasa a hash); pasado ese plazo hay que quitar esa segunda
+   condición de `findByRefreshToken`. Además los tokens llevan `jti`, por lo que
+   dos emitidos en el mismo segundo ya no son idénticos.
 3. **Una sola sesión renovable por usuario** (ver 4.4).
-4. **CSRF.** Con `SameSite=None` el navegador manda la cookie en pedidos
-   iniciados desde otro sitio. CORS (`origin` fijo en `FRONTEND_URL`) impide que
-   otro sitio *lea* las respuestas, pero no impide que *envíe* un pedido simple.
-   Hoy no hay un token anti-CSRF y `app.ts:67` mantiene activo
-   `express.urlencoded`, por lo que un formulario HTML de otro sitio podría
-   disparar un `POST` con la cookie de la usuaria. **Pendiente de revisar**: la
-   mitigación mínima es quitar ese parser (el frontend envía JSON) para que las
-   mutaciones solo acepten `application/json`, que obliga a una verificación
-   previa de CORS.
+4. **CSRF** (mitigado el 2026-10-24). Con `SameSite=None` el navegador manda la
+   cookie en pedidos iniciados desde otro sitio, y CORS (`origin` fijo en
+   `FRONTEND_URL`) impide *leer* las respuestas pero no *enviar* un pedido
+   simple. Antes, un formulario HTML de otro sitio podía cambiar la contraseña
+   de una usuaria logueada o, contra una admin, invitar a un profesional. Ahora:
+   (a) se quitó `express.urlencoded`, así que la API no interpreta formularios;
+   (b) `middlewares/trustedOrigin.ts` rechaza con `403 FORBIDDEN_ORIGIN` todo
+   pedido que cambia datos (no GET/HEAD/OPTIONS) cuya cabecera `Origin` no sea la
+   del frontend. Los navegadores siempre envían `Origin` en esos pedidos y un
+   sitio no puede falsearla; los pedidos sin `Origin` (webhook de Mercado Pago,
+   `curl`, tests) pasan porque no arrastran la sesión de un navegador. No se
+   agregó un token anti-CSRF. Riesgo que queda: un navegador que no envíe
+   `Origin`, algo que los navegadores actuales no hacen en pedidos que cambian
+   datos.
 5. **El login no exige email verificado**, y la verificación no limita ninguna
    ruta; no encontré esa comprobación en `auth.service.ts`.
 6. **`POST /api/auth/change-password` no pide la contraseña actual**

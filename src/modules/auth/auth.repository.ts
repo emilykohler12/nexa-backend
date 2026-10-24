@@ -1,6 +1,13 @@
 // src/modules/auth/auth.repository.ts
+import { createHash } from 'node:crypto'
 import { prisma } from '../../app/database/prisma'
 import type { UserRole } from './types/auth.types'
+
+// El refresh token se guarda como SHA-256: si se filtra la base (o un backup), los valores
+// de la columna no sirven para abrir sesión. Se compara por igualdad exacta del hash.
+function hashRefreshToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex')
+}
 
 export const authRepository = {
 
@@ -19,8 +26,13 @@ export const authRepository = {
     return null
   },
 
+  // TRANSICIÓN (2026-10-24): las sesiones abiertas antes de este cambio tienen el token
+  // guardado en texto plano. Se aceptan una vez más (el refresh siguiente lo guarda como
+  // hash). Pasados 7 días, que es lo que dura el refresh token, quitar la segunda condición.
   findByRefreshToken: (token: string) =>
-    prisma.user.findFirst({ where: { refreshToken: token, active: true } }),
+    prisma.user.findFirst({
+      where: { active: true, OR: [{ refreshToken: hashRefreshToken(token) }, { refreshToken: token }] },
+    }),
 
   findByVerificationToken: (token: string) =>
     prisma.user.findFirst({ where: { verificationToken: token, active: true } }),
@@ -83,7 +95,7 @@ export const authRepository = {
   },
 
   saveRefreshToken: (userId: string, token: string) =>
-    prisma.user.update({ where: { id: userId }, data: { refreshToken: token } }),
+    prisma.user.update({ where: { id: userId }, data: { refreshToken: hashRefreshToken(token) } }),
 
   clearRefreshToken: (userId: string) =>
     prisma.user.update({ where: { id: userId }, data: { refreshToken: null } }),

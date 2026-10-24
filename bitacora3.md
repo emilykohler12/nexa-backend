@@ -315,3 +315,42 @@ Registro de cada cambio hecho en la rama `chore/claude-config`. Cada entrada con
 | 4 | Aporte personal | Pidió resolver el punto del checksum. La notas previas de Emily ("checksum = sha256 del migration.sql tal como está en git") quedaron confirmadas. Archivos: `scripts/migration-checksums.mjs`, `.claude/skills/nueva-migracion/SKILL.md`. |
 | 5 | Desacuerdo y resolución | Ninguno. **Pendiente de Emily:** correr el SELECT en el SQL Editor de Supabase para confirmar el estado real de producción; este registro solo verifica la base de pruebas. `00-gestion/SOP.md` indica `migrate deploy` con la cadena de Supabase, lo que no coincide con lo que se pudo hacer desde su PC; no se editó. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): consulta de solo lectura a la base de pruebas, escritura del script y de la skill, y consulta a Context7. Revisión de Emily pendiente. |
+
+## Entrada 25: commit y push del script de migraciones
+
+**Fecha:** 2026-10-24, 15:43 (commit `13177c6`), registrado el 2026-10-24, 15:43.
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Commitear y pushear a `chore/claude-config` el script `migration-checksums.mjs`, la skill `nueva-migracion` actualizada y la entrada 24. El push actualiza el pull request #1. |
+| 2 | Alternativas y criterio de descarte | Esperar a juntar más cambios en un solo commit: descartado, es una herramienta independiente que Emily necesita ya para verificar Supabase. |
+| 3 | Evidencia que la sostiene | `git log` muestra `13177c6` con el nombre de Emily y sin co-autor. El pull request #1 figura sin conflictos, con 1 chequeo del CI en verde y ninguno fallando al momento del push. |
+| 4 | Aporte personal | Pidió "commit y push". Registro: commit `13177c6`. |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): ejecutó el commit y el push a pedido de Emily. |
+
+## Entrada 26: seguridad del login, primera tanda (CSRF, cierre de sesión y refresh token)
+
+**Fecha:** 2026-10-24, 16:09 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | (a) Quitar `express.urlencoded` y agregar `src/app/middlewares/trustedOrigin.ts`, que rechaza con `403 FORBIDDEN_ORIGIN` los pedidos que cambian datos y traen un `Origin` distinto de `FRONTEND_URL`. (b) `POST /api/auth/logout` deja de exigir `authenticate`: identifica a la usuaria por la firma del access token aunque esté vencido (`verifyAccessEvenIfExpired`) y siempre limpia las cookies. (c) El refresh token se guarda como SHA-256, con una transición de 7 días que acepta el formato viejo. (d) Los tokens llevan `jwtid` (jti). Test nuevo: `tests/integration/auth.security.test.ts` (16 casos). Se actualizaron el ADR-003 y `CLAUDE.md`. |
+| 2 | Alternativas y criterio de descarte | Token anti-CSRF por pedido: descartado, exige cambios en el frontend y el chequeo de `Origin` cubre el vector con una pieza chica. Exigir `Content-Type: application/json` en todos los POST: descartado, rompería los POST sin cuerpo del frontend (logout, refresh, pagos). Cambiar `SameSite` a `Lax`: descartado, con frontend y backend en dominios distintos el navegador no mandaría la sesión. Migrar ya todos los refresh tokens a hash borrando los viejos: descartado, desloguearía a todas; se prefirió la transición. Tabla de sesiones (varios dispositivos): descartada por ahora, es un cambio de diseño mayor. |
+| 3 | Evidencia que la sostiene | Informe del subagente `revisor-seguridad-api` (verificado por mí leyendo el código). Los tests reprodujeron los ataques antes del arreglo (12 de 16 fallaban): un formulario de otro sitio cambiaba la contraseña de una clienta (respuesta 200) y creaba una invitación de profesional desde una cuenta admin (201); `logout` con el access token vencido respondía 401 sin cerrar la sesión; el refresh token se guardaba tal cual; y dos tokens emitidos en el mismo segundo salían idénticos. Documentación (Context7): `req.body` queda `undefined` sin parser que coincida; `jwt.sign` admite `jwtid` y `jwt.verify` admite `ignoreExpiration`. Después del arreglo: 16 de 16, tres corridas seguidas; suite completa de 22 archivos y 173 tests en verde; `typecheck:all` sin errores. |
+| 4 | Aporte personal | Aprobó la primera tanda ("OK") y fijó que el frontend no se toque sin su permiso. Archivos: `app.ts`, `trustedOrigin.ts`, `jwt.provider.ts`, `auth.repository.ts`, `auth.controller.ts`, `auth.routes.ts`, `auth.security.test.ts`, ADR-003, `CLAUDE.md`. |
+| 5 | Desacuerdo y resolución | Ninguno. **Efectos al desplegar:** las sesiones abiertas siguen funcionando (transición); no hay migraciones ni cambios de rutas ni de formato de respuesta. **Verificar en producción:** que `FRONTEND_URL` en Render sea exactamente el origen que usan las usuarias (CORS ya lo exigía, pero ahora una diferencia también bloquearía los POST con 403). El pedido de pago y el webhook de Mercado Pago no traen `Origin` y pasan. **Pendiente (segunda tanda, con cambios en el frontend):** contraseña actual en `change-password` y email en `reset-password`. Después del 2026-10-31 quitar la aceptación del refresh token en texto plano. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): usó el subagente `revisor-seguridad-api` (solo lectura), Context7 para Express y jsonwebtoken, y escribió el arreglo y los tests. Revisión de Emily pendiente. |
+
+## Entrada 27: commit y push de la primera tanda de seguridad del login
+
+**Fecha:** 2026-10-24, 16:09 (hora de la máquina). El hash del commit figura en `git log` con el mensaje "Seguridad del login: CSRF, cierre de sesión y refresh token".
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Commitear y pushear a `chore/claude-config` los cambios de la entrada 26 junto con las entradas 25 a 27 de la bitácora. El push actualiza el pull request #1. |
+| 2 | Alternativas y criterio de descarte | Abrir un pull request aparte para la seguridad del login: descartado por ahora, Emily pidió seguir en el PR #1 y el commit queda separado para poder revertirlo. |
+| 3 | Evidencia que la sostiene | Suite completa en verde antes del commit (22 archivos, 173 tests) y `typecheck:all` sin errores. |
+| 4 | Aporte personal | Pidió "commit y push". |
+| 5 | Desacuerdo y resolución | Ninguno. Antes de mergear a `main`: verificar `FRONTEND_URL` en Render (ver entrada 26). |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): ejecutó el commit y el push a pedido de Emily. |

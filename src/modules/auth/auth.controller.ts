@@ -3,6 +3,7 @@ import type { Request, Response, NextFunction } from 'express'
 import { z }                   from 'zod'
 import { authService }         from './auth.service'
 import { bcryptProvider }      from './providers/bcrypt.provider'
+import { jwtProvider }         from './providers/jwt.provider'
 import { authRepository }      from './auth.repository'
 import { registerDto }         from './dto/register.dto'
 import { loginDto }            from './dto/login.dto'
@@ -34,6 +35,15 @@ function setTokenCookies(res: Response, tokens: { accessToken: string; refreshTo
 function clearTokenCookies(res: Response): void {
   res.clearCookie('access_token',  { ...COOKIE_BASE })
   res.clearCookie('refresh_token', { ...COOKIE_BASE, path: '/api/auth/refresh' })
+}
+
+function userIdFromExpiredAccessToken(token: unknown): string | null {
+  if (typeof token !== 'string' || !token) return null
+  try {
+    return jwtProvider.verifyAccessEvenIfExpired(token).sub
+  } catch {
+    return null
+  }
 }
 
 function validate<S extends z.ZodType>(schema: S, data: unknown): z.infer<S> {
@@ -78,7 +88,11 @@ export const authController = {
 
   logout: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      if (req.user) await authService.logout(req.user.id)
+      // La ruta no exige sesión vigente: si el access token venció (15 min) igual hay que
+      // cerrar la sesión. Se identifica a la usuaria por la firma del token, aunque esté
+      // vencido; un token falso o ausente no cierra la sesión de nadie.
+      const userId = req.user?.id ?? userIdFromExpiredAccessToken(req.cookies?.access_token)
+      if (userId) await authService.logout(userId)
       clearTokenCookies(res)
       res.status(HTTP.OK).json({ success: true })
     } catch (err) { next(err) }
