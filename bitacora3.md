@@ -224,3 +224,68 @@ Registro de cada cambio hecho en la rama `chore/claude-config`. Cada entrada con
 | 4 | Aporte personal | Pidió resolver el punto del webhook como se explicó. Registro: archivos modificados del repositorio. |
 | 5 | Desacuerdo y resolución | El plan inicial era rechazar avisos viejos si Mercado Pago lo permitía sin cortar sus reintentos. La documentación indica que no lo permite con seguridad, así que se resolvió con idempotencia, que es la protección real contra repeticiones. No cambia ninguna ruta ni forma de respuesta: no afecta al frontend. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): usó el subagente `revisor-seguridad-api` (solo lectura) para revisar el flujo, Context7 para la documentación de Mercado Pago, y escribió el arreglo y los tests. Revisión de Emily pendiente. |
+
+## Entrada 18: commit de Sentry y webhook
+
+**Fecha:** 2026-10-24, 05:40 (hora del commit `6c2db39`), registrado el 2026-10-24, 14:43.
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Commitear en `chore/claude-config` los arreglos de las entradas 16 y 17 (Sentry y webhook idempotente) con sus tests y la actualización de `CLAUDE.md`. No se pusheó. |
+| 2 | Alternativas y criterio de descarte | Esperar a terminar la zona horaria para hacer un solo commit: descartado, son cambios independientes y conviene poder revertirlos por separado. |
+| 3 | Evidencia que la sostiene | Suite completa en verde antes del commit (20 archivos, 148 tests) y `typecheck:all` sin errores. `git log` confirma `6c2db39` con el nombre de Emily y sin co-autor. |
+| 4 | Aporte personal | Pidió "commit y seguir". Registro: commit `6c2db39`. |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): ejecutó el commit a pedido de Emily. |
+
+## Entrada 19: `VITE_TENANT_SLUG` y aclaración en `CLAUDE.md`
+
+**Fecha:** 2026-10-24, 14:43 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Documentar en `CLAUDE.md` que el "tenant" del frontend es solo la marca del negocio y que `VITE_TENANT_SLUG` no se usa. No se tocó el frontend. |
+| 2 | Alternativas y criterio de descarte | Borrar la variable del frontend: no se hizo, es otro repositorio y no se pidió; sirve de marcador si se arma un día un servicio de configuración. |
+| 3 | Evidencia que la sostiene | Lectura de `nexa-frontend`: `tenant.config.ts` arma el objeto `Business` (nombre, logo, colores, textos, servicios, productos) desde archivos fijos en `src/app/data/tenant/`; `TenantContext.tsx` lo aplica como variables CSS (`--tenant-primary`, `--tenant-accent`); `appConfig.tenantSlug` solo se define en `app.config.ts` y aparece en un comentario TODO. Es coherente con el ADR-001 y con el plan de Emily: para otro cliente se clona y se adaptan nombre, logo y colores. |
+| 4 | Aporte personal | La idea de un sistema para Loren que se adapta a otro cliente. Archivo: `CLAUDE.md`. |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): lectura del frontend (solo lectura) y redacción de la aclaración. |
+
+## Entrada 20: ADR-003 reescrito (`04-diseno/adr-003-jwt-auth.md`)
+
+**Fecha:** 2026-10-24, 14:43 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Reescribir el ADR-003 para que describa el código real: JWT en cookies `httpOnly` (acceso 15 min y refresh 7 días con rotación), en lugar de `localStorage` con header `Bearer`. Se agregó una nota de revisión, las alternativas reales, las referencias a archivos y líneas existentes, los tests que hay y los que faltan, y las limitaciones conocidas. Se actualizó la línea de auth en `CLAUDE.md`. |
+| 2 | Alternativas y criterio de descarte | Dejar el ADR como estaba y aclarar solo en `CLAUDE.md`: descartado, el ADR forma parte de la entrega y contradecía el código. Cambiar el código para que coincida con el ADR (pasar a `localStorage`): descartado, es menos seguro frente a XSS. Borrar el contenido anterior sin dejar rastro: descartado, la nota de revisión explica qué decía y por qué estaba mal, como en el ADR-002. |
+| 3 | Evidencia que la sostiene | `auth.controller.ts` (cookies), `auth.middleware.ts`, `jwt.provider.ts`, `generateTokens.ts`, `auth.service.ts` y `auth.repository.ts` (refresh token guardado y rotado), `env.ts` (secretos de 32 caracteres), `auth.routes.ts` (límites de velocidad), `app.ts` (CORS y `express.urlencoded`), y el historial de git: las cookies existen desde el commit inicial `98c15ea` (2026-08-25), antes de la fecha del ADR. Se corrigieron dos afirmaciones propias al verificar: `guestOnly` no lo usa ninguna ruta, y `change-password` no pide la contraseña actual. |
+| 4 | Aporte personal | Pidió rehacer el ADR-003; el ADR original era suyo. Archivo: `04-diseno/adr-003-jwt-auth.md`. |
+| 5 | Desacuerdo y resolución | Ninguno. El ADR deja anotados, sin corregirlos en el código, seis riesgos: access token no revocable, refresh token en texto plano, una sola sesión renovable por usuario, posible CSRF por `SameSite=None` con el parser urlencoded activo, cambio de contraseña sin la contraseña actual y login sin email verificado. Quedan a decisión de Emily. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): redacción y verificación contra el código. Revisión de Emily pendiente, por tratarse de un documento de la entrega. |
+
+## Entrada 21: zona horaria de Argentina (ART) en turnos, jobs y tests
+
+**Fecha:** 2026-10-24, 14:54 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Crear `src/app/utils/argentinaTime.ts` (`todayArgentinaStr`, `appointmentInstant`, `argentinaParts`, `ARGENTINA_TIME_ZONE`) y usarlo en: el job de no-show (`autoNoShow.job.ts`), el corte de 12 horas de cancelación y reembolso (dos lugares de `appointment.service.ts`), el registro de llegada del día (`registerArrival`), la vigencia de promociones de turnos (`isPromoLive`), el "próximo turno" de la ficha de la clienta, las promociones de la tienda, los pedidos y los eventos especiales. Los cuatro cron de `scheduler.ts` pasan a `timezone: 'America/Argentina/Buenos_Aires'`. `vitest.config.mts` fija `TZ=UTC` y `tests/helpers/factories.ts` arma las fechas con el mismo helper. Test nuevo: `tests/integration/timezone-art.test.ts` (9 casos). `CLAUDE.md` documenta la regla. |
+| 2 | Alternativas y criterio de descarte | Fijar `TZ=America/Argentina/Buenos_Aires` en Render: descartado, `toAdminView` y `normalizeAdminUpdateInput` dependen de que el proceso esté en UTC y se romperían. Agregar una librería de fechas (luxon, date-fns-tz): descartado, `Intl` alcanza y no hay horario de verano. Cambiar también `inactivityReminder`, `autoPromotions` y los dashboards: postergado, el impacto es bajo (solo cambian de día unas horas antes) y no se pidió ampliar el alcance. |
+| 3 | Evidencia que la sostiene | Informe del subagente `revisor-reservas`, verificado leyendo el código. **Corrección al informe:** el subagente describía el desfase con el signo cambiado; con el servidor en UTC, `new Date('2026-10-24T10:00:00')` es las 07:00 de Argentina, 3 horas **antes** del turno real, de modo que el no-show saltaría a las 07:20 para un turno de las 10:00 (antes de que empiece) y la regla de reembolso calcularía 3 horas de menos. Documentación de node-cron (Context7): `cron.schedule(expresión, función, { timezone })`. Los tests reprodujeron los errores antes del arreglo (6 de 9 fallaban con `TZ=UTC`) y pasan después. Con `TZ=UTC` la suite anterior pasaba entera (148), es decir, no los detectaba. Resultado final: 21 archivos y 157 tests en verde; `typecheck:all` sin errores. |
+| 4 | Aporte personal | Pidió resolver la zona horaria como se explicó. Archivos: `src/app/utils/argentinaTime.ts`, `autoNoShow.job.ts`, `scheduler.ts`, `appointment.service.ts`, `order.service.ts`, `promotion.model.ts`, `specialEvent.model.ts`, `vitest.config.mts`, `tests/helpers/factories.ts`, `tests/integration/timezone-art.test.ts`. |
+| 5 | Desacuerdo y resolución | Ninguno con Emily. Con el subagente: su informe tenía el signo del desfase invertido; se resolvió verificando con una ejecución (`TZ=UTC node -e …`). **Pendiente de verificar por Emily:** la zona real del servidor de Render. Si corre en UTC, el no-show automático de producción venía marcando turnos antes de su hora. Cómo comprobarlo: Render, Shell del servicio, `node -e "console.log(new Date().toString())"`; o en el panel de actividad buscar "Turno marcado como no show (automático)" y comparar con la hora del turno. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): usó el subagente `revisor-reservas` (solo lectura), Context7 para node-cron, y escribió el arreglo y los tests. Revisión de Emily pendiente. Al desplegar cambia el comportamiento en producción: conviene revisar después los turnos marcados como no-show. |
+
+## Entrada 22: commits de la zona horaria y de la documentación
+
+**Fecha:** 2026-10-24, 14:55 (commit `4398d15`), registrado el 2026-10-24, 14:55. El segundo commit (documentación) se hizo inmediatamente después, con este mismo registro.
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Dos commits en `chore/claude-config`: (1) `4398d15`, código y tests de la hora de Argentina (entrada 21); (2) documentación: ADR-003 reescrito (entrada 20), `CLAUDE.md` (entradas 19 y 21) y `bitacora3.md` (entradas 18 a 22). No se pusheó. |
+| 2 | Alternativas y criterio de descarte | Un solo commit: descartado, el código se puede revertir sin perder la documentación y el ADR es un documento de la entrega con su propio historial. |
+| 3 | Evidencia que la sostiene | Suite completa antes del commit: 21 archivos y 157 tests en verde; `typecheck:all` sin errores. `git log` muestra el nombre de Emily y ningún co-autor. |
+| 4 | Aporte personal | Pidió "sí, commit". Registro: commit `4398d15` y el commit de documentación siguiente. |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): preparó y ejecutó los commits a pedido de Emily. |
