@@ -21,7 +21,7 @@ Si te pasan un diff o archivos, revisá eso y sus vecinos directos. Si no, revis
 - **Rate limit**: global 100/min y limiters en `auth.routes.ts`, desactivados con `NODE_ENV=test`. `trust proxy` = 1.
 - **Webhook**: `POST /api/webhook/mercadopago` con `verificarFirmaMercadoPago` (HMAC-SHA256 sobre `id`, `request-id` y `ts`, comparación con `timingSafeEqual`).
 - **Uploads**: `POST /api/uploads/image`, multer en memoria, 5 MB, Supabase Storage; cualquier usuaria autenticada puede subir.
-- **Sentry**: `beforeSend` solo descarta errores de validación y 404; no redacta cookies ni cuerpos.
+- **Sentry**: `beforeSend` descarta errores de validación y 404 y aplica `scrubSensitiveData` (borra cookies, cuerpo, query string, cabeceras sensibles y email/IP). No limpia el texto de los mensajes de error ni de los `console.error`.
 
 ## Qué buscar
 

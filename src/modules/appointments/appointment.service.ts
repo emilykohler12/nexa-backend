@@ -1031,10 +1031,13 @@ export const appointmentService = {
     if (legs.every(l => l.paymentStatus === 'partial')) return // ya aplicado
 
     const paymentStatus = status === 'approved' ? 'partial' : status
-    await prisma.appointment.updateMany({
-      where: { comboGroupId, status: { not: 'cancelled' } },
+    // Escritura condicional: si otro aviso del mismo pago ya aplicó el resultado a
+    // todas las patas, esta llamada no cambia nada y no vuelve a notificar.
+    const claimed = await prisma.appointment.updateMany({
+      where: { comboGroupId, status: { not: 'cancelled' }, paymentStatus: { not: 'partial' } },
       data:  { paymentStatus, mpPaymentId },
     })
+    if (claimed.count === 0) return
 
     await activityService.log({
       action: 'Pago de seña recibido', module: 'payments',
@@ -1279,11 +1282,16 @@ export const appointmentService = {
     if (appointment.paymentStatus === 'partial') return
 
     const paymentStatus = status === 'approved' ? 'partial' : status // 'partial' = seña pagada
-    const updated = await prisma.appointment.update({
-      where:   { id },
-      data:    { paymentStatus, mpPaymentId },
-      include: APPOINTMENT_INCLUDE,
+
+    // El chequeo de arriba no alcanza si dos avisos llegan a la vez (payment.created y
+    // payment.updated, o el webhook junto con verifyPayment): los dos leen "pendiente".
+    // Por eso la escritura es condicional y la base decide quién gana; el otro no hace nada.
+    const claimed = await prisma.appointment.updateMany({
+      where: { id, paymentStatus: { not: 'partial' } },
+      data:  { paymentStatus, mpPaymentId },
     })
+    if (claimed.count === 0) return
+    const updated = await prisma.appointment.findUniqueOrThrow({ where: { id }, include: APPOINTMENT_INCLUDE })
 
     await activityService.log({
       action: 'Pago de seña recibido', module: 'payments',

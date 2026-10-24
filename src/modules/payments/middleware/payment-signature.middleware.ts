@@ -34,7 +34,8 @@ export function verificarFirmaMercadoPago(req: Request, res: Response, next: Nex
   const requestId        = req.header('x-request-id')
   const dataId            = req.query['data.id'] as string | undefined
 
-  if (!signatureHeader || !requestId || !dataId) {
+  // typeof: si "data.id" viene repetido en la URL, Express lo entrega como lista.
+  if (!signatureHeader || !requestId || typeof dataId !== 'string' || !dataId) {
     console.warn('[mercadopago] webhook sin x-signature / x-request-id / data.id — se rechaza (401)')
     return res.sendStatus(401)
   }

@@ -33,7 +33,8 @@ Necesitan un PostgreSQL de pruebas apuntado por `.env.test` (copiar de `.env.tes
 
 ## Seguridad
 
-- Nunca loguear ni devolver tokens, cookies, datos de pago ni contenido de `.env`. `beforeSend` de Sentry (`src/sentry.ts`) solo descarta errores de validación y 404; **no** redacta cookies ni cuerpos, así que no meter datos sensibles en mensajes de error.
+- Nunca loguear ni devolver tokens, cookies, datos de pago ni contenido de `.env`. `beforeSend` de Sentry (`src/sentry.ts`) descarta errores de validación y 404 y, con `scrubSensitiveData`, borra cookies, cuerpo, query string, cabeceras sensibles y email/IP del usuario. Los mensajes de error y los `console.error` igual pueden llegar a Sentry: no meter datos sensibles en ellos.
+- Webhook de Mercado Pago: Mercado Pago reintenta cada 15 minutos (y cada vez más espaciado) hasta recibir 200, y no está documentado que el `ts` se renueve, así que **no** se rechazan avisos por antigüedad. La protección contra repeticiones es la idempotencia: `applyPaymentResult` y `applyGroupPaymentResult` usan escrituras condicionales (`updateMany` con `paymentStatus` distinto del final), no un chequeo previo.
 - `helmet` con CSP `default-src 'none'`, rate limit global (100/min) y limiters propios en `auth.routes.ts` (desactivados con `NODE_ENV=test`), CORS con `origin: FRONTEND_URL` y `credentials: true`, `trust proxy` en 1.
 - Webhook de Mercado Pago: `POST /api/webhook/mercadopago`, protegido por `verificarFirmaMercadoPago`.
 - Uploads: `POST /api/uploads/image`, multer en memoria, 5 MB, sube a Supabase Storage.

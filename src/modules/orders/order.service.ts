@@ -273,12 +273,21 @@ export const orderService = {
         qtyByProduct.set(li.productId, (qtyByProduct.get(li.productId) ?? 0) + li.quantity)
       }
 
-      await prisma.$transaction(async (tx) => {
+      // Primero se reclama el pedido con una escritura condicional y recién después
+      // se descuenta el stock, todo en la misma transacción: si dos avisos llegan a
+      // la vez, solo uno lo reclama y el otro sale sin tocar el stock.
+      const applied = await prisma.$transaction(async (tx) => {
+        const claimed = await tx.order.updateMany({
+          where: { id, paymentStatus: { not: 'paid' } },
+          data:  { paymentStatus, mpPaymentId },
+        })
+        if (claimed.count === 0) return false
         for (const [productId, qty] of qtyByProduct) {
           await tx.product.update({ where: { id: productId }, data: { stock: { decrement: qty } } })
         }
-        await tx.order.update({ where: { id }, data: { paymentStatus, mpPaymentId } })
+        return true
       })
+      if (!applied) return
 
       // No es fatal, pero si algún producto quedó en negativo el admin tiene que
       // saberlo (se vendió más de lo que había entre que se creó el pedido y se
@@ -296,7 +305,12 @@ export const orderService = {
     } else {
       // rechazado / cancelado / pendiente — nunca se descontó stock, solo se
       // deja registrado el estado.
-      await prisma.order.update({ where: { id }, data: { paymentStatus, mpPaymentId } })
+      // Condicional para que un aviso tardío de rechazo no pise un pedido ya pago.
+      const claimed = await prisma.order.updateMany({
+        where: { id, paymentStatus: { not: 'paid' } },
+        data:  { paymentStatus, mpPaymentId },
+      })
+      if (claimed.count === 0) return
     }
 
     const viaWhatsapp = mpPaymentId.startsWith('whatsapp-manual-')

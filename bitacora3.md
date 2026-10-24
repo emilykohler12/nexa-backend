@@ -185,3 +185,42 @@ Registro de cada cambio hecho en la rama `chore/claude-config`. Cada entrada con
 | 4 | Aporte personal | Pidió resolver los puntos ciegos de los hooks. Archivo: `.claude/hooks/guard-bash.mjs`. |
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): reescritura del hook y pruebas. Revisión de Emily pendiente. |
+
+## Entrada 15: commit de la primera tanda de ajustes
+
+**Fecha:** 2026-10-24, 05:34 (hora del commit `2b34aa7`), registrado el 2026-10-24, 05:40.
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Commitear en `chore/claude-config` el hook de comandos reescrito, `.gitignore` (con `launch.json`), `CLAUDE.md`, `bitacora3.md` y el borrado de `evolver.config.json`. No se pusheó. |
+| 2 | Alternativas y criterio de descarte | Un commit por cambio: descartado, son ajustes chicos y relacionados. Pushear en el mismo paso: descartado, no se pidió. |
+| 3 | Evidencia que la sostiene | `git log` muestra `2b34aa7` con el nombre de Emily y sin co-autor; `git status` quedó limpio salvo el trabajo posterior. |
+| 4 | Aporte personal | Pidió "commit y seguir". Registro: commit `2b34aa7`. |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): armó y ejecutó el commit a pedido de Emily. |
+
+## Entrada 16: Sentry deja de recibir datos sensibles (`src/sentry.ts`)
+
+**Fecha:** 2026-10-24, 05:40 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Agregar `scrubSensitiveData` y llamarla desde `beforeSend`: borra cookies y cuerpo del pedido, filtra las cabeceras `authorization`, `cookie`, `set-cookie`, `x-signature` y similares, reemplaza el query string, recorta la URL sin query y elimina email, nombre de usuario e IP del usuario (se conserva el id). Se agregó `tests/integration/sentry.scrub.test.ts` (5 casos) y se actualizaron `CLAUDE.md` y el subagente `revisor-seguridad-api`. |
+| 2 | Alternativas y criterio de descarte | Opciones de configuración propias del SDK (`dataCollection`): descartadas por ahora, dependen de la versión del SDK y la función propia es probable con un test. Desactivar Sentry: descartado, es el aviso de caídas en producción. |
+| 3 | Evidencia que la sostiene | Documentación de Sentry (consultada con Context7): la integración de datos del pedido en servidor incluye cookies, cabeceras, query string, cuerpo y URL. El `verify-email` de esta API lleva un token en la query. Los 5 tests pasan y `typecheck:all` no da errores. Límite: no se limpia el texto de los mensajes de error ni de `console.error`. |
+| 4 | Aporte personal | Pidió resolver el punto de Sentry como se explicó. Archivos: `src/sentry.ts`, `tests/integration/sentry.scrub.test.ts`. |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5), con consulta a Context7 para la documentación de Sentry. Revisión de Emily pendiente. |
+
+## Entrada 17: webhook de Mercado Pago, idempotencia y frescura del `ts`
+
+**Fecha:** 2026-10-24, 05:40 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | (a) **No** rechazar avisos por antigüedad del `ts`. (b) Hacer idempotente la aplicación del pago con escrituras condicionales: `applyPaymentResult` (turno), `applyGroupPaymentResult` (combo) y `applyPaymentResult` (pedido, reclamando el pedido dentro de la transacción antes de descontar stock; un rechazo tardío ya no pisa un pedido pago). (c) Validar que `data.id` sea un texto único en el middleware y el controller. Archivos: `appointment.service.ts`, `order.service.ts`, `payment-signature.middleware.ts`, `payment.controller.ts` y `tests/integration/payments.webhook-idempotency.test.ts` (7 casos). |
+| 2 | Alternativas y criterio de descarte | Ventana de 5 minutos sobre el `ts`: descartada, Mercado Pago reintenta cada 15 minutos y de forma cada vez más espaciada hasta recibir 200, y su documentación no dice que el `ts` se renueve; se perderían confirmaciones legítimas. Ventana amplia: no aporta, porque la idempotencia ya neutraliza una repetición. Quedan sin hacer, a decisión de Emily: validar monto y moneda antes de marcar pagado, responder 500 cuando falla el procesamiento para que Mercado Pago reintente, y no loguear el objeto de error completo del SDK. |
+| 3 | Evidencia que la sostiene | Informe del subagente `revisor-seguridad-api` con `archivo:línea`, verificado leyendo el código. El controller no usa el cuerpo y consulta el pago a Mercado Pago, por eso una repetición solo reaplica el estado real. Documentación de Mercado Pago (Context7): respuesta 200 o 201 en 22 segundos, reintentos cada 15 minutos. Los tests reprodujeron el defecto antes del arreglo (5 notificaciones y 5 logs en lugar de 1; stock en −5 en lugar de 7) y pasan después, 3 corridas seguidas. Suite completa: 20 archivos y 148 tests en verde; `typecheck:all` sin errores. |
+| 4 | Aporte personal | Pidió resolver el punto del webhook como se explicó. Registro: archivos modificados del repositorio. |
+| 5 | Desacuerdo y resolución | El plan inicial era rechazar avisos viejos si Mercado Pago lo permitía sin cortar sus reintentos. La documentación indica que no lo permite con seguridad, así que se resolvió con idempotencia, que es la protección real contra repeticiones. No cambia ninguna ruta ni forma de respuesta: no afecta al frontend. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): usó el subagente `revisor-seguridad-api` (solo lectura) para revisar el flujo, Context7 para la documentación de Mercado Pago, y escribió el arreglo y los tests. Revisión de Emily pendiente. |
