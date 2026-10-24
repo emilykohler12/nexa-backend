@@ -5,16 +5,14 @@ import { HTTP }     from '../../app/constants/http'
 import { activityService } from '../activity/activity.service'
 import { paymentService }  from '../payments/payment.service'
 import { fullName } from '../../app/utils/fullName'
+import { todayArgentinaStr } from '../../app/utils/argentinaTime'
 
 type OrderItemInput = { productId: string; quantity: number; promotionId?: string | null }
 type PromotionItem  = { id: string; name: string; price: number }
 type ResolvedLine    = { productId: string; quantity: number; unitPrice?: number }
 
-function pad(n: number) { return String(n).padStart(2, '0') }
-function todayStr() {
-  const d = new Date()
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
+// "Hoy" en hora de Argentina, no la del servidor (ver argentinaTime.ts).
+const todayStr = todayArgentinaStr
 
 function isPromoLive(promo: { status: string; startDate: string | null; endDate: string | null }): boolean {
   if (promo.status !== 'active') return false

@@ -2,6 +2,7 @@
 //
 // Evento especial destacado en el home (ver comentario del modelo en schema.prisma).
 import { prisma } from '../../app/database/prisma'
+import { todayArgentinaStr } from '../../app/utils/argentinaTime'
 
 export interface SpecialEventData {
   serviceId:      string
@@ -12,11 +13,8 @@ export interface SpecialEventData {
   active:         boolean
 }
 
-function pad(n: number) { return String(n).padStart(2, '0') }
-function todayStr() {
-  const d = new Date()
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
+// "Hoy" en hora de Argentina, no la del servidor (ver argentinaTime.ts).
+const todayStr = todayArgentinaStr
 
 const withDisplayInfo = {
   service: { select: { id: true, name: true, description: true, price: true, duration: true, image: true } },

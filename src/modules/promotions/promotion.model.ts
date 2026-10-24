@@ -1,6 +1,7 @@
 // src/modules/promotions/promotion.model.ts
 import type { Prisma } from '@prisma/client'
 import { prisma } from '../../app/database/prisma'
+import { todayArgentinaStr } from '../../app/utils/argentinaTime'
 
 export type PromotionType   = 'service' | 'product'
 export type PromotionStatus = 'active' | 'inactive'
@@ -28,11 +29,8 @@ export interface PromotionData {
   endDate:       string | null
 }
 
-function pad(n: number) { return String(n).padStart(2, '0') }
-function todayStr() {
-  const d = new Date()
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
+// "Hoy" en hora de Argentina, no la del servidor (ver argentinaTime.ts).
+const todayStr = todayArgentinaStr
 
 export const promotionModel = {
 

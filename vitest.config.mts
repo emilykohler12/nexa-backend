@@ -1,5 +1,10 @@
 import { defineConfig } from 'vitest/config'
 
+// El servidor de producción (Render) corre en UTC mientras los turnos están en hora
+// de Argentina. Los tests corren en UTC también, para reproducir esa diferencia en
+// cualquier máquina (la de Emily está en hora de Argentina) y en el CI.
+process.env.TZ = 'UTC'
+
 export default defineConfig({
   test: {
     environment: 'node',

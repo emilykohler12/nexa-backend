@@ -17,6 +17,7 @@ import { notificationService } from '../professionals/notification.service'
 import { mailProvider } from '../auth/providers/mail.provider'
 import { bcryptProvider } from '../auth/providers/bcrypt.provider'
 import type { SpecialSlot } from '../services/service.model'
+import { todayArgentinaStr, appointmentInstant } from '../../app/utils/argentinaTime'
 
 function loadTemplate(name: string, replacements: Record<string, string>): string {
   const candidates = [
@@ -366,17 +367,12 @@ async function afterStaffReschedule(a: AppointmentRow, previousDate: string, pre
   ).catch(err => console.error('[mail] error notificando reprogramación (staff):', err.message))
 }
 
-function todayLocalStr(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
 async function registerArrival(appointment: AppointmentRow): Promise<AppointmentRow> {
   if (appointment.arrivedAt) return appointment
   if (appointment.status !== 'confirmed') {
     throw new AppError(HTTP.BAD_REQUEST, 'Solo se puede registrar la llegada de un turno confirmado', 'INVALID_STATUS')
   }
-  if (appointment.date !== todayLocalStr()) {
+  if (appointment.date !== todayArgentinaStr()) {
     throw new AppError(HTTP.BAD_REQUEST, 'Solo se puede registrar la llegada el día del turno', 'NOT_TODAY')
   }
   return prisma.appointment.update({
@@ -450,7 +446,7 @@ async function cancelWithGroup(appointment: AppointmentRow, emailClient: boolean
 
   const updatedList: AppointmentRow[] = []
   for (const a of group) {
-    const apptDateTime = new Date(`${a.date}T${a.time}:00`)
+    const apptDateTime = appointmentInstant(a.date, a.time)
     const hoursUntil    = (apptDateTime.getTime() - Date.now()) / (1000 * 60 * 60)
     const eligible      = hoursUntil >= paymentSettings.cancellationHours
     const refunded      = eligible && paymentSettings.refundPolicy !== 'none'
@@ -704,7 +700,7 @@ async function assertClientNotBlocked(clientId: string) {
 
 function isPromoLive(promo: { status: string; startDate: string | null; endDate: string | null }): boolean {
   if (promo.status !== 'active') return false
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayArgentinaStr()
   if (promo.startDate && promo.startDate > today) return false
   if (promo.endDate && promo.endDate < today) return false
   return true
@@ -1328,7 +1324,7 @@ export const appointmentService = {
       let refunded = false
       if (isLastLeg) {
         const settings   = await settingsService.getPaymentSettings()
-        const dt         = new Date(`${appointment.date}T${appointment.time}:00`)
+        const dt         = appointmentInstant(appointment.date, appointment.time)
         const hoursUntil  = (dt.getTime() - Date.now()) / (1000 * 60 * 60)
         refunded = hoursUntil >= settings.cancellationHours && settings.refundPolicy !== 'none'
       }
@@ -1594,7 +1590,7 @@ export const appointmentService = {
       byClient.set(a.clientId, list)
     }
 
-    const today = new Date().toISOString().slice(0, 10)
+    const today = todayArgentinaStr()
 
     return Array.from(byClient.values()).map(list => {
       const first = list[0]

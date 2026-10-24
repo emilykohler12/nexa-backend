@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto'
 import { prisma } from '../../src/app/database/prisma'
 import { bcryptProvider } from '../../src/modules/auth/providers/bcrypt.provider'
+import { argentinaParts, todayArgentinaStr } from '../../src/app/utils/argentinaTime'
 
 export const TEST_PASSWORD = 'Test1234!'
 
@@ -104,9 +105,11 @@ export async function setAvailability(
 // Un lunes al menos una semana adelante (YYYY-MM-DD) + N días — para armar
 // turnos dentro de una misma semana (R-04 mide la carga de lunes a domingo).
 export function futureWeekDay(daysAfterMonday = 0): string {
-  const d = new Date()
-  d.setDate(d.getDate() + 7 + ((8 - d.getDay()) % 7) + daysAfterMonday)
-  return localDateStr(d)
+  // Se parte de la fecha de hoy en Argentina, a medianoche UTC, para que el día de la
+  // semana y la suma de días no dependan de la zona de la máquina.
+  const d = new Date(`${todayArgentinaStr()}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + 7 + ((8 - d.getUTCDay()) % 7) + daysAfterMonday)
+  return d.toISOString().slice(0, 10)
 }
 
 // Habilita a una profesional a hacer un servicio — necesario para que la
@@ -149,11 +152,11 @@ export async function createPromotion(overrides: Partial<{
   })
 }
 
-// Nunca usar toISOString() para armar estas fechas — convierte a UTC y puede
-// correr el día para atrás/adelante según la zona horaria (mismo motivo que
-// en el resto del código real, ver Agenda.tsx del frontend).
+// Los turnos son en hora de Argentina y los tests corren en UTC (vitest.config.mts),
+// como el servidor de producción. Estas fechas se arman con el mismo módulo que usa
+// el código real (src/app/utils/argentinaTime.ts), no con la zona de la máquina.
 function localDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return todayArgentinaStr(d)
 }
 
 // Fecha de mañana (o N días adelante) en formato YYYY-MM-DD — evita turnos de
@@ -171,15 +174,13 @@ export function todayStr(): string {
 // Fecha/hora de HOY menos N minutos, como {date, time} — para simular turnos
 // que ya deberían haber empezado (tests del job de no-show automático).
 export function minutesAgo(minutes: number): { date: string; time: string } {
-  const d = new Date(Date.now() - minutes * 60 * 1000)
-  return { date: localDateStr(d), time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` }
+  return argentinaParts(new Date(Date.now() - minutes * 60 * 1000))
 }
 
 // Fecha/hora dentro de N horas, como {date, time} — para armar turnos "lejos"
 // o "cerca" del corte de cancelación (12hs por default, RF-04).
 export function hoursFromNow(hours: number): { date: string; time: string } {
-  const d = new Date(Date.now() + hours * 60 * 60 * 1000)
-  return { date: localDateStr(d), time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` }
+  return argentinaParts(new Date(Date.now() + hours * 60 * 60 * 1000))
 }
 
 // Crea un turno directo en la base (sin pasar por el endpoint de reserva) —
