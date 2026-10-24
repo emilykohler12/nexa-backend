@@ -46,9 +46,13 @@ Para probar que la migración funciona con filas ya existentes, cargá datos de 
 El orden importa. Según tus notas de despliegue, el push a `main` redespliega Render, así que **la base de Supabase se migra antes del push**:
 
 1. Revisá el SQL final con Emily.
-2. Aplicalo en el SQL Editor de Supabase (lo hace Emily; nunca desde esta sesión).
-3. Registralo en `_prisma_migrations` para que Prisma no intente aplicarlo de nuevo (nombre de la migración y `checksum` = SHA-256 en hexadecimal del `migration.sql`, que se calcula con `node -e "console.log(require('crypto').createHash('sha256').update(require('fs').readFileSync(process.argv[1])).digest('hex'))" <ruta>`). Confirmalo contra cómo se hizo en las migraciones anteriores antes de insertar.
-4. Recién ahí, push a `main` (lo hace Emily).
+2. Antes de aplicar, verificá el estado de la base con el script del repo, que **no** se conecta a nada y solo imprime SQL: `node scripts/migration-checksums.mjs`. Emily pega el resultado en el SQL Editor de Supabase (es un SELECT de solo lectura) y debe ver `OK` para todas las migraciones anteriores y `FALTA APLICAR` solo para la nueva.
+3. Aplicá el SQL de la migración en el SQL Editor de Supabase (lo hace Emily; nunca desde esta sesión).
+4. Registrala en `_prisma_migrations` para que Prisma no la considere pendiente: `node scripts/migration-checksums.mjs insert <nombre_de_la_migracion>` imprime el `INSERT` exacto (el `checksum` es el SHA-256 hexadecimal del `migration.sql` con saltos de línea LF). Emily lo corre **después** del paso 3. Alternativa oficial, si la conexión a la base lo permite: `DATABASE_URL=… npx prisma migrate resolve --applied <nombre_de_la_migracion>`.
+5. Volvé a correr el SELECT del paso 2: tiene que dar todo `OK`.
+6. Recién ahí, push a `main` (lo hace Emily).
+
+Verificado el 2026-10-24 contra la base de pruebas: los 51 checksums que escribió Prisma coinciden con el SHA-256 de los `migration.sql`, y el `INSERT` generado reproduce la misma fila. Si un checksum no coincide, `prisma migrate deploy` solo **avisa** ("migrations have been modified since they were applied") y no falla, pero conviene corregirlo para que el aviso no quede.
 
 Antes de migrar producción, que exista un backup reciente (workflow "Backup diario de la base de datos" en GitHub Actions, ver `00-gestion/RUNBOOK.md`).
 

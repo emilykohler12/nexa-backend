@@ -302,3 +302,16 @@ Registro de cada cambio hecho en la rama `chore/claude-config`. Cada entrada con
 | 4 | Aporte personal | Pidió "push y abrir PR". Registro: pull request #1. |
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): ejecutó el push y creó el PR con `gh` a pedido de Emily. La aplicación activó Auto-fix: ante fallos del CI o conflictos corrige, verifica, commitea y pushea en esta rama; ante comentarios de revisión no actúa sin que Emily lo confirme. |
+
+## Entrada 24: checksum de migraciones verificado y script `migration-checksums.mjs`
+
+**Fecha:** 2026-10-24, 15:43 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Verificar el cálculo del checksum de `_prisma_migrations` y crear `scripts/migration-checksums.mjs`, que no se conecta a ninguna base y solo imprime SQL: sin argumentos, un SELECT de solo lectura que compara la tabla con las 51 migraciones del repo (OK, FALTA APLICAR, CHECKSUM DISTINTO, INCOMPLETA, SOLO EN LA BASE); con `insert <nombre>`, el INSERT para registrar una migración aplicada a mano. Se actualizó la skill `nueva-migracion` con ese procedimiento. |
+| 2 | Alternativas y criterio de descarte | Calcular el hash con un `node -e` suelto (como decía la skill): descartado, es fácil equivocarse y no verifica nada. `prisma migrate resolve --applied`: queda como alternativa oficial, pero según las notas de Emily la conexión desde su PC al pooler de Supabase da P1001. Conectarse a Supabase desde esta sesión: descartado por la regla del proyecto (no tocar producción) y porque el conector de Supabase está apagado. |
+| 3 | Evidencia que la sostiene | Consulta a la base de pruebas con el código de la app: los 51 checksums guardados por Prisma coinciden con el SHA-256 de los bytes de cada `migration.sql`, tanto del archivo local como del de git (51 de 51). El SELECT generado devolvió `OK: 51`. El INSERT generado, probado dentro de una transacción deshecha, reprodujo el mismo checksum, `finished_at` y `applied_steps_count = 1` que escribió Prisma, y la tabla quedó con 51 filas. Documentación de Prisma (Context7): `migrate deploy` solo avisa cuando una migración ya aplicada fue modificada; `migrate resolve --applied` registra una migración como aplicada. |
+| 4 | Aporte personal | Pidió resolver el punto del checksum. La notas previas de Emily ("checksum = sha256 del migration.sql tal como está en git") quedaron confirmadas. Archivos: `scripts/migration-checksums.mjs`, `.claude/skills/nueva-migracion/SKILL.md`. |
+| 5 | Desacuerdo y resolución | Ninguno. **Pendiente de Emily:** correr el SELECT en el SQL Editor de Supabase para confirmar el estado real de producción; este registro solo verifica la base de pruebas. `00-gestion/SOP.md` indica `migrate deploy` con la cadena de Supabase, lo que no coincide con lo que se pudo hacer desde su PC; no se editó. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): consulta de solo lectura a la base de pruebas, escritura del script y de la skill, y consulta a Context7. Revisión de Emily pendiente. |
