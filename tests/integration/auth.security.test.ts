@@ -77,7 +77,7 @@ describe('CSRF: pedidos que cambian datos y vienen de otro sitio', () => {
       .post('/api/auth/change-password')
       .set('Cookie', cookieFor(client))
       .set('Origin', env.FRONTEND_URL)
-      .send({ password: 'NuevaClave123' })
+      .send({ currentPassword: TEST_PASSWORD, password: 'NuevaClave123' })
     expect(res.status).toBe(200)
   })
 
@@ -86,7 +86,7 @@ describe('CSRF: pedidos que cambian datos y vienen de otro sitio', () => {
     const res = await request(app)
       .post('/api/auth/change-password')
       .set('Cookie', cookieFor(client))
-      .send({ password: 'NuevaClave123' })
+      .send({ currentPassword: TEST_PASSWORD, password: 'NuevaClave123' })
     expect(res.status).toBe(200)
   })
 

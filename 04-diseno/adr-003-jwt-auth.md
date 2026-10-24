@@ -165,18 +165,33 @@ así que uno ya usado deja de servir.
    datos.
 5. **El login no exige email verificado**, y la verificación no limita ninguna
    ruta; no encontré esa comprobación en `auth.service.ts`.
-6. **`POST /api/auth/change-password` no pide la contraseña actual**
-   (`auth.controller.ts:126`): alcanza con una sesión activa. Quien consiga un
-   access token vigente (15 minutos) podría cambiar la contraseña y, como eso
-   borra el refresh token, dejar fuera a la dueña. Mitigación posible: exigir la
-   contraseña actual.
-7. El **login social** (Google/Facebook) figura en el RUNBOOK como retirado:
+6. ~~`POST /api/auth/change-password` no pedía la contraseña actual.~~
+   **Corregido el 2026-10-24:** ahora exige `currentPassword` y la compara con
+   bcrypt. Si es incorrecta responde `400 INVALID_CURRENT_PASSWORD` (no 401:
+   el frontend desloguea ante cualquier 401). La ruta tiene además el límite de
+   10 intentos cada 15 minutos por IP. Cuerpo: `{ currentPassword, password }`.
+   Cambia el contrato; los formularios del admin y de la profesional se
+   actualizaron en `nexa-frontend` (rama `feat/seguridad-login-contrasenas`).
+7. ~~El código de recuperación se buscaba solo por su valor.~~ **Corregido el
+   2026-10-24:** `POST /api/auth/reset-password` recibe `{ email, token, password }`
+   y busca el código **de esa cuenta** (`findPasswordReset(userId, token)`); un
+   email inexistente y un código incorrecto dan el mismo `400 INVALID_TOKEN`.
+   Los intentos **fallidos** se limitan a 5 cada 15 minutos por email
+   (`429 TOO_MANY_ATTEMPTS`; los exitosos no cuentan; el límite está activo
+   también en test). El código se consume con una escritura condicional, por lo
+   que dos pedidos simultáneos no pueden usarlo los dos, y si al generarlo
+   coincide con el de otra usuaria se sortea otro en vez de devolver un 500.
+   Contrapartida: quien envíe 5 códigos erróneos con el email de otra persona la
+   deja 15 minutos sin poder recuperar la contraseña. El código sigue guardado en
+   texto plano (dura 15 minutos y se invalida al usarse o al pedir uno nuevo).
+8. El **login social** (Google/Facebook) figura en el RUNBOOK como retirado:
    `auth.routes.ts` ya no expone esas rutas, aunque quedan el DTO y el provider
    sin uso.
 
-**Límites de velocidad:** `register`, `forgot-password` y `reset-password` tienen
-un límite de 10 intentos cada 15 minutos; `login`, 20 intentos cada 5 minutos
-(`auth.routes.ts`). En test están desactivados.
+**Límites de velocidad:** `register`, `forgot-password`, `reset-password` y
+`change-password` tienen un límite de 10 intentos cada 15 minutos por IP; `login`,
+20 intentos cada 5 minutos (`auth.routes.ts`). En test están desactivados. El
+límite por email de `reset-password` (punto 7) sí está activo en test.
 
 ---
 
@@ -185,11 +200,12 @@ un límite de 10 intentos cada 15 minutos; `login`, 20 intentos cada 5 minutos
 | Archivo | Qué cubre |
 |---|---|
 | `tests/integration/auth.test.ts` | Registro con cookies de sesión y validaciones (email repetido, sin apellido, sin teléfono, sin términos); login correcto, con contraseña incorrecta, de usuario inexistente y de usuario inactivo; `/me` con y sin cookie y con token inválido; una clienta y una profesional no entran a rutas de admin |
+| `tests/integration/auth.security.test.ts` | CSRF (formulario de otro sitio, `Origin` ajeno o `null`, pedidos sin `Origin`, formularios ya no interpretados); `logout` con el access token vencido, sin cookies, con token vigente y con token falsificado; refresh token guardado como hash, rotación, reutilización y transición del formato viejo |
+| `tests/integration/auth.password.test.ts` | Cambio de contraseña con contraseña actual (falta, incorrecta, correcta, sin sesión); recuperación con email y código (correcto, otra cuenta, email inexistente, código usado, vencido, uso simultáneo, límite de intentos por email, colisión de códigos) |
 | `tests/helpers/auth.ts` | `cookieFor()` firma un `access_token` válido para el resto de los tests |
 
-**Sin cobertura hoy:** `POST /api/auth/refresh`, `logout`, el cambio de
-contraseña, y las propiedades de las cookies (`httpOnly`, `secure`, `sameSite`).
-Son los casos que más conviene agregar.
+**Sin cobertura hoy:** las propiedades de las cookies (`httpOnly`, `secure`,
+`sameSite`), que dependen de `NODE_ENV=production`.
 
 ---
 

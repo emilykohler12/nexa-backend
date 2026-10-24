@@ -141,7 +141,19 @@ export const authController = {
     try {
       if (!req.user) throw new AppError(HTTP.UNAUTHORIZED, 'No autenticado')
 
-      const { password } = req.body
+      const { password, currentPassword } = req.body ?? {}
+
+      // Con una sesión robada o abierta en una compu compartida no alcanza para cambiar la
+      // contraseña: hay que conocer la actual. Si es incorrecta se responde 400 y no 401,
+      // porque el frontend desloguea ante cualquier 401.
+      if (!currentPassword || typeof currentPassword !== 'string') {
+        throw new AppError(HTTP.BAD_REQUEST, 'Ingresá tu contraseña actual', 'VALIDATION_ERROR')
+      }
+      const account = await authRepository.findById(req.user.id)
+      if (!account) throw new AppError(HTTP.UNAUTHORIZED, 'Sesión inválida', 'SESSION_INVALID')
+      if (!(await bcryptProvider.compare(currentPassword, account.passwordHash))) {
+        throw new AppError(HTTP.BAD_REQUEST, 'La contraseña actual no es correcta', 'INVALID_CURRENT_PASSWORD')
+      }
 
       if (!password || typeof password !== 'string') {
         throw new AppError(HTTP.BAD_REQUEST, 'La contraseña es requerida', 'VALIDATION_ERROR')

@@ -150,9 +150,19 @@ export const authService = {
     const dbUser = await authRepository.findByEmail(dto.email)
     if (!dbUser) return
 
-    const code      = generateVerificationCode()
+    let code        = generateVerificationCode()
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000)
-    await authRepository.savePasswordReset(dbUser.id, code, expiresAt)
+    // El código es único en toda la tabla (6 dígitos): si justo otra usuaria tiene el mismo
+    // vigente, la base lo rechaza (P2002). Se sortea otro en vez de devolver un 500.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await authRepository.savePasswordReset(dbUser.id, code, expiresAt)
+        break
+      } catch (err: any) {
+        if (err?.code !== 'P2002' || attempt >= 4) throw err
+        code = generateVerificationCode()
+      }
+    }
 
     const html = loadTemplate('resetPassword', { CODE: code })
     try {
@@ -164,15 +174,20 @@ export const authService = {
   },
 
   resetPassword: async (dto: ResetPasswordDto): Promise<void> => {
-    const reset = await authRepository.findPasswordReset(dto.token)
-    if (!reset || reset.used) {
-      throw new AppError(HTTP.BAD_REQUEST, 'Código inválido o ya utilizado', 'INVALID_TOKEN')
-    }
+    // Mismo error si el email no existe o si el código no es de esa cuenta: no se revela
+    // qué emails están registrados.
+    const invalid = new AppError(HTTP.BAD_REQUEST, 'Código inválido o ya utilizado', 'INVALID_TOKEN')
+
+    const dbUser = await authRepository.findByEmail(dto.email)
+    if (!dbUser) throw invalid
+    const reset = await authRepository.findPasswordReset(dbUser.id, dto.token)
+    if (!reset || reset.used) throw invalid
     if (new Date() > new Date(reset.expiresAt)) {
       throw new AppError(HTTP.BAD_REQUEST, 'El código expiró. Solicitá uno nuevo.', 'TOKEN_EXPIRED')
     }
     const passwordHash = await bcryptProvider.hash(dto.password)
+    // Se reclama el código ANTES de cambiar la contraseña: solo un pedido puede usarlo.
+    if (!(await authRepository.consumePasswordReset(reset.id))) throw invalid
     await authRepository.updatePassword(reset.userId, passwordHash)
-    await authRepository.markPasswordResetUsed(dto.token)
   },
 }

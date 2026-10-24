@@ -120,11 +120,16 @@ export const authRepository = {
     return prisma.passwordReset.create({ data: { userId, token, expiresAt } })
   },
 
-  findPasswordReset: (token: string) =>
-    prisma.passwordReset.findUnique({ where: { token } }),
+  // Busca el código DE ESA usuaria: el mismo código de otra cuenta no cuenta.
+  findPasswordReset: (userId: string, token: string) =>
+    prisma.passwordReset.findFirst({ where: { userId, token } }),
 
-  markPasswordResetUsed: (token: string) =>
-    prisma.passwordReset.update({ where: { token }, data: { used: true } }),
+  // Marca el código como usado de forma atómica. Devuelve false si otro pedido lo usó antes,
+  // así dos pedidos simultáneos con el mismo código no pueden cambiar la contraseña los dos.
+  consumePasswordReset: async (id: string): Promise<boolean> => {
+    const result = await prisma.passwordReset.updateMany({ where: { id, used: false }, data: { used: true } })
+    return result.count === 1
+  },
 
   updatePassword: (userId: string, passwordHash: string) =>
     prisma.user.update({
