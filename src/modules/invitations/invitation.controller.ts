@@ -6,6 +6,7 @@ import { registerProfessionalSchema } from './dto/register-professional.dto'
 import { AppError }                   from '../../app/middlewares/errorHandler'
 import { HTTP }                       from '../../app/constants/http'
 import type { AuthUser }              from '../auth/types/auth.types'
+import { setTokenCookies }            from '../auth/utils/cookies'
 
 export const invitationController = {
 
@@ -58,19 +59,12 @@ export const invitationController = {
 
       const { user, tokens } = await invitationService.registerProfessional(parsed.data)
 
-      // Mismo criterio que auth.controller.ts: en producción el frontend y el
-      // backend están en dominios distintos, así que la cookie necesita
-      // SameSite=None (+ Secure) para que el navegador la acepte cross-site.
-      const isProd = process.env['NODE_ENV'] === 'production'
-      res.cookie('refresh_token', tokens.refreshToken, {
-        httpOnly: true,
-        secure:   isProd,
-        sameSite: isProd ? 'none' : 'lax',
-        maxAge:   7 * 24 * 60 * 60 * 1000,
-        path:     '/api/auth/refresh',
-      })
+      // Las mismas dos cookies que el login (access_token y refresh_token). El access token ya
+      // no se devuelve en el cuerpo: no se usa (la API no lee el header Authorization) y
+      // quedaba expuesto a logs o extensiones.
+      setTokenCookies(res, tokens)
 
-      res.status(HTTP.CREATED).json({ user, accessToken: tokens.accessToken })
+      res.status(HTTP.CREATED).json({ user })
     } catch (err) {
       next(err)
     }

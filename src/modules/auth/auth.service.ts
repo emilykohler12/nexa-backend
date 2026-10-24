@@ -1,6 +1,7 @@
 // src/modules/auth/auth.service.ts
 import fs   from 'fs'
 import path from 'path'
+import { randomUUID } from 'crypto'
 import { authRepository }           from './auth.repository'
 import { bcryptProvider }           from './providers/bcrypt.provider'
 import { jwtProvider }              from './providers/jwt.provider'
@@ -68,6 +69,13 @@ function toAuthUser(user: {
   }
 }
 
+// Hash de bcrypt de una clave al azar, calculado una sola vez, para el login de un email que no existe.
+let dummyPasswordHash: Promise<string> | null = null
+function getDummyPasswordHash(): Promise<string> {
+  dummyPasswordHash ??= bcryptProvider.hash(randomUUID())
+  return dummyPasswordHash
+}
+
 export const authService = {
 
   register: async (dto: RegisterDto): Promise<{ user: AuthUser; tokens: TokenPair }> => {
@@ -102,7 +110,13 @@ export const authService = {
   login: async (dto: LoginDto): Promise<{ user: AuthUser; tokens: TokenPair }> => {
     const dbUser      = await authRepository.findByEmail(dto.email)
     const invalidCreds = new AppError(HTTP.UNAUTHORIZED, 'Credenciales inválidas', 'INVALID_CREDENTIALS')
-    if (!dbUser) throw invalidCreds
+    if (!dbUser) {
+      // Se hace igual la comparación de bcrypt (lenta a propósito) contra un hash de relleno:
+      // si no, un email inexistente respondería en milisegundos y uno existente en ~200 ms, y
+      // por la diferencia de tiempo se podría saber qué emails están registrados.
+      await bcryptProvider.compare(dto.password, await getDummyPasswordHash())
+      throw invalidCreds
+    }
     const match = await bcryptProvider.compare(dto.password, dbUser.passwordHash)
     if (!match) throw invalidCreds
 
@@ -164,13 +178,13 @@ export const authService = {
       }
     }
 
+    // El mail no se espera (como en el registro): si no, un email registrado tardaría lo que dura
+    // el envío y uno inexistente respondería enseguida, y esa diferencia revelaría qué cuentas
+    // existen. Tampoco se registra el email en los logs.
     const html = loadTemplate('resetPassword', { CODE: code })
-    try {
-      await mailProvider.send(dbUser.email, 'Código para recuperar tu contraseña — Nexa', html)
-      console.log(`[mail] ✅ Código enviado a ${dbUser.email}`)
-    } catch (err: any) {
-      console.error('[mail] ❌ Error enviando código:', err.message)
-    }
+    mailProvider.send(dbUser.email, 'Código para recuperar tu contraseña — Nexa', html)
+      .then(() => console.log('[mail] ✅ Código de recuperación enviado'))
+      .catch((err: any) => console.error('[mail] ❌ Error enviando código:', err?.message))
   },
 
   resetPassword: async (dto: ResetPasswordDto): Promise<void> => {

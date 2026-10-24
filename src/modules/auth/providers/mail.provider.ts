@@ -2,6 +2,7 @@
 
 import nodemailer from 'nodemailer'
 import { env } from '../../../app/config/env'
+import { maskEmail } from '../../../app/utils/maskEmail'
 
 const transporter = nodemailer.createTransport({
   host: env.MAIL_HOST,
@@ -41,7 +42,7 @@ export const mailProvider = {
       })
 
       console.log('[mail] ✅ Email enviado')
-      console.log('[mail] To:', to)
+      console.log('[mail] To:', maskEmail(to))
       console.log('[mail] Message ID:', info.messageId)
 
       return info

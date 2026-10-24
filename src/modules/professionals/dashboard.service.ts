@@ -1,5 +1,6 @@
 // src/modules/professionals/dashboard.service.ts
 import { prisma } from '../../app/database/prisma'
+import { argentinaWallClock, todayArgentinaStr } from '../../app/utils/argentinaTime'
 
 export type PeriodFilter = 'day' | 'week' | 'month' | 'year'
 
@@ -30,7 +31,7 @@ function minutesOf(range: { startTime: string; endTime: string }): number {
 // Mismo cálculo de rango que admin/dashboard.service.ts y statistics.service.ts —
 // se duplica a propósito (cada módulo ya lo hacía así) en vez de compartir un
 // helper cruzado entre módulos.
-function getRange(period: PeriodFilter, ref = new Date()): { start: Date; end: Date } {
+function getRange(period: PeriodFilter, ref = argentinaWallClock()): { start: Date; end: Date } {
   const start = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate())
   const end = new Date(start)
   switch (period) {
@@ -61,7 +62,7 @@ export const professionalDashboardService = {
   compute: async (professionalId: string, period: PeriodFilter = 'month') => {
     const { start, end } = getRange(period)
     const startStr = toDateStr(start), endStr = toDateStr(end)
-    const todayStr = toDateStr(new Date())
+    const todayStr = todayArgentinaStr()
 
     const [inRange, professional, reviews, holidaysInRange] = await Promise.all([
       prisma.appointment.findMany({

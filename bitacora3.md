@@ -406,3 +406,42 @@ Registro de cada cambio hecho en la rama `chore/claude-config`. Cada entrada con
 | 4 | Aporte personal | Pidió "commit y abrir PR". Registro: `dffa1b6` (frontend), pull request #1 del frontend y actualización del #2 del backend. |
 | 5 | Desacuerdo y resolución | Ninguno. **Recordatorio:** orden de despliegue = (1) mergear y desplegar nexa-frontend#1, (2) probar los dos formularios y la recuperación con un código real, (3) mergear nexa-backend#2 con `FRONTEND_URL` verificado en Render. Después del 2026-10-31 quitar la aceptación del refresh token en texto plano. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): ejecutó los commits, los push y la creación y edición de los pull requests con `gh` a pedido de Emily. Auto-fix queda activo solo para el pull request del backend. |
+
+## Entrada 32: webhook de Mercado Pago, monto y moneda, respuesta 500 y logs
+
+**Fecha:** 2026-10-24, 16:44 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | (a) Nuevo `payments/paidAmount.ts`: antes de marcar una seña, una seña de combo (suma de las patas) o un pedido como pagos, se compara el monto y la moneda que informa Mercado Pago con lo esperado; se acepta el monto esperado o uno mayor, en pesos; si no coincide o no se informa, no se registra y queda una entrada de error en la actividad ("Pago con monto distinto al esperado"). Solo se valida lo aprobado y lo que trae datos de Mercado Pago (la seña confirmada a mano por WhatsApp no). (b) `findPaymentByReference` devuelve monto y moneda, y la verificación a demanda (polling) los usa igual que el webhook. (c) El controller del webhook responde 200 **después** de procesar y 500 si falló algo transitorio, para que Mercado Pago reintente; envía el error a Sentry y ya no vuelca el error completo del SDK en los logs. Test nuevo: `payments.webhook-amount.test.ts` (19). |
+| 2 | Alternativas y criterio de descarte | Rechazar también un monto mayor: descartado, si el monto esperado cambió entre el checkout y el pago, cobrar de más no deja a la clienta sin seña. Seguir respondiendo 200 antes de procesar: descartado, un fallo transitorio perdía la confirmación hasta que la clienta consultara. Responder 500 ante un monto distinto: descartado, reintentar no cambia el resultado y Mercado Pago seguiría reintentando. Cobrar la diferencia o reembolsar automáticamente: fuera de alcance, queda para revisión manual. |
+| 3 | Evidencia que la sostiene | Informe del subagente `revisor-seguridad-api` (puntos 3 y 5 y defecto B). Documentación de Mercado Pago (Context7): se espera 200 o 201 en 22 segundos y se reintenta cada 15 minutos hasta recibirlo. Los tests reprodujeron los fallos antes del arreglo (10 de 19: un pago por 1000 se registraba como seña de 5000, un pedido de 3000 quedaba pago con 1000, no había respuesta 500 y el log traía el error completo) y pasan después. |
+| 4 | Aporte personal | Pidió terminar lo pendiente. Archivos: `paidAmount.ts`, `payment.controller.ts`, `payment.service.ts`, `appointment.service.ts`, `order.service.ts`, el test. |
+| 5 | Desacuerdo y resolución | Ninguno. **Riesgo a conocer:** si un pago se cobra por un monto distinto, el dinero entra a Mercado Pago pero la seña no se registra; hay que mirar en la actividad las entradas con nivel de error. La tolerancia es de medio centavo. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): implementación y tests. Revisión de Emily pendiente. |
+
+## Entrada 33: hora de Argentina en jobs de recordatorio y dashboards
+
+**Fecha:** 2026-10-24, 16:44 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Completar la migración al helper de hora argentina: `inactivityReminder` (corte de 60 días desde la fecha de Argentina), `autoPromotions` (cumpleaños y año de la campaña) y los tres servicios de dashboard y estadísticas (`argentinaWallClock()` para los rangos de calendario; los límites contra `createdAt` ahora son instantes reales de Argentina). Se quitaron `pad`, `toDateStr` y `addDays` que quedaron sin uso. Tests: 7 casos nuevos en `timezone-art.test.ts` (ahora 16). |
+| 2 | Alternativas y criterio de descarte | Convertir cada getter local de los dashboards uno por uno: descartado por riesgo; un único "reloj de pared de Argentina" como punto de partida da los mismos rangos sin tocar el cálculo. Tocar `availability.ts`, vacaciones y fechas de nacimiento: no, ya trabajan en UTC puro y son correctos en cualquier zona. |
+| 3 | Evidencia que la sostiene | Informe del subagente `revisor-reservas` (puntos de impacto bajo) verificado leyendo el código. Los 6 tests nuevos de comportamiento fallaban antes (a las 22:30 de Argentina, que en UTC ya es el día siguiente: el dashboard no contaba el turno de "hoy", el aviso de cumpleaños salía un día antes y el recordatorio de inactividad cortaba un día antes) y pasan después. Efecto lateral corregido: los tests viejos de dashboard armaban "hoy" en hora de Argentina y el servicio en UTC, por lo que habrían fallado de 21:00 a 24:00. |
+| 4 | Aporte personal | Pidió terminar lo pendiente de la hora de Argentina. |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
+
+## Entrada 34: menores del login, uso del subagente `escritor-tests` y logs sin emails
+
+**Fecha:** 2026-10-24, 16:44 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | (a) Emails con `trim().toLowerCase()` en el alta del admin y en el turno manual, con búsqueda sin distinguir mayúsculas. (b) `toggleRole` solo alterna profesional y administradora (`400 INVALID_ROLE_CHANGE`). (c) Invitaciones: `409 ADMIN_ACCOUNT`, `409 ACCOUNT_INACTIVE` (antes 500), consumo atómico (`consume`) y las mismas dos cookies que el login sin `accessToken` en el cuerpo (nuevo `auth/utils/cookies.ts`). (d) Un refresh fallido limpia las cookies. (e) El login con un email inexistente ejecuta igual el bcrypt y `forgot-password` no espera el mail. (f) Validación con zod del perfil de la clienta (nombre hasta 100, teléfono hasta 20). (g) Nuevo `maskEmail` en los logs de mail, invitaciones y jobs. Tests: `auth.minor-fixes.test.ts` (33, escrito por el subagente) y `mask-email.test.ts` (3). |
+| 2 | Alternativas y criterio de descarte | Exigir email verificado para iniciar sesión: **no se tocó**, es una decisión de producto de Emily (la bandera `emailVerified` hoy solo se escribe). Tabla de sesiones para varios dispositivos: postergada, cambio de diseño mayor. Hacer `forgot-password` totalmente asíncrono: descartado, los tests y el flujo necesitan que el código ya esté guardado al responder; solo el envío del mail dejó de esperarse. Registrar siempre 201 para ocultar `EMAIL_TAKEN`: descartado por usabilidad. |
+| 3 | Evidencia que la sostiene | Uso del subagente: se le dio una especificación del comportamiento esperado (sin tocar `src/`) y escribió los tests primero. Verificó rutas y cuerpos reales y reportó 8 discrepancias con la descripción (por ejemplo, que un email repetido con otras mayúsculas hoy crea otra cuenta y que `findByEmail` filtra `active` y por eso el 500). Resultado inicial: 13 pasaban (comportamiento que se conserva) y 20 fallaban (lo nuevo). Tras la implementación pasan los 33. El frontend no usa el `accessToken` de la respuesta de invitaciones (búsqueda en `nexa-frontend`). Verificado: el `toggleRole` ya impedía cambiar el propio rol; el informe del revisor se equivocaba en ese punto. |
+| 4 | Aporte personal | Pidió usar los agentes y terminar lo pendiente. |
+| 5 | Desacuerdo y resolución | Ninguno. Contrato: `POST /api/invitations/register` ya no devuelve `accessToken`; `PATCH /api/client/profile` responde 400 si los valores no son válidos; las rutas de admin pueden responder los códigos nuevos (el frontend muestra el mensaje). |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con el subagente `escritor-tests` (escribe y corre tests; no modifica `src/`). Revisión de Emily pendiente. |
