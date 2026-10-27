@@ -20,14 +20,44 @@ const EXT_BY_MIME: Record<string, string> = {
   'image/svg+xml': 'svg',
 }
 
+// El `mimetype` lo declara el cliente, así que no alcanza: se comprueba que los primeros bytes
+// sean los de una imagen de ese formato (firma del archivo).
+function matchesSignature(buffer: Buffer, mimetype: string): boolean {
+  switch (mimetype) {
+    case 'image/png':
+      return buffer.length > 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+    case 'image/jpeg':
+      return buffer.length > 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff
+    case 'image/webp':
+      return buffer.length > 12 && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP'
+    case 'image/svg+xml':
+      return isSafeSvg(buffer)
+    default:
+      return false
+  }
+}
+
+// Un SVG es XML y puede llevar JavaScript: abierto directo desde el bucket público se ejecutaría
+// en ese dominio. Por eso solo lo sube el admin (ver upload.controller) y además se rechaza el que
+// trae scripts, manejadores de eventos, enlaces javascript: o contenido embebido.
+function isSafeSvg(buffer: Buffer): boolean {
+  if (buffer.length > 512 * 1024) return false
+  const text = buffer.toString('utf8')
+  if (!/^\s*(<\?xml[^>]*\?>\s*)?(<!--[\s\S]*?-->\s*)*<svg[\s>]/i.test(text)) return false
+  return !/<script|<foreignObject|<iframe|<embed|<object|<!ENTITY|<!DOCTYPE|\son[a-z]+\s*=|javascript:|data:text\/html/i.test(text)
+}
+
 export const uploadProvider = {
   uploadImage: async (buffer: Buffer, mimetype: string, folder = 'general'): Promise<string> => {
-    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
-      throw new AppError(HTTP.INTERNAL_SERVER_ERROR, 'El almacenamiento de imágenes no está configurado en el servidor', 'STORAGE_NOT_CONFIGURED')
-    }
     const ext = EXT_BY_MIME[mimetype]
     if (!ext) {
       throw new AppError(HTTP.BAD_REQUEST, 'Formato de imagen no soportado (usá PNG, JPG, WEBP o SVG)', 'UNSUPPORTED_IMAGE_TYPE')
+    }
+    if (!matchesSignature(buffer, mimetype)) {
+      throw new AppError(HTTP.BAD_REQUEST, 'El archivo no es una imagen válida', 'INVALID_IMAGE_CONTENT')
+    }
+    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+      throw new AppError(HTTP.INTERNAL_SERVER_ERROR, 'El almacenamiento de imágenes no está configurado en el servidor', 'STORAGE_NOT_CONFIGURED')
     }
 
     const client = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY)
