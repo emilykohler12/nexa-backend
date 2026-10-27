@@ -1,13 +1,7 @@
 // src/modules/auth/auth.repository.ts
-import { createHash } from 'node:crypto'
 import { prisma } from '../../app/database/prisma'
 import type { UserRole } from './types/auth.types'
-
-// El refresh token se guarda como SHA-256: si se filtra la base (o un backup), los valores
-// de la columna no sirven para abrir sesión. Se compara por igualdad exacta del hash.
-function hashRefreshToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex')
-}
+import { hashRefreshToken } from './utils/hashToken'
 
 export const authRepository = {
 
@@ -99,11 +93,68 @@ export const authRepository = {
     return count > 0
   },
 
-  saveRefreshToken: (userId: string, token: string) =>
-    prisma.user.update({ where: { id: userId }, data: { refreshToken: hashRefreshToken(token) } }),
-
+  // ── Token único anterior (users.refresh_token) ───────────────────────────────────────────────
+  // Solo para la transición: las sesiones abiertas antes de las sesiones por dispositivo todavía
+  // lo tienen. Se canjea una sola vez por una sesión nueva y se borra.
   clearRefreshToken: (userId: string) =>
     prisma.user.update({ where: { id: userId }, data: { refreshToken: null } }),
+
+  // Canje atómico: devuelve false si el token ya fue canjeado (dos pedidos a la vez).
+  claimLegacyRefreshToken: async (userId: string, token: string): Promise<boolean> => {
+    const result = await prisma.user.updateMany({
+      where: { id: userId, OR: [{ refreshToken: hashRefreshToken(token) }, { refreshToken: token }] },
+      data:  { refreshToken: null },
+    })
+    return result.count === 1
+  },
+
+  // ── Sesiones por dispositivo (refresh_sessions) ───────────────────────────────────────────────
+  createSession: (data: { id: string; userId: string; refreshToken: string; expiresAt: Date }) =>
+    prisma.refreshSession.create({
+      data: { id: data.id, userId: data.userId, tokenHash: hashRefreshToken(data.refreshToken), expiresAt: data.expiresAt },
+    }),
+
+  findSession: (id: string) =>
+    prisma.refreshSession.findUnique({ where: { id } }),
+
+  // Reemplaza el token de la sesión SOLO si sigue siendo el que se leyó (control optimista): si
+  // otro pedido con la misma cookie renovó antes, devuelve false. El hash anterior queda
+  // aceptado hasta previousValidUntil.
+  rotateSession: async (opts: {
+    id: string; currentHash: string; newRefreshToken: string; previousValidUntil: Date; expiresAt: Date
+  }): Promise<boolean> => {
+    const result = await prisma.refreshSession.updateMany({
+      where: { id: opts.id, tokenHash: opts.currentHash },
+      data:  {
+        tokenHash:          hashRefreshToken(opts.newRefreshToken),
+        previousTokenHash:  opts.currentHash,
+        previousValidUntil: opts.previousValidUntil,
+        lastUsedAt:         new Date(),
+        expiresAt:          opts.expiresAt,
+      },
+    })
+    return result.count === 1
+  },
+
+  deleteSession: (id: string) =>
+    prisma.refreshSession.deleteMany({ where: { id } }),
+
+  deleteSessionsOf: (userId: string) =>
+    prisma.refreshSession.deleteMany({ where: { userId } }),
+
+  // Borra las vencidas y deja como máximo `keep` sesiones (las más recientes).
+  pruneSessions: async (userId: string, keep: number): Promise<void> => {
+    await prisma.refreshSession.deleteMany({ where: { userId, expiresAt: { lt: new Date() } } })
+    const surplus = await prisma.refreshSession.findMany({
+      where:   { userId },
+      orderBy: { createdAt: 'desc' },
+      skip:    keep,
+      select:  { id: true },
+    })
+    if (surplus.length > 0) {
+      await prisma.refreshSession.deleteMany({ where: { id: { in: surplus.map(s => s.id) } } })
+    }
+  },
 
   verifyEmail: (userId: string) =>
     prisma.user.update({
@@ -136,9 +187,12 @@ export const authRepository = {
     return result.count === 1
   },
 
-  updatePassword: (userId: string, passwordHash: string) =>
-    prisma.user.update({
-      where: { id: userId },
-      data:  { passwordHash, refreshToken: null },
-    }),
+  // Cambiar la contraseña cierra la sesión en TODOS los dispositivos.
+  updatePassword: async (userId: string, passwordHash: string) => {
+    const [user] = await prisma.$transaction([
+      prisma.user.update({ where: { id: userId }, data: { passwordHash, refreshToken: null } }),
+      prisma.refreshSession.deleteMany({ where: { userId } }),
+    ])
+    return user
+  },
 }

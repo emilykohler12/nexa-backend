@@ -378,7 +378,10 @@ export const professionalService = {
   toggleActive: async (id: string) => {
     const user = await prisma.user.findUnique({ where: { id } })
     if (!user) throw new AppError(HTTP.NOT_FOUND, 'Usuario no encontrado')
-    return prisma.user.update({ where: { id }, data: { active: !user.active } })
+    const updated = await prisma.user.update({ where: { id }, data: { active: !user.active } })
+    // Al desactivar una cuenta se cierra la sesión en todos sus dispositivos.
+    if (!updated.active) await prisma.refreshSession.deleteMany({ where: { userId: id } })
+    return updated
   },
 
   toggleRole: async (id: string) => {

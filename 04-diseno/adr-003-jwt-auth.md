@@ -108,24 +108,40 @@ comparan el rol con la lista permitida y responden `403 FORBIDDEN`.
 (`guestOnly`, que rechazaría el registro y el login con una sesión activa, está
 definido en `guest.middleware.ts` pero ninguna ruta lo usa.)
 
-### 4.3 Renovación
-`POST /api/auth/refresh` lee la cookie `refresh_token`, la busca en la base
-(`findByRefreshToken`, solo usuarios activos) y verifica su firma. Si está
-vencida limpia el token guardado y responde `401 INVALID_REFRESH_TOKEN`. Si es
-válida emite un par nuevo y lo guarda: el refresh token se **rota** en cada uso,
-así que uno ya usado deja de servir.
+### 4.3 Renovación (una sesión por dispositivo, desde el 2026-10-27)
+Cada dispositivo con la sesión abierta tiene una fila en `refresh_sessions`
+(máximo 10 por usuaria; al abrir el undécimo se cierra el más antiguo). El id de
+la fila viaja dentro de los dos JWT como `sid`, y la fila guarda el SHA-256 del
+refresh token vigente, su vencimiento y el hash anterior.
+
+`POST /api/auth/refresh` verifica la firma del refresh token, busca la sesión por
+`sid` (que sea de esa usuaria y no esté vencida), comprueba que la usuaria siga
+activa y que el hash coincida, y **rota** el token: guarda el hash nuevo y deja el
+anterior como `previousTokenHash`. La rotación es condicional (control optimista),
+así que dos pedidos con la misma cookie no pueden rotar los dos.
+
+**Margen de gracia de 30 segundos:** el token recién reemplazado todavía sirve,
+pero solo para obtener un access token nuevo (no se rota otra vez). Es para dos
+pestañas que renuevan a la vez con la misma cookie: la segunda no se desloguea ni
+borra las cookies de la primera. Pasado el margen, un token ya usado da
+`401 INVALID_REFRESH_TOKEN`, y eso no cierra la sesión vigente del dispositivo.
+
+*Sesiones anteriores* (sin `sid`, guardadas en `users.refresh_token`): se canjean
+una sola vez por una sesión nueva y la columna se vacía. Esa columna y su
+búsqueda (`findByRefreshToken`, `claimLegacyRefreshToken`) se pueden quitar 7 días
+después del despliegue, cuando ya no quede ninguna sesión del formato anterior.
 
 ### 4.4 Cierre de sesión e invalidación
-- `logout` borra el refresh token guardado y las dos cookies. **No exige una
-  sesión vigente** (desde el 2026-10-24): si el access token ya venció, la
+- `logout` cierra **solo la sesión de ese dispositivo** (el `sid` del access token)
+  y borra las dos cookies. **No exige una sesión vigente** (desde el 2026-10-24): si el access token ya venció, la
   usuaria se identifica por la firma del token (se ignora solo el vencimiento) y
   la sesión se cierra igual. Un token ausente o falsificado no cierra la sesión
   de nadie, y la respuesta es siempre 200 con las cookies limpias.
-- Cambiar o restablecer la contraseña también borra el refresh token
-  (`auth.repository.ts:117`), lo que cierra la sesión en cualquier dispositivo
-  al vencer el access token.
-- Hay **un solo refresh token por usuario**: iniciar sesión en otro dispositivo
-  reemplaza al anterior y cierra la renovación de la sesión anterior.
+- Cambiar o restablecer la contraseña, desactivar la cuenta y anonimizar a una
+  clienta borran **todas** sus sesiones (`deleteSessionsOf`), lo que cierra la
+  renovación en cualquier dispositivo; los access tokens ya emitidos valen hasta
+  15 minutos.
+- Iniciar sesión en otro dispositivo **no** cierra la sesión de los demás.
 
 ---
 
@@ -143,12 +159,14 @@ así que uno ya usado deja de servir.
    corta de inmediato.
 2. ~~El refresh token se guardaba en texto plano.~~ **Corregido el 2026-10-24:**
    `users.refresh_token` guarda el SHA-256 del token (`auth.repository.ts`), por
-   lo que un backup filtrado no permite abrir sesiones. Durante una transición
+   lo que un backup filtrado no permite abrir sesiones. Durante una transición (contada desde el despliegue en producción)
    de 7 días se sigue aceptando un token guardado en texto plano (el siguiente
    refresh lo pasa a hash); pasado ese plazo hay que quitar esa segunda
    condición de `findByRefreshToken`. Además los tokens llevan `jti`, por lo que
    dos emitidos en el mismo segundo ya no son idénticos.
-3. **Una sola sesión renovable por usuario** (ver 4.4).
+3. ~~Una sola sesión renovable por usuario.~~ **Corregido el 2026-10-27:** una
+   sesión por dispositivo en `refresh_sessions` (ver 4.3). Requirió una migración
+   (`20261027120000_add_refresh_sessions`, solo agrega una tabla).
 4. **CSRF** (mitigado el 2026-10-24). Con `SameSite=None` el navegador manda la
    cookie en pedidos iniciados desde otro sitio, y CORS (`origin` fijo en
    `FRONTEND_URL`) impide *leer* las respuestas pero no *enviar* un pedido

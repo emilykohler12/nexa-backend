@@ -13,10 +13,13 @@ import { AppError }            from '../../app/middlewares/errorHandler'
 import { HTTP }                from '../../app/constants/http'
 import { setTokenCookies, clearTokenCookies } from './utils/cookies'
 
-function userIdFromExpiredAccessToken(token: unknown): string | null {
+// Quién cierra sesión y desde qué dispositivo (sid), según la firma del access token aunque haya
+// vencido. Un token ausente o falsificado no identifica a nadie.
+function whoIsLoggingOut(token: unknown): { userId: string; sid?: string } | null {
   if (typeof token !== 'string' || !token) return null
   try {
-    return jwtProvider.verifyAccessEvenIfExpired(token).sub
+    const payload = jwtProvider.verifyAccessEvenIfExpired(token)
+    return { userId: payload.sub, sid: payload.sid }
   } catch {
     return null
   }
@@ -67,8 +70,8 @@ export const authController = {
       // La ruta no exige sesión vigente: si el access token venció (15 min) igual hay que
       // cerrar la sesión. Se identifica a la usuaria por la firma del token, aunque esté
       // vencido; un token falso o ausente no cierra la sesión de nadie.
-      const userId = req.user?.id ?? userIdFromExpiredAccessToken(req.cookies?.access_token)
-      if (userId) await authService.logout(userId)
+      const who = whoIsLoggingOut(req.cookies?.access_token)
+      if (who) await authService.logout(who.userId, who.sid)
       clearTokenCookies(res)
       res.status(HTTP.OK).json({ success: true })
     } catch (err) { next(err) }

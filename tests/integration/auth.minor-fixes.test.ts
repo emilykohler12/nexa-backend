@@ -259,9 +259,11 @@ describe('POST /api/invitations/register', () => {
     expect(refresh).toContain('Path=/api/auth/refresh')
     expect(refresh).toContain('HttpOnly')
 
-    const stored = (await prisma.user.findUniqueOrThrow({ where: { email: INVITED } })).refreshToken
-    expect(stored).toMatch(HEX64)
-    expect(stored).not.toBe(refresh.split(';')[0].slice('refresh_token='.length))
+    // la sesión del dispositivo queda en refresh_sessions, con el hash del token (no el token)
+    const invited = await prisma.user.findUniqueOrThrow({ where: { email: INVITED } })
+    const [session] = await prisma.refreshSession.findMany({ where: { userId: invited.id } })
+    expect(session.tokenHash).toMatch(HEX64)
+    expect(session.tokenHash).not.toBe(refresh.split(';')[0].slice('refresh_token='.length))
   })
 
   it('el access_token de la cookie sirve para entrar a una ruta protegida', async () => {
