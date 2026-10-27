@@ -4,7 +4,7 @@ import { invitationRepository } from './invitation.repository'
 import { authRepository }       from '../auth/auth.repository'
 import { bcryptProvider }       from '../auth/providers/bcrypt.provider'
 import { mailProvider }         from '../auth/providers/mail.provider'
-import { generateTokens }       from '../auth/utils/generateTokens'
+import { authService }          from '../auth/auth.service'
 import { AppError }             from '../../app/middlewares/errorHandler'
 import { HTTP }                 from '../../app/constants/http'
 import { env }                  from '../../app/config/env'
@@ -140,8 +140,7 @@ export const invitationService = {
       profileComplete: dbUser.profileComplete,
     }
 
-    const tokens = generateTokens(user)
-    await authRepository.saveRefreshToken(user.id, tokens.refreshToken)
+    const tokens = await authService.startSession(user)
 
     return { user, tokens }
   },

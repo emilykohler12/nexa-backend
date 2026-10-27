@@ -52,7 +52,8 @@ model User {
   professional    Professional?
   invitationsSent Invitation[]    @relation("SentBy")
   passwordResets  PasswordReset[]
-  appointmentsAsClient       Appointment[] @relation("ClientAppointments")
+  refreshSessions RefreshSession[]
+  appointmentsAsClient      Appointment[] @relation("ClientAppointments")
   appointmentsAsProfessional Appointment[] @relation("ProfessionalAppointments")
   balancePaymentsCollected   Appointment[] @relation("BalanceCollectedBy")
   galleryPhotos              ClientGalleryPhoto[]
@@ -144,6 +145,26 @@ model PasswordReset {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@map("password_resets")
+}
+
+// Una fila por dispositivo con la sesión abierta. Reemplaza a users.refresh_token, que guardaba un
+// único token por usuaria (un login en otro dispositivo cerraba la renovación del anterior).
+// El id viaja dentro de los dos JWT como "sid". Se guarda el SHA-256 del refresh token, nunca el
+// token. Al renovar, el hash anterior se acepta unos segundos más (previousTokenHash): dos
+// pestañas que renuevan a la vez con la misma cookie no se deslogueen entre sí.
+model RefreshSession {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash          String    @map("token_hash") @db.VarChar(64)
+  previousTokenHash  String?   @map("previous_token_hash") @db.VarChar(64)
+  previousValidUntil DateTime? @map("previous_valid_until") @db.Timestamptz
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  lastUsedAt         DateTime  @default(now()) @map("last_used_at") @db.Timestamptz
+  expiresAt          DateTime  @map("expires_at") @db.Timestamptz
+
+  @@index([userId])
+  @@map("refresh_sessions")
 }
 
 model Client {

@@ -212,6 +212,8 @@ export const adminService = {
         refreshToken: null,
       },
     })
+    // y se cierra la sesión en todos sus dispositivos
+    await prisma.refreshSession.deleteMany({ where: { userId: id } })
 
     await activityService.log({
       userName: adminName,

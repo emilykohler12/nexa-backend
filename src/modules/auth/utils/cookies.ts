@@ -15,8 +15,11 @@ const COOKIE_BASE = {
   sameSite: env.NODE_ENV === 'production' ? 'none' as const : 'lax' as const,
 }
 
-export function setTokenCookies(res: Response, tokens: { accessToken: string; refreshToken: string }): void {
+// Si no viene refreshToken (renovación dentro del margen de gracia, sin rotar) solo se actualiza el
+// access token y la cookie de refresh que el navegador ya tiene queda como está.
+export function setTokenCookies(res: Response, tokens: { accessToken: string; refreshToken?: string }): void {
   res.cookie('access_token',  tokens.accessToken,  { ...COOKIE_BASE, maxAge: 15 * 60 * 1000 })
+  if (!tokens.refreshToken) return
   res.cookie('refresh_token', tokens.refreshToken, {
     ...COOKIE_BASE,
     maxAge: 7 * 24 * 60 * 60 * 1000,

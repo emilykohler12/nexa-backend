@@ -19,4 +19,10 @@ export const jwtProvider = {
   verifyAccessEvenIfExpired: (token: string) =>
     jwt.verify(token, env.JWT_SECRET, { ignoreExpiration: true }) as JwtPayload,
   verifyRefresh: (token: string) => jwt.verify(token, env.JWT_REFRESH_SECRET)   as JwtPayload,
+  // Cuándo vence un token que acabamos de firmar (para guardarlo en la sesión).
+  expiryOf: (token: string): Date => {
+    const exp = (jwt.decode(token) as { exp?: number } | null)?.exp
+    if (!exp) throw new Error('El token no trae fecha de vencimiento')
+    return new Date(exp * 1000)
+  },
 }

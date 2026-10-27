@@ -32,7 +32,9 @@ async function loginAs(user: { email: string }) {
   }
 }
 
-const dbToken = async (id: string) => (await prisma.user.findUniqueOrThrow({ where: { id } })).refreshToken
+// Hashes de los refresh tokens de las sesiones (una por dispositivo) de una usuaria.
+const sessionHashes = async (id: string) =>
+  (await prisma.refreshSession.findMany({ where: { userId: id }, orderBy: { createdAt: 'asc' } })).map(s => s.tokenHash)
 
 describe('CSRF: pedidos que cambian datos y vienen de otro sitio', () => {
   it('un formulario de otro sitio no puede cambiar la contraseña de una clienta logueada', async () => {
@@ -115,13 +117,13 @@ describe('cerrar sesión', () => {
     vi.setSystemTime(new Date('2026-10-24T12:00:00Z'))
     const client = await createClientUser()
     const { access } = await loginAs(client)
-    expect(await dbToken(client.id)).not.toBeNull()
+    expect(await sessionHashes(client.id)).toHaveLength(1)
 
     vi.setSystemTime(new Date('2026-10-24T12:20:00Z')) // 20 minutos después: el access (15 min) venció
     const res = await request(app).post('/api/auth/logout').set('Cookie', `access_token=${access}`)
 
     expect(res.status).toBe(200)
-    expect(await dbToken(client.id)).toBeNull()
+    expect(await sessionHashes(client.id)).toHaveLength(0)
     const cookies = (res.headers['set-cookie'] ?? []) as unknown as string[]
     expect(cookies.some(c => c.startsWith('access_token=;'))).toBe(true)
     expect(cookies.some(c => c.startsWith('refresh_token=;'))).toBe(true)
@@ -141,19 +143,19 @@ describe('cerrar sesión', () => {
     const res = await request(app).post('/api/auth/logout').set('Cookie', `access_token=${access}`)
 
     expect(res.status).toBe(200)
-    expect(await dbToken(client.id)).toBeNull()
+    expect(await sessionHashes(client.id)).toHaveLength(0)
   })
 
   it('una cookie falsificada no cierra la sesión de nadie', async () => {
     const client = await createClientUser()
     await loginAs(client)
-    const before = await dbToken(client.id)
+    const before = await sessionHashes(client.id)
 
     const forged = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ4In0.firma-falsa'
     const res = await request(app).post('/api/auth/logout').set('Cookie', `access_token=${forged}`)
 
     expect(res.status).toBe(200)
-    expect(await dbToken(client.id)).toBe(before)
+    expect(await sessionHashes(client.id)).toEqual(before)
   })
 })
 
@@ -162,7 +164,7 @@ describe('refresh token', () => {
     const client = await createClientUser()
     const { refresh } = await loginAs(client)
 
-    const stored = await dbToken(client.id)
+    const [stored] = await sessionHashes(client.id)
     expect(stored).toMatch(HEX64)
     expect(stored).not.toBe(refresh)
   })
@@ -170,7 +172,7 @@ describe('refresh token', () => {
   it('renueva la sesión con la cookie y rota el token', async () => {
     const client = await createClientUser()
     const { refresh } = await loginAs(client)
-    const first = await dbToken(client.id)
+    const [first] = await sessionHashes(client.id)
 
     const res = await request(app).post('/api/auth/refresh').set('Cookie', `refresh_token=${refresh}`)
 
@@ -178,22 +180,26 @@ describe('refresh token', () => {
     expect(cookieValue(res, 'access_token')).toBeTruthy()
     const next = cookieValue(res, 'refresh_token')!
     expect(next).not.toBe(refresh)
-    expect(await dbToken(client.id)).toMatch(HEX64)
-    expect(await dbToken(client.id)).not.toBe(first)
+    const [after] = await sessionHashes(client.id)
+    expect(after).toMatch(HEX64)
+    expect(after).not.toBe(first)
   })
 
-  it('un refresh token ya usado deja de servir', async () => {
+  it('un refresh token ya usado deja de servir (pasado el margen de gracia de 30 segundos)', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-27T12:00:00Z'))
     const client = await createClientUser()
     const { refresh } = await loginAs(client)
     await request(app).post('/api/auth/refresh').set('Cookie', `refresh_token=${refresh}`)
 
+    vi.setSystemTime(new Date('2026-10-27T12:01:00Z'))
     const again = await request(app).post('/api/auth/refresh').set('Cookie', `refresh_token=${refresh}`)
 
     expect(again.status).toBe(401)
     expect(again.body.code).toBe('INVALID_REFRESH_TOKEN')
   })
 
-  it('transición: un token guardado en texto plano (sesiones anteriores) todavía se acepta y se pasa a hash', async () => {
+  it('transición: un token guardado en texto plano (sesiones anteriores) todavía se acepta y pasa a ser una sesión con hash', async () => {
     const client = await createClientUser()
     const legacy = jwtProvider.signRefresh({ sub: client.id, email: client.email, role: 'client' })
     await prisma.user.update({ where: { id: client.id }, data: { refreshToken: legacy } })
@@ -201,7 +207,10 @@ describe('refresh token', () => {
     const res = await request(app).post('/api/auth/refresh').set('Cookie', `refresh_token=${legacy}`)
 
     expect(res.status).toBe(200)
-    expect(await dbToken(client.id)).toMatch(HEX64)
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: client.id } })).refreshToken).toBeNull()
+    const hashes = await sessionHashes(client.id)
+    expect(hashes).toHaveLength(1)
+    expect(hashes[0]).toMatch(HEX64)
   })
 
   it('un token distinto del guardado se rechaza', async () => {

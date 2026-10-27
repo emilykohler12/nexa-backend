@@ -23,6 +23,9 @@ export interface JwtPayload {
   sub:   string
   email: string
   role:  UserRole
+  // Id de la sesión (refresh_sessions.id) del dispositivo que inició sesión. Ausente en las
+  // sesiones abiertas antes de que existieran las sesiones por dispositivo.
+  sid?:  string
   iat?:  number
   exp?:  number
 }

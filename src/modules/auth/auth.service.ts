@@ -6,6 +6,7 @@ import { authRepository }           from './auth.repository'
 import { bcryptProvider }           from './providers/bcrypt.provider'
 import { jwtProvider }              from './providers/jwt.provider'
 import { generateTokens }           from './utils/generateTokens'
+import { hashRefreshToken }         from './utils/hashToken'
 import { generateSecureToken, generateVerificationCode } from './utils/generateCode'
 import { mailProvider }             from './providers/mail.provider'
 import { AppError }                 from '../../app/middlewares/errorHandler'
@@ -76,7 +77,25 @@ function getDummyPasswordHash(): Promise<string> {
   return dummyPasswordHash
 }
 
+// Dispositivos con la sesión abierta a la vez; al abrir uno más se cierra el más antiguo.
+const MAX_SESSIONS = 10
+// Tras renovar, el refresh token anterior se sigue aceptando este tiempo (solo para renovar el
+// access token): dos pestañas que renuevan a la vez con la misma cookie no se desloguean entre sí.
+const PREVIOUS_TOKEN_GRACE_MS = 30_000
+
 export const authService = {
+
+  // Abre una sesión nueva para un dispositivo: crea la fila en refresh_sessions y firma los dos
+  // tokens con su id (sid). Las sesiones de los demás dispositivos no se tocan.
+  startSession: async (user: AuthUser): Promise<TokenPair> => {
+    const sid    = randomUUID()
+    const tokens = generateTokens(user, sid)
+    await authRepository.createSession({
+      id: sid, userId: user.id, refreshToken: tokens.refreshToken, expiresAt: jwtProvider.expiryOf(tokens.refreshToken),
+    })
+    await authRepository.pruneSessions(user.id, MAX_SESSIONS)
+    return tokens
+  },
 
   register: async (dto: RegisterDto): Promise<{ user: AuthUser; tokens: TokenPair }> => {
     const exists = await authRepository.emailExists(dto.email)
@@ -102,8 +121,7 @@ export const authService = {
     )
 
     const user   = toAuthUser(created)
-    const tokens = generateTokens(user)
-    await authRepository.saveRefreshToken(user.id, tokens.refreshToken)
+    const tokens = await authService.startSession(user)
     return { user, tokens }
   },
 
@@ -121,8 +139,7 @@ export const authService = {
     if (!match) throw invalidCreds
 
     const user   = toAuthUser(dbUser)
-    const tokens = generateTokens(user)
-    await authRepository.saveRefreshToken(user.id, tokens.refreshToken)
+    const tokens = await authService.startSession(user)
     return { user, tokens }
   },
 
@@ -133,25 +150,69 @@ export const authService = {
     return toAuthUser({ ...dbUser, photo })
   },
 
-  logout: async (userId: string): Promise<void> => {
-    await authRepository.clearRefreshToken(userId)
+  // Cierra la sesión de ESTE dispositivo (sid). Un token sin sid es de una sesión anterior a las
+  // sesiones por dispositivo: se borra el token único de la usuaria.
+  logout: async (userId: string, sid?: string): Promise<void> => {
+    if (sid) await authRepository.deleteSession(sid)
+    else await authRepository.clearRefreshToken(userId)
   },
 
-  refresh: async (refreshToken: string): Promise<{ user: AuthUser; tokens: TokenPair }> => {
-    const dbUser = await authRepository.findByRefreshToken(refreshToken)
-    if (!dbUser) throw new AppError(HTTP.UNAUTHORIZED, 'Token inválido', 'INVALID_REFRESH_TOKEN')
+  // Renueva la sesión de un dispositivo. Devuelve siempre un access token nuevo; el refresh token
+  // solo viene si se rotó (en el caso del margen de gracia no se rota, ver abajo).
+  refresh: async (refreshToken: string): Promise<{ user: AuthUser; tokens: { accessToken: string; refreshToken?: string } }> => {
+    const invalid = () => new AppError(HTTP.UNAUTHORIZED, 'Token inválido o expirado', 'INVALID_REFRESH_TOKEN')
 
+    let payload
     try {
-      jwtProvider.verifyRefresh(refreshToken)
+      payload = jwtProvider.verifyRefresh(refreshToken)
     } catch {
-      await authRepository.clearRefreshToken(dbUser.id)
-      throw new AppError(HTTP.UNAUTHORIZED, 'Token expirado', 'INVALID_REFRESH_TOKEN')
+      throw invalid()
     }
 
-    const user   = toAuthUser(dbUser)
-    const tokens = generateTokens(user)
-    await authRepository.saveRefreshToken(user.id, tokens.refreshToken)
-    return { user, tokens }
+    // Sesión anterior a las sesiones por dispositivo (sin sid): se canjea una sola vez por una sesión nueva.
+    if (!payload.sid) {
+      const dbUser = await authRepository.findByRefreshToken(refreshToken)
+      if (!dbUser || !(await authRepository.claimLegacyRefreshToken(dbUser.id, refreshToken))) throw invalid()
+      const user = toAuthUser(dbUser)
+      return { user, tokens: await authService.startSession(user) }
+    }
+
+    const session = await authRepository.findSession(payload.sid)
+    const now = new Date()
+    if (!session || session.userId !== payload.sub || session.expiresAt <= now) throw invalid()
+
+    const dbUser = await authRepository.findById(session.userId)
+    if (!dbUser) throw invalid()
+    const user = toAuthUser(dbUser)
+
+    const presented = hashRefreshToken(refreshToken)
+
+    // Margen de gracia: el token que se acaba de reemplazar sigue sirviendo unos segundos, pero solo
+    // para un access token nuevo. No se rota otra vez: la cookie vigente es la que ya entregó la otra pestaña.
+    const acceptedAsPrevious = (s: typeof session) =>
+      s.previousTokenHash === presented && !!s.previousValidUntil && s.previousValidUntil > new Date()
+    const accessOnly = () => ({ user, tokens: { accessToken: generateTokens(user, session.id).accessToken } })
+
+    if (presented !== session.tokenHash) {
+      if (acceptedAsPrevious(session)) return accessOnly()
+      throw invalid()
+    }
+
+    const tokens = generateTokens(user, session.id)
+    const rotated = await authRepository.rotateSession({
+      id:                 session.id,
+      currentHash:        presented,
+      newRefreshToken:    tokens.refreshToken,
+      previousValidUntil: new Date(now.getTime() + PREVIOUS_TOKEN_GRACE_MS),
+      expiresAt:          jwtProvider.expiryOf(tokens.refreshToken),
+    })
+    if (rotated) return { user, tokens }
+
+    // Otro pedido con esta misma cookie renovó justo antes: se vuelve a leer la sesión y, si este token
+    // ahora es el "anterior", se responde como en el margen de gracia.
+    const fresh = await authRepository.findSession(session.id)
+    if (fresh && acceptedAsPrevious(fresh)) return accessOnly()
+    throw invalid()
   },
 
   verifyEmail: async (token: string): Promise<void> => {
