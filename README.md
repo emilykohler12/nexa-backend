@@ -195,7 +195,9 @@ npm run seed:demo
 **Esperado:**
 
 ```
-46 migrations found in prisma/migrations
+54 migrations found in prisma/migrations
+Applying migration `20260720211431_init`
+Applying migration `20260813212326_init`
 ...
 All migrations have been successfully applied.
 ...
@@ -342,6 +344,8 @@ Test Files  11 passed (11)
 ## 8. Declaración de uso de IA
 
 En este proyecto se usó **Claude Code** (Anthropic) como asistente de programación, con los modelos Claude Sonnet 5, Claude Sonnet 5.5, Claude Haiku 4.5 y Claude Opus 5.5. Toda decisión de dominio (entidades, reglas, alcance del MVP, iteraciones) la tomó la autora; el detalle de cada decisión, las alternativas descartadas y en qué intervino la IA está en la bitácora: [`00-gestion/BITACORA.md`](00-gestion/BITACORA.md) (AE1, hasta el 03/09/2026) y su continuación [`00-gestion/20261006_BitacoraIndividual_KohlerAE2_v5.docx`](00-gestion/20261006_BitacoraIndividual_KohlerAE2_v5.docx) (AE2, del 10/09 al 06/10/2026).
+
+También se usó **Claude** (chat, Anthropic) sobre documentos —el informe, los instrumentos, el libro de requisitos, el acta, el tablero y la bitácora—; ese uso está declarado en la bitácora y en el Anexo III.
 
 ### 8.1 Cifras (calculadas con `git log`)
 
