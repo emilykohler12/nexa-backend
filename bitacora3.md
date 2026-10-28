@@ -549,3 +549,16 @@ Registro de cada cambio hecho en la rama `chore/claude-config`. Cada entrada con
 | 4 | Aporte personal | Emily pidió actualizar el SOP, explicar qué es, guiar el uso del SQL Editor, subir los cambios del backend, revisar y borrar las ramas innecesarias, y que toda modificación de código quede en esta bitácora con fecha. |
 | 5 | Desacuerdo y resolución | Ninguno. Contrato con el frontend (viene de la entrada 37, todavía sin desplegar): `POST /api/auth/login` puede responder `429` con `code: TOO_MANY_ATTEMPTS`; `POST /api/uploads/image` puede responder `400 INVALID_IMAGE_CONTENT` y `403` si un no admin sube SVG. Antes de mergear, confirmar en Supabase que la migración 52 figura como `OK`. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
+
+## Entrada 43: migración refresh_sessions aplicada en Supabase (hecho por Emily)
+
+**Fecha:** 2026-10-28, 00:05 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Aplicar en la base de producción (Supabase) la migración `20261027120000_add_refresh_sessions` pegando su SQL en el SQL Editor (paso 1) y registrándola en `_prisma_migrations` con el INSERT que genera `scripts/migration-checksums.mjs insert` (paso 2). Lo ejecutó Emily; Claude solo preparó los dos archivos SQL. No se modificó ningún archivo de migración ni de código. |
+| 2 | Alternativas y criterio de descarte | `prisma migrate deploy` desde la PC: descartado, da `P1001` contra Supabase. Mergear antes de aplicar: descartado, el código nuevo consulta `refresh_sessions` y sin la tabla el login da error. |
+| 3 | Evidencia que la sostiene | Antes: el control de migraciones dio `FALTA APLICAR` 1 (`20261027120000_add_refresh_sessions`) y `OK` 51. Emily informó que los dos pasos salieron bien. **La consulta de control posterior (esperado: `OK` 52) todavía no se vio**: queda pendiente que Emily la corra y pase el resultado. |
+| 4 | Aporte personal | Emily ejecutó el SQL en Supabase y avisó el resultado. |
+| 5 | Desacuerdo y resolución | Ninguno. Con la tabla creada ya se puede mergear el pull request #5 y desplegar sin romper el login. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
