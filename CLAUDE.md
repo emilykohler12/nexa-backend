@@ -44,7 +44,7 @@ Necesitan un PostgreSQL de pruebas apuntado por `.env.test` (copiar de `.env.tes
 
 ## Producción y base de datos
 
-- Según `00-gestion/RUNBOOK.md`, el backend corre en Render y la base en Supabase. Un push a `main` redespliega el backend, así que no pushear a `main` sin que Emily lo pida.
+- Según `00-gestion/RUNBOOK.md`, el backend corre en Render y la base en Supabase. Un push a `main` redespliega el backend, así que no pushear a `main` sin que Emily lo pida. La versión de Node de Render sale de `.node-version` (el servicio no tiene `NODE_VERSION`; si la variable existiera, gana sobre el archivo): mantenerla en un parche de seguridad vigente de la 24 y redesplegar al cambiarla.
 - Una migración nueva va primero a la base de Supabase y recién después al push. Nunca correr migraciones, seeds ni tests contra otra base que no sea la de `.env.test`. No editar migraciones ya existentes.
 
 ## Contrato con el frontend
