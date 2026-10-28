@@ -29,7 +29,14 @@ const schema = z.object({
   MAIL_PORT: z.string().default('587').transform(Number),
   MAIL_USER:              z.string().default(''),
   MAIL_PASS:              z.string().default(''),
-  MAIL_FROM:              z.string().default('noreply@app.com'),
+  // Remitente de TODOS los mails de la app. Con Brevo tiene que estar verificado como remitente allá.
+  MAIL_FROM:              z.string().trim().min(1).default('kologic6@gmail.com'),
+  // Envío por la API HTTPS de Brevo (en Render el SMTP está bloqueado). Un valor vacío se trata como
+  // "no configurado" y se usa SMTP, que sirve para desarrollo local.
+  BREVO_API_KEY: z.preprocess(
+    v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().trim().optional(),
+  ),
 
   // Mercado Pago — opcionales, la app arranca sin ellas. payment.service.ts
   // valida su presencia recién al momento de crear un pago real.
