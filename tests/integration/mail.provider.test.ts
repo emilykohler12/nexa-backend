@@ -114,3 +114,20 @@ describe('mailProvider sin BREVO_API_KEY (desarrollo local)', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 })
+
+describe('mailProvider con un MAIL_FROM inválido', () => {
+  beforeEach(() => { env.BREVO_API_KEY = 'clave-de-prueba' })
+
+  it.each(['kologic6gmail.com', 'kologic6@gmail', 'dos palabras@gmail.com'])(
+    'con "%s" falla con un mensaje claro y no llama a Brevo', async (invalid) => {
+      env.MAIL_FROM = invalid
+
+      const err = await mailProvider.send('clienta@test.local', 'Asunto', '<p>Hola</p>').then(() => null, (e: unknown) => e as Error)
+
+      expect(err).toBeInstanceOf(Error)
+      expect(err!.message).toContain('MAIL_FROM no es un email válido')
+      expect(err!.message).not.toContain('clave-de-prueba')
+      expect(fetchMock).not.toHaveBeenCalled()
+    },
+  )
+})

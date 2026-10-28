@@ -43,7 +43,14 @@ function getSmtpTransporter(): Transporter {
   return smtpTransporter
 }
 
+const EMAIL_SHAPE = /^[^\s@"']+@[^\s@"']+\.[^\s@"']+$/
+
 async function sendWithBrevo(to: string, subject: string, html: string): Promise<{ messageId?: string }> {
+  // Brevo solo dice "valid sender email required"; así el log indica qué variable corregir.
+  if (!EMAIL_SHAPE.test(env.MAIL_FROM)) {
+    // El remitente no es un dato personal ni secreto: se muestra tal cual para ver qué le falta (arroba, comillas).
+    throw new Error(`MAIL_FROM no es un email válido (${JSON.stringify(env.MAIL_FROM)}): revisá la variable en Render.`)
+  }
   const res = await fetch(BREVO_URL, {
     method:  'POST',
     headers: { 'api-key': env.BREVO_API_KEY!, 'content-type': 'application/json', accept: 'application/json' },

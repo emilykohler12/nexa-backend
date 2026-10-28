@@ -614,3 +614,16 @@ Registro de cada cambio hecho en la rama `chore/claude-config`. Cada entrada con
 | 4 | Aporte personal | Emily creó la cuenta de Brevo y pidió revisar todo el código de envío para que solo se use `kologic6@gmail.com`. Escribió la dirección sin la arroba (`kologic6gmail.com`); se interpretó como `kologic6@gmail.com`, que es la que ya figura en `tenant.data.ts` del frontend. |
 | 5 | Desacuerdo y resolución | Ninguno. **Para que funcione, en Render (Environment):** `BREVO_API_KEY` = la clave de Brevo y `MAIL_FROM` = `kologic6@gmail.com`; la dirección tiene que figurar como remitente verificado en Brevo. **Advertencia:** Brevo avisa que los remitentes de dominios gratuitos (gmail.com) no se pueden autenticar con DKIM/DMARC propios y los mails pueden caer en spam; para uso real conviene un dominio propio. El resto de los mails que dependen de esto (verificación, turnos, recordatorios) también empezará a salir. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
+
+## Entrada 48: error de Brevo "valid sender email required" y validación del remitente
+
+**Fecha:** 2026-10-28, 01:10 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Rama `fix/mail-from-valido`. (a) `env.ts`: `MAIL_FROM` y `BREVO_API_KEY` ya no conservan espacios ni comillas simples o dobles pegadas alrededor del valor. (b) `mail.provider.ts`: antes de llamar a Brevo se comprueba que `MAIL_FROM` tenga forma de email; si no, falla con `MAIL_FROM no es un email válido ("...")\: revisá la variable en Render` en lugar del genérico de Brevo. (c) Tests: 3 casos nuevos en `mail.provider.test.ts` (`kologic6gmail.com`, `kologic6@gmail`, con un espacio). |
+| 2 | Alternativas y criterio de descarte | Cambiar el valor por defecto o fijar el remitente en el código para ignorar la variable de Render: descartado, el remitente tiene que poder cambiarse sin tocar código. Validar con `.email()` en `env.ts`: descartado otra vez, un valor inválido en Render impediría que el servidor arranque. |
+| 3 | Evidencia que la sostiene | Log de Render pegado por Emily tras el merge de #8: `Brevo respondió 400 (invalid_parameter): valid sender email required`. Brevo devuelve eso cuando el `sender.email` no tiene forma de dirección. El valor por defecto del código (`kologic6@gmail.com`) sí la tiene, así que lo que llega es el de la variable `MAIL_FROM` de Render. **Causa exacta: no verificada**, no se puede leer Render desde acá; las hipótesis son que la variable se cargó sin la arroba (`kologic6gmail.com`, como se escribió en el pedido), con comillas o con un espacio. `typecheck:all` sin errores y suite completa: 29 archivos, 284 tests en verde. |
+| 4 | Aporte personal | Emily cargó las variables en Render y pegó el log del error. |
+| 5 | Desacuerdo y resolución | Ninguno. **Acción de Emily en Render (Environment):** revisar que `MAIL_FROM` valga exactamente `kologic6@gmail.com`; guardar. Con este cambio, si sigue mal, el log dirá qué valor llegó. El cambio del código solo mejora el diagnóstico y tolera comillas: no reemplaza corregir la variable. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
