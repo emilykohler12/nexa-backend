@@ -14,6 +14,10 @@ export const uploadController = {
       if (!file) {
         throw new AppError(HTTP.BAD_REQUEST, 'Falta el archivo de imagen', 'MISSING_FILE')
       }
+      // El SVG solo lo usa el logo del negocio (pantalla de admin): ver el motivo en upload.provider.
+      if (file.mimetype === 'image/svg+xml' && req.user?.role !== 'admin') {
+        throw new AppError(HTTP.FORBIDDEN, 'Solo el administrador puede subir imágenes SVG', 'FORBIDDEN')
+      }
       const parsedFolder = folderSchema.safeParse(req.body?.folder)
       const folder = parsedFolder.success ? parsedFolder.data : undefined
 
