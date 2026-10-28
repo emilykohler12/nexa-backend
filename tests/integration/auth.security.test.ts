@@ -199,18 +199,15 @@ describe('refresh token', () => {
     expect(again.body.code).toBe('INVALID_REFRESH_TOKEN')
   })
 
-  it('transición: un token guardado en texto plano (sesiones anteriores) todavía se acepta y pasa a ser una sesión con hash', async () => {
+  it('un token sin sid (formato anterior a las sesiones por dispositivo) ya no se acepta', async () => {
     const client = await createClientUser()
     const legacy = jwtProvider.signRefresh({ sub: client.id, email: client.email, role: 'client' })
-    await prisma.user.update({ where: { id: client.id }, data: { refreshToken: legacy } })
 
     const res = await request(app).post('/api/auth/refresh').set('Cookie', `refresh_token=${legacy}`)
 
-    expect(res.status).toBe(200)
-    expect((await prisma.user.findUniqueOrThrow({ where: { id: client.id } })).refreshToken).toBeNull()
-    const hashes = await sessionHashes(client.id)
-    expect(hashes).toHaveLength(1)
-    expect(hashes[0]).toMatch(HEX64)
+    expect(res.status).toBe(401)
+    expect(res.body.code).toBe('INVALID_REFRESH_TOKEN')
+    expect(await sessionHashes(client.id)).toHaveLength(0)
   })
 
   it('un token distinto del guardado se rechaza', async () => {

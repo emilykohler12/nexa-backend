@@ -34,7 +34,6 @@ model User {
   gender            Gender?
   emailVerified     Boolean   @default(false) @map("email_verified")
   active            Boolean   @default(true)
-  refreshToken      String?   @map("refresh_token") @db.Text
   profileComplete   Boolean   @default(false) @map("profile_complete")
   verificationToken String?   @map("verification_token") @db.VarChar(255)
   // RF-06.01 — fecha en que aceptó Términos de Servicio y Política de Privacidad.
@@ -147,8 +146,8 @@ model PasswordReset {
   @@map("password_resets")
 }
 
-// Una fila por dispositivo con la sesión abierta. Reemplaza a users.refresh_token, que guardaba un
-// único token por usuaria (un login en otro dispositivo cerraba la renovación del anterior).
+// Una fila por dispositivo con la sesión abierta. Reemplazó a la columna users.refresh_token (borrada
+// en la migración 20261028120000), que guardaba un único token por usuaria (un login en otro dispositivo cerraba la renovación del anterior).
 // El id viaja dentro de los dos JWT como "sid". Se guarda el SHA-256 del refresh token, nunca el
 // token. Al renovar, el hash anterior se acepta unos segundos más (previousTokenHash): dos
 // pestañas que renuevan a la vez con la misma cookie no se deslogueen entre sí.

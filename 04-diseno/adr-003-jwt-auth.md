@@ -94,7 +94,7 @@ sin `secure`.
 ### 4.1 Emisión
 `register` y `login` (`auth.service.ts:97` y `:110`) generan el par con
 `generateTokens()` (`utils/generateTokens.ts`), guardan el refresh token en la
-columna `users.refresh_token` y el controller lo entrega con `setTokenCookies()`
+tabla `refresh_sessions` (su hash SHA-256) y el controller lo entrega con `setTokenCookies()`
 (`auth.controller.ts:25`). El login responde el mismo error
 `INVALID_CREDENTIALS` si el email no existe o si la contraseña no coincide, para
 no revelar qué cuentas existen. Las contraseñas se guardan con bcrypt.
@@ -126,10 +126,7 @@ pestañas que renuevan a la vez con la misma cookie: la segunda no se desloguea 
 borra las cookies de la primera. Pasado el margen, un token ya usado da
 `401 INVALID_REFRESH_TOKEN`, y eso no cierra la sesión vigente del dispositivo.
 
-*Sesiones anteriores* (sin `sid`, guardadas en `users.refresh_token`): se canjean
-una sola vez por una sesión nueva y la columna se vacía. Esa columna y su
-búsqueda (`findByRefreshToken`, `claimLegacyRefreshToken`) se pueden quitar 7 días
-después del despliegue, cuando ya no quede ninguna sesión del formato anterior.
+*Sesiones anteriores* (sin `sid`, guardadas en `users.refresh_token`): se canjeaban una sola vez por una sesión nueva. Ese canje y la columna se quitaron el 2026-10-28, a los 7 días del despliegue de las sesiones por dispositivo (migración `20261028120000_drop_users_refresh_token`); hoy un token sin `sid` da `401 INVALID_REFRESH_TOKEN`.
 
 ### 4.4 Cierre de sesión e invalidación
 - `logout` cierra **solo la sesión de ese dispositivo** (el `sid` del access token)
@@ -158,11 +155,9 @@ después del despliegue, cuando ya no quede ninguna sesión del formato anterior
    hasta 15 minutos. Aceptado por el tamaño del sistema; la renovación sí se
    corta de inmediato.
 2. ~~El refresh token se guardaba en texto plano.~~ **Corregido el 2026-10-24:**
-   `users.refresh_token` guarda el SHA-256 del token (`auth.repository.ts`), por
-   lo que un backup filtrado no permite abrir sesiones. Durante una transición (contada desde el despliegue en producción)
-   de 7 días se sigue aceptando un token guardado en texto plano (el siguiente
-   refresh lo pasa a hash); pasado ese plazo hay que quitar esa segunda
-   condición de `findByRefreshToken`. Además los tokens llevan `jti`, por lo que
+   `refresh_sessions.token_hash` guarda el SHA-256 del token (`auth.repository.ts`), por
+   lo que un backup filtrado no permite abrir sesiones. El formato viejo en texto plano
+   dejó de aceptarse el 2026-10-28. Además los tokens llevan `jti`, por lo que
    dos emitidos en el mismo segundo ya no son idénticos.
 3. ~~Una sola sesión renovable por usuario.~~ **Corregido el 2026-10-27:** una
    sesión por dispositivo en `refresh_sessions` (ver 4.3). Requirió una migración
