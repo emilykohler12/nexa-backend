@@ -182,11 +182,11 @@ describe('reserva de turnos', () => {
       expect(res.body.appointment.professionalId).toBe(a.id)
     })
 
-    it('los turnos cancelados y no_show no suman carga', async () => {
+    it('los turnos cancelados y cancelled_no_show no suman carga', async () => {
       const { a, svc } = await twoPros()
       const other = await createClientUser()
       await createAppointmentDirect({ clientId: other.id, professionalId: a.id, serviceId: svc.id, date: futureWeekDay(1), time: '09:00', status: 'cancelled' })
-      await createAppointmentDirect({ clientId: other.id, professionalId: a.id, serviceId: svc.id, date: futureWeekDay(1), time: '10:00', status: 'no_show' })
+      await createAppointmentDirect({ clientId: other.id, professionalId: a.id, serviceId: svc.id, date: futureWeekDay(1), time: '10:00', status: 'cancelled_no_show' })
 
       // Empate en 0 → gana la de mayor antigüedad.
       const res = await bookAny(svc.id, futureWeekDay(2), '12:00')

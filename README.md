@@ -49,7 +49,7 @@ Una clienta se registra, elige un servicio, una profesional, una fecha y un hora
 La disponibilidad se garantiza en el **backend**, no solo en la interfaz:
 
 - El frontend no ofrece los horarios ya ocupados (`GET /api/professional/:id/availability`).
-- La fuente de verdad es un **índice único parcial** en PostgreSQL sobre `(professional_id, date, time)` que excluye los turnos `cancelled` y `no_show`. Es atómico: aunque dos reservas lleguen a la vez o alguien salte la interfaz, solo una se guarda y la otra recibe **HTTP 409** (`PROFESSIONAL_SLOT_TAKEN`). No hay consulta previa.
+- La fuente de verdad es un **índice único parcial** en PostgreSQL sobre `(professional_id, date, time)` que excluye los turnos `cancelled` y `cancelled_no_show`. Es atómico: aunque dos reservas lleguen a la vez o alguien salte la interfaz, solo una se guarda y la otra recibe **HTTP 409** (`PROFESSIONAL_SLOT_TAKEN`). No hay consulta previa.
 - La reserva de la clienta (simple, combo y reprogramación) además exige que la hora caiga dentro de las franjas que definió la profesional: si no, **HTTP 400** (`OUT_OF_HOURS`). Los turnos manuales del admin no se validan contra la franja.
 - Pruebas automatizadas: `tests/integration/appointments.booking.test.ts` y `tests/integration/appointments.out-of-hours.test.ts`.
 - Alternativas evaluadas y motivo de la elección: `04-diseno/adr-002-validacion-antes-persistencia.md`.
@@ -195,7 +195,9 @@ npm run seed:demo
 **Esperado:**
 
 ```
-46 migrations found in prisma/migrations
+54 migrations found in prisma/migrations
+Applying migration `20260720211431_init`
+Applying migration `20260813212326_init`
 ...
 All migrations have been successfully applied.
 ...
@@ -342,6 +344,8 @@ Test Files  11 passed (11)
 ## 8. Declaración de uso de IA
 
 En este proyecto se usó **Claude Code** (Anthropic) como asistente de programación, con los modelos Claude Sonnet 5, Claude Sonnet 5.5, Claude Haiku 4.5 y Claude Opus 5.5. Toda decisión de dominio (entidades, reglas, alcance del MVP, iteraciones) la tomó la autora; el detalle de cada decisión, las alternativas descartadas y en qué intervino la IA está en la bitácora: [`00-gestion/BITACORA.md`](00-gestion/BITACORA.md) (AE1, hasta el 03/09/2026) y su continuación [`00-gestion/20261006_BitacoraIndividual_KohlerAE2_v5.docx`](00-gestion/20261006_BitacoraIndividual_KohlerAE2_v5.docx) (AE2, del 10/09 al 06/10/2026).
+
+También se usó **Claude** (chat, Anthropic) sobre documentos —el informe, los instrumentos, el libro de requisitos, el acta, el tablero y la bitácora—; ese uso está declarado en la bitácora y en el Anexo III.
 
 ### 8.1 Cifras (calculadas con `git log`)
 

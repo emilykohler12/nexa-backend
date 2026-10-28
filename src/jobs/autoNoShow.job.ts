@@ -4,10 +4,10 @@
 // desde la hora pactada de un turno 'confirmed' y nadie registró la llegada
 // de la clienta (ni ella desde la app, ni el profesional/admin por ella —
 // ver markArrivalFor* en appointment.service.ts), se marca el turno como
-// 'no_show'.
+// 'cancelled_no_show'.
 //
 // El índice único parcial que impide doble reserva por profesional/fecha/hora
-// solo excluye 'cancelled' y 'no_show' (ver releaseUnpaidAppointments.job.ts),
+// solo excluye 'cancelled' y 'cancelled_no_show' (ver releaseUnpaidAppointments.job.ts),
 // así que este cambio de estado ya libera el horario para reasignar — no hace
 // falta ningún paso extra.
 import { prisma }          from '../app/database/prisma'
@@ -37,9 +37,9 @@ export async function runAutoNoShowJob(): Promise<{ marked: number }> {
     const minutesLate  = (now - scheduled.getTime()) / (60 * 1000)
     if (minutesLate < GRACE_MINUTES) continue
 
-    await prisma.appointment.update({ where: { id: a.id }, data: { status: 'no_show' } })
+    await prisma.appointment.update({ where: { id: a.id }, data: { status: 'cancelled_no_show' } })
     await activityService.log({
-      action: 'Turno marcado como no show (automático)',
+      action: 'Turno cancelado por inasistencia (automático)',
       module: 'appointments',
       detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}: sin registro de llegada tras ${GRACE_MINUTES} minutos de la hora pactada.`,
     })

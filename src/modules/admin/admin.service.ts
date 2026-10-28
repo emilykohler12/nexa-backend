@@ -78,7 +78,7 @@ export const adminService = {
     if (!user || user.role !== 'client') throw new AppError(HTTP.NOT_FOUND, 'Cliente no encontrado', 'NOT_FOUND')
 
     const rows = await prisma.appointment.findMany({
-      where:   { clientId: id, status: { in: ['finished', 'cancelled', 'no_show'] } },
+      where:   { clientId: id, status: { in: ['finished', 'cancelled', 'cancelled_no_show'] } },
       include: { professional: true, service: true },
       orderBy: [{ date: 'desc' }, { time: 'desc' }],
     })
@@ -206,6 +206,7 @@ export const adminService = {
       where: { id },
       data: {
         name:         'Cliente eliminado',
+        lastName:     null,
         email:        `anonimo_${id}@borrado.com`,
         phone:        null,
         active:       false,

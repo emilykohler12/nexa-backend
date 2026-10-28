@@ -21,13 +21,13 @@ describe('auditoría de cambios de estado de un turno', () => {
     const res = await request(app)
       .patch(`/api/professional/appointments/${appt.id}`)
       .set('Cookie', cookieFor(pro))
-      .send({ status: 'no_show' })
+      .send({ status: 'cancelled_no_show' })
 
     expect(res.status).toBe(200)
-    expect(res.body.appointment.status).toBe('no_show')
+    expect(res.body.appointment.status).toBe('cancelled_no_show')
 
     const logs = await prisma.activityLog.findMany({ where: { module: 'appointments' } })
-    const entry = logs.find(l => l.detail?.includes('"confirmed" → "no_show"'))
+    const entry = logs.find(l => l.detail?.includes('"confirmed" → "cancelled_no_show"'))
     expect(entry).toBeDefined()
     expect(entry!.userName).toBe('Profesional Auditada')
   })

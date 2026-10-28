@@ -4,7 +4,7 @@
 // dejó a medias: reservó, se le abrió el checkout de Mercado Pago y nunca pagó
 // la seña. Esos turnos quedan status 'confirmed' + paymentStatus 'pending' y
 // siguen ocupando el horario (el índice único parcial solo excluye 'cancelled'
-// y 'no_show'), así que hay que cancelarlos pasado el tiempo de reserva.
+// y 'cancelled_no_show'), así que hay que cancelarlos pasado el tiempo de reserva.
 //
 // Libera cuando:
 //  - nunca se intentó pagar (paymentStatus 'pending' y sin mpPaymentId), o
