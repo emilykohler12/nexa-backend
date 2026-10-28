@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { randomUUID } from 'crypto'
 import request from 'supertest'
 import { app } from '../../src/app/app'
 import { prisma } from '../../src/app/database/prisma'
+import { authRepository } from '../../src/modules/auth/auth.repository'
 import {
   createClientUser, createProfessionalUser, createAdminUser, createService, futureWeekDay, TEST_PASSWORD,
 } from '../helpers/factories'
@@ -230,6 +231,20 @@ describe('POST /api/invitations/register', () => {
     const after = await prisma.user.findUniqueOrThrow({ where: { id: existing.id } })
     expect(after.role).toBe('client')
     expect(after.active).toBe(false)
+    expect((await prisma.invitation.findUniqueOrThrow({ where: { token } })).used).toBe(false)
+  })
+
+  it('si el email se ocupa justo antes de crear la cuenta responde 409 EMAIL_TAKEN y no gasta la invitación', async () => {
+    const token = await invite(INVITED)
+    // Simula la carrera: la consulta previa no ve la cuenta, pero existe cuando se hace el INSERT.
+    await createClientUser({ email: INVITED })
+    const spy = vi.spyOn(authRepository, 'findAnyByEmail').mockResolvedValueOnce(null)
+
+    const res = await register(token)
+    spy.mockRestore()
+
+    expect(res.status).toBe(409)
+    expect(res.body.code).toBe('EMAIL_TAKEN')
     expect((await prisma.invitation.findUniqueOrThrow({ where: { token } })).used).toBe(false)
   })
 

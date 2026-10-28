@@ -118,14 +118,24 @@ export const invitationService = {
       await authRepository.updatePassword(existing.id, passwordHash)
       dbUser = await authRepository.updateRole(existing.id, 'professional')
     } else {
-      dbUser = await authRepository.createVerified({
-        name:         dto.name,
-        email:        invitation.email,
-        passwordHash,
-        role:         'professional',
-        phone:        dto.phone  ?? null,
-        gender:       dto.gender ?? null,
-      })
+      try {
+        dbUser = await authRepository.createVerified({
+          name:         dto.name,
+          email:        invitation.email,
+          passwordHash,
+          role:         'professional',
+          phone:        dto.phone  ?? null,
+          gender:       dto.gender ?? null,
+        })
+      } catch (err: any) {
+        // Alguien creó una cuenta con ese email entre la consulta de arriba y este INSERT: la base lo
+        // rechaza (P2002). Se devuelve la invitación para que no quede quemada y se responde 409.
+        if (err?.code === 'P2002') {
+          await invitationRepository.release(dto.token)
+          throw new AppError(HTTP.CONFLICT, 'Ya existe una cuenta con ese email', 'EMAIL_TAKEN')
+        }
+        throw err
+      }
     }
 
     if (!dbUser) throw new AppError(HTTP.INTERNAL_SERVER_ERROR, 'Error al crear el usuario')

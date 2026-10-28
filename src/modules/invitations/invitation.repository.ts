@@ -23,6 +23,10 @@ export const invitationRepository = {
     return result.count === 1
   },
 
+  // Deshace consume() cuando la cuenta no llegó a crearse, para que la invitación se pueda reintentar.
+  release: (token: string) =>
+    prisma.invitation.updateMany({ where: { token, used: true }, data: { used: false } }),
+
   findByEmail: (email: string) =>
     prisma.invitation.findFirst({
       where: { email, used: false },
