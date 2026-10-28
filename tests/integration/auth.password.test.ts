@@ -72,7 +72,6 @@ describe('cambiar la contraseña desde la sesión', () => {
 
   it('con la contraseña actual correcta cambia la clave y cierra la renovación de la sesión', async () => {
     const client = await createClientUser()
-    await prisma.user.update({ where: { id: client.id }, data: { refreshToken: 'algo' } })
 
     const res = await request(app)
       .post('/api/auth/change-password')

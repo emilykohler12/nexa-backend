@@ -31,7 +31,6 @@ describe('anonimización de datos de una clienta (RF-06.03)', () => {
 
     const dbUser = await prisma.user.findUnique({ where: { id: client.id } })
     expect(dbUser?.active).toBe(false)
-    expect(dbUser?.refreshToken).toBeNull()
 
     // El turno sigue existiendo con su precio real — nada contable se pierde.
     const dbAppt = await prisma.appointment.findUnique({ where: { id: appt.id } })

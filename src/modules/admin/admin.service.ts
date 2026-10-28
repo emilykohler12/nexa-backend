@@ -209,7 +209,6 @@ export const adminService = {
         email:        `anonimo_${id}@borrado.com`,
         phone:        null,
         active:       false,
-        refreshToken: null,
       },
     })
     // y se cierra la sesión en todos sus dispositivos

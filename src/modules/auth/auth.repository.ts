@@ -25,14 +25,6 @@ export const authRepository = {
     return null
   },
 
-  // TRANSICIÓN (2026-10-24): las sesiones abiertas antes de este cambio tienen el token
-  // guardado en texto plano. Se aceptan una vez más (el refresh siguiente lo guarda como
-  // hash). Pasados 7 días, que es lo que dura el refresh token, quitar la segunda condición.
-  findByRefreshToken: (token: string) =>
-    prisma.user.findFirst({
-      where: { active: true, OR: [{ refreshToken: hashRefreshToken(token) }, { refreshToken: token }] },
-    }),
-
   findByVerificationToken: (token: string) =>
     prisma.user.findFirst({ where: { verificationToken: token, active: true } }),
 
@@ -91,21 +83,6 @@ export const authRepository = {
   emailExists: async (email: string): Promise<boolean> => {
     const count = await prisma.user.count({ where: { email } })
     return count > 0
-  },
-
-  // ── Token único anterior (users.refresh_token) ───────────────────────────────────────────────
-  // Solo para la transición: las sesiones abiertas antes de las sesiones por dispositivo todavía
-  // lo tienen. Se canjea una sola vez por una sesión nueva y se borra.
-  clearRefreshToken: (userId: string) =>
-    prisma.user.update({ where: { id: userId }, data: { refreshToken: null } }),
-
-  // Canje atómico: devuelve false si el token ya fue canjeado (dos pedidos a la vez).
-  claimLegacyRefreshToken: async (userId: string, token: string): Promise<boolean> => {
-    const result = await prisma.user.updateMany({
-      where: { id: userId, OR: [{ refreshToken: hashRefreshToken(token) }, { refreshToken: token }] },
-      data:  { refreshToken: null },
-    })
-    return result.count === 1
   },
 
   // ── Sesiones por dispositivo (refresh_sessions) ───────────────────────────────────────────────
@@ -190,7 +167,7 @@ export const authRepository = {
   // Cambiar la contraseña cierra la sesión en TODOS los dispositivos.
   updatePassword: async (userId: string, passwordHash: string) => {
     const [user] = await prisma.$transaction([
-      prisma.user.update({ where: { id: userId }, data: { passwordHash, refreshToken: null } }),
+      prisma.user.update({ where: { id: userId }, data: { passwordHash } }),
       prisma.refreshSession.deleteMany({ where: { userId } }),
     ])
     return user

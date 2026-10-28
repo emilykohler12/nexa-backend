@@ -150,11 +150,10 @@ export const authService = {
     return toAuthUser({ ...dbUser, photo })
   },
 
-  // Cierra la sesión de ESTE dispositivo (sid). Un token sin sid es de una sesión anterior a las
-  // sesiones por dispositivo: se borra el token único de la usuaria.
-  logout: async (userId: string, sid?: string): Promise<void> => {
+  // Cierra la sesión de ESTE dispositivo (sid). Un token sin sid ya no corresponde a ninguna sesión:
+  // no hay nada que borrar (las cookies las limpia el controller).
+  logout: async (_userId: string, sid?: string): Promise<void> => {
     if (sid) await authRepository.deleteSession(sid)
-    else await authRepository.clearRefreshToken(userId)
   },
 
   // Renueva la sesión de un dispositivo. Devuelve siempre un access token nuevo; el refresh token
@@ -169,13 +168,8 @@ export const authService = {
       throw invalid()
     }
 
-    // Sesión anterior a las sesiones por dispositivo (sin sid): se canjea una sola vez por una sesión nueva.
-    if (!payload.sid) {
-      const dbUser = await authRepository.findByRefreshToken(refreshToken)
-      if (!dbUser || !(await authRepository.claimLegacyRefreshToken(dbUser.id, refreshToken))) throw invalid()
-      const user = toAuthUser(dbUser)
-      return { user, tokens: await authService.startSession(user) }
-    }
+    // Un token sin sid es del formato anterior a las sesiones por dispositivo, que ya no se acepta.
+    if (!payload.sid) throw invalid()
 
     const session = await authRepository.findSession(payload.sid)
     const now = new Date()

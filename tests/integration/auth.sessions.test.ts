@@ -183,26 +183,14 @@ describe('cómo se guarda y se renueva cada sesión', () => {
   })
 })
 
-describe('transición desde el token único anterior (users.refresh_token)', () => {
-  it('una sesión del formato anterior se acepta y pasa a ser una sesión por dispositivo', async () => {
+describe('token del formato anterior (sin sid)', () => {
+  it('ya no se acepta y no crea ninguna sesión', async () => {
     const client = await createClientUser()
     const legacy = jwtProvider.signRefresh({ sub: client.id, email: client.email, role: 'client' })
-    await prisma.user.update({ where: { id: client.id }, data: { refreshToken: legacy } })
 
     const res = await refresh(legacy)
 
-    expect(res.status).toBe(200)
-    expect((await prisma.user.findUniqueOrThrow({ where: { id: client.id } })).refreshToken).toBeNull()
-    expect(await sessions(client.id)).toHaveLength(1)
-    expect((await refresh(cookieValue(res, 'refresh_token')!)).status).toBe(200)
-  })
-
-  it('el token del formato anterior no sirve dos veces', async () => {
-    const client = await createClientUser()
-    const legacy = jwtProvider.signRefresh({ sub: client.id, email: client.email, role: 'client' })
-    await prisma.user.update({ where: { id: client.id }, data: { refreshToken: legacy } })
-    await refresh(legacy)
-
-    expect((await refresh(legacy)).status).toBe(401)
+    expect(res.status).toBe(401)
+    expect(await sessions(client.id)).toHaveLength(0)
   })
 })
