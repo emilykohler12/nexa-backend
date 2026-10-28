@@ -146,7 +146,7 @@ export const dashboardService = {
         if (weekday < 6) heatmap[weekday][timeBlockOf(a.time)] += 1
       }
 
-      if (a.status === 'no_show') noShowAppointments += 1
+      if (a.status === 'cancelled_no_show') noShowAppointments += 1
 
       if (a.paymentStatus === 'partial' || a.paymentStatus === 'paid') {
         depositRevenueTotal += Number(a.depositAmount)

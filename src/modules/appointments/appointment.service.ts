@@ -51,7 +51,7 @@ function formatDate(date: string): string {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1)
 }
 
-export const APPOINTMENT_STATUSES = ['pending', 'confirmed', 'finished', 'cancelled', 'no_show'] as const
+export const APPOINTMENT_STATUSES = ['pending', 'confirmed', 'finished', 'cancelled', 'cancelled_no_show'] as const
 export type AppointmentStatus = typeof APPOINTMENT_STATUSES[number]
 
 function assertValidStatus(status: string) {
@@ -398,7 +398,7 @@ async function registerBalancePayment(
   if (!(data.amount > 0)) {
     throw new AppError(HTTP.BAD_REQUEST, 'El monto tiene que ser mayor a cero', 'INVALID_AMOUNT')
   }
-  if (['cancelled', 'no_show'].includes(appointment.status)) {
+  if (['cancelled', 'cancelled_no_show'].includes(appointment.status)) {
     throw new AppError(HTTP.BAD_REQUEST, 'No se puede registrar un cobro sobre un turno cancelado o no asistido', 'INVALID_STATUS')
   }
 
@@ -591,9 +591,9 @@ export const ANY_PROFESSIONAL_SENTINEL = 'any'
 
 // R-04 (RF-06) — "Cualquiera". Candidatas: profesionales activas, habilitadas
 // para el servicio, con una franja de disponibilidad que cubra ese día y hora,
-// sin vacaciones esa fecha y sin turno activo (ni cancelado ni no_show) a esa
+// sin vacaciones esa fecha y sin turno activo (ni cancelado ni cancelled_no_show) a esa
 // misma hora de inicio. Entre ellas, la de menor carga de la SEMANA de la fecha
-// pedida (lunes a domingo, turnos no cancelados ni no_show); a igual carga, la
+// pedida (lunes a domingo, turnos no cancelados ni cancelled_no_show); a igual carga, la
 // de mayor antigüedad (Professional.createdAt ascendente). Si hay profesionales
 // para el servicio pero ninguna libre en ese horario → 409.
 // `excludeIds` saca profesionales ya asignados a otro servicio del mismo combo
@@ -630,7 +630,7 @@ async function resolveProfessionalId(
   }
 
   const busy = await prisma.appointment.findMany({
-    where:  { professionalId: { in: enabled.map(u => u.id) }, date: slot.date, time: slot.time, status: { notIn: ['cancelled', 'no_show'] } },
+    where:  { professionalId: { in: enabled.map(u => u.id) }, date: slot.date, time: slot.time, status: { notIn: ['cancelled', 'cancelled_no_show'] } },
     select: { professionalId: true },
   })
   const busyIds = new Set(busy.map(b => b.professionalId))
@@ -651,7 +651,7 @@ async function resolveProfessionalId(
     where:  {
       professionalId: { in: candidates.map(c => c.id) },
       date:           { gte: week.from, lte: week.to },
-      status:         { notIn: ['cancelled', 'no_show'] },
+      status:         { notIn: ['cancelled', 'cancelled_no_show'] },
     },
     _count: { id: true },
   })

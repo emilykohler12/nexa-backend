@@ -308,7 +308,7 @@ model Appointment {
   cancelReason   String?   @map("cancel_reason") @db.VarChar(30)
   // Se completa cuando la clienta (o el profesional/admin en su nombre) registra
   // que llegó al local. Si un turno 'confirmed' sigue en null 20 minutos después
-  // de la hora pactada, el job autoNoShow.job.ts lo marca 'no_show' solo.
+  // de la hora pactada, el job autoNoShow.job.ts lo marca 'cancelled_no_show' solo.
   arrivedAt      DateTime? @map("arrived_at") @db.Timestamptz
   // Cobro del SALDO restante (precio - seña) en el local — la seña ya se
   // cobra sola por Mercado Pago (mpPaymentId), pero el resto se paga en mano
@@ -335,7 +335,7 @@ model Appointment {
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   // Evita doble reserva: un mismo profesional no puede tener dos turnos activos
-  // (ni cancelled ni no_show) en la misma fecha/hora. Se implementa como un índice
+  // (ni cancelled ni cancelled_no_show) en la misma fecha/hora. Se implementa como un índice
   // único PARCIAL creado a mano en la migración — Prisma
   // no puede expresar ese WHERE en el schema, así que intencionalmente no hay
   // ningún @@unique/@@index acá para esas columnas (evita que `migrate diff`

@@ -27,7 +27,7 @@ describe('dashboard del admin — KPIs (period=day)', () => {
     expect(res.body.dashboard.attendedAppointments).toBe(1)
   })
 
-  it('cuenta los no_show de hoy', async () => {
+  it('cuenta los cancelled_no_show de hoy', async () => {
     const admin  = await createAdminUser()
     const client = await createClientUser()
     const pro    = await createProfessionalUser()
@@ -35,7 +35,7 @@ describe('dashboard del admin — KPIs (period=day)', () => {
 
     await createAppointmentDirect({
       clientId: client.id, professionalId: pro.id, serviceId: svc.id,
-      date: todayStr(), time: '09:00', status: 'no_show',
+      date: todayStr(), time: '09:00', status: 'cancelled_no_show',
     })
 
     const res = await request(app).get('/api/admin/dashboard').query({ period: 'day' }).set('Cookie', cookieFor(admin))

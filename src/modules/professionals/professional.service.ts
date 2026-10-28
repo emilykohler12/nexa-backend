@@ -290,7 +290,7 @@ export const professionalService = {
     let bookedTimes: string[] = []
     if (date) {
       const booked = await prisma.appointment.findMany({
-        where:  { professionalId: id, date, status: { notIn: ['cancelled', 'no_show'] } },
+        where:  { professionalId: id, date, status: { notIn: ['cancelled', 'cancelled_no_show'] } },
         select: { time: true },
       })
       bookedTimes = booked.map(b => b.time)

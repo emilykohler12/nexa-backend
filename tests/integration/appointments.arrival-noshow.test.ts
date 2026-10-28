@@ -125,7 +125,7 @@ describe('registro de llegada', () => {
 })
 
 describe('job de no-show automático', () => {
-  it('marca no_show un turno confirmado 25 min pasada su hora sin llegada registrada', async () => {
+  it('marca cancelled_no_show un turno confirmado 25 min pasada su hora sin llegada registrada', async () => {
     const client = await createClientUser()
     const pro    = await createProfessionalUser()
     const svc    = await createService()
@@ -138,7 +138,7 @@ describe('job de no-show automático', () => {
     expect(result.marked).toBe(1)
 
     const fresh = await prisma.appointment.findUnique({ where: { id: appt.id } })
-    expect(fresh?.status).toBe('no_show')
+    expect(fresh?.status).toBe('cancelled_no_show')
   })
 
   it('NO marca un turno que ya registró la llegada', async () => {
@@ -171,7 +171,7 @@ describe('job de no-show automático', () => {
     expect(result.marked).toBe(0)
   })
 
-  it('libera el horario — después de marcar no_show, se puede reservar la misma profesional/fecha/hora de nuevo', async () => {
+  it('libera el horario — después de marcar cancelled_no_show, se puede reservar la misma profesional/fecha/hora de nuevo', async () => {
     const client1 = await createClientUser()
     const client2 = await createClientUser()
     const pro     = await createProfessionalUser()
@@ -207,6 +207,6 @@ describe('job de no-show automático', () => {
     await runAutoNoShowJob()
 
     const logs = await prisma.activityLog.findMany({ where: { module: 'appointments' } })
-    expect(logs.some(l => l.action.toLowerCase().includes('no show'))).toBe(true)
+    expect(logs.some(l => l.action.toLowerCase().includes('inasistencia'))).toBe(true)
   })
 })

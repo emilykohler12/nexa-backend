@@ -13,14 +13,14 @@ Si te pasan un diff o una lista de archivos, revisá eso. Si no, revisá `src/mo
 
 ## Qué es R-01 en este código (no lo reinventes)
 
-- La garantía es el índice único parcial `appointments_professional_date_time_active_key` sobre `(professional_id, date, time) WHERE status NOT IN ('cancelled','no_show')`, definido solo en SQL de la migración.
+- La garantía es el índice único parcial `appointments_professional_date_time_active_key` sobre `(professional_id, date, time) WHERE status NOT IN ('cancelled','cancelled_no_show')`, definido solo en SQL de la migración.
 - No hay consulta previa a propósito: se hace el `INSERT` y `isSlotConflict()` traduce la violación a `409 PROFESSIONAL_SLOT_TAKEN` (eventos especiales: `SLOT_TAKEN`; asignación automática sin nadie libre: `NO_PROFESSIONAL_FREE`).
 - La reserva de la clienta fuera de franja da `400 OUT_OF_HOURS` (`assertWithinAvailability`). Los turnos manuales de admin/profesional no se validan a propósito.
 - Limitación conocida y aceptada: no detecta solapamientos por duración. No la reportes como hallazgo nuevo; sí reportá si un cambio la empeora.
 
 ## Qué buscar
 
-1. **R-01**: caminos nuevos que creen o muevan turnos (reserva, combo, reprogramación, manual, evento especial, cambio de estado, reactivación de un cancelado) sin pasar por el `INSERT`/`UPDATE` que dispara el índice, o que capturen el error y lo traduzcan mal. Un `findFirst` previo como "garantía" es un defecto. Un cambio de `status` de `cancelled`/`no_show` a activo también puede chocar con el índice.
+1. **R-01**: caminos nuevos que creen o muevan turnos (reserva, combo, reprogramación, manual, evento especial, cambio de estado, reactivación de un cancelado) sin pasar por el `INSERT`/`UPDATE` que dispara el índice, o que capturen el error y lo traduzcan mal. Un `findFirst` previo como "garantía" es un defecto. Un cambio de `status` de `cancelled`/`cancelled_no_show` a activo también puede chocar con el índice.
 2. **Carreras y transacciones**: operaciones de varios pasos (turno + pago + log de estado, combos con varias patas, cancelación parcial de combos, descuento de stock, promociones aplicadas) fuera de `prisma.$transaction`. Lecturas-luego-escrituras sin bloqueo (`SELECT … FOR UPDATE`) sobre cupos o contadores. Efectos externos (mail, Mercado Pago) dentro de una transacción o antes del commit.
 3. **Zona horaria (ART, UTC-3)**: en este código las fechas de turno son texto `YYYY-MM-DD` y las horas `HH:mm`; `availability.ts` calcula días con `T00:00:00Z`/`getUTCDay`. Los cron de `scheduler.ts` usan la hora del servidor, sin opción de zona. Buscá comparaciones entre "ahora" (UTC en Render) y fecha/hora pactada (hora local de Argentina) sin convertir: reglas de cancelación (corte de 12 h), no-show a los 20 min, recordatorios, liberación de impagos, `new Date('YYYY-MM-DD')`, `toISOString().slice(0,10)` sobre fechas locales, desfases cerca de medianoche.
 4. **Estados inconsistentes**: combinaciones imposibles de `status` y `paymentStatus`; transiciones de estado sin pasar por el registro de estados; combos donde una pata queda activa y otra cancelada; turnos `confirmed` con seña `pending` que ocupan el horario; reembolsos o señas parciales mal reflejados.
