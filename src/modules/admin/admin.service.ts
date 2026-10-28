@@ -206,6 +206,7 @@ export const adminService = {
       where: { id },
       data: {
         name:         'Cliente eliminado',
+        lastName:     null,
         email:        `anonimo_${id}@borrado.com`,
         phone:        null,
         active:       false,

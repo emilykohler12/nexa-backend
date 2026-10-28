@@ -20,6 +20,9 @@ describe('anonimización de datos de una clienta (RF-06.03)', () => {
       status: 'finished', servicePrice: 15000,
     })
 
+    // RF-09: el apellido vive en su propia columna y también tiene que desaparecer.
+    await prisma.user.update({ where: { id: client.id }, data: { lastName: 'Gómez' } })
+
     const res = await request(app)
       .post(`/api/admin/clients/${client.id}/anonymize`)
       .set('Cookie', cookieFor(admin))
@@ -31,6 +34,8 @@ describe('anonimización de datos de una clienta (RF-06.03)', () => {
 
     const dbUser = await prisma.user.findUnique({ where: { id: client.id } })
     expect(dbUser?.active).toBe(false)
+    expect(dbUser?.lastName).toBeNull()
+    expect(JSON.stringify(res.body)).not.toContain('Gómez')
 
     // El turno sigue existiendo con su precio real — nada contable se pierde.
     const dbAppt = await prisma.appointment.findUnique({ where: { id: appt.id } })
