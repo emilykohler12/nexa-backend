@@ -788,3 +788,16 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily pidió borrar el grupo de encuadre, pasar a AE3, mover y renombrar la bitácora para que continúe la de la AE2, nombrarla en el README debajo de las otras dos y en la declaración de uso de IA, y subir todo a GitHub para hacer ella el merge. |
 | 5 | Desacuerdo y resolución | Ninguno. **A tener en cuenta:** la fecha del nombre del archivo (28/10/2026) es la del traslado, y el período arranca el 23/10; las entradas anteriores dicen «bitácora 3» y no se tocaron. **Pendiente de Emily:** decidir si quiere esta bitácora también como \`.docx\` para entregarla junto a la de la AE2. La entrada del push y los pull requests va en la entrada 61. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
+
+## Entrada 61: push de las dos ramas y pull requests (backend #12, frontend #8)
+
+**Fecha:** 2026-10-28, 23:01 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Subir \`fix/alergias-solo-la-clienta\` (backend) y \`fix/anonimizar-datos-y-readme\` (frontend) y abrir un pull request por repositorio, con base \`main\`, sin mergear: backend https://github.com/emilykohler12/nexa-backend/pull/12 y frontend https://github.com/emilykohler12/nexa-frontend/pull/8. El merge lo hace Emily. Esta entrada se suma en un commit aparte sobre la rama del backend. |
+| 2 | Alternativas y criterio de descarte | Pushear a \`main\`: descartado, redespliega Render y Vercel y la regla del proyecto lo prohíbe sin pedido. Un solo pull request para los dos repositorios: no existe, son repositorios separados. Mover la etiqueta \`v1.3\` a estos commits: no se hizo, queda en el merge de los pull requests #11 y #7 (entrada 57). |
+| 3 | Evidencia que la sostiene | \`git push -u origin\` creó las dos ramas remotas y \`gh pr create\` devolvió las dos URL. Antes del push: backend \`npm run typecheck:all\` sin errores y 303 tests en verde; frontend lint, \`typecheck:all\` y 77 tests en verde (el resto de los cambios de este push son documentación). Los commits del backend son \`3fe5704\`, \`078241d\`, \`cee7f22\` y \`83d82e2\`; los del frontend, \`c11524f\`, \`ae60d51\`, \`abe79b6\` y \`818e1a7\`. |
+| 4 | Aporte personal | Emily pidió subir todos los cambios a GitHub y dijo que hace ella el merge. |
+| 5 | Desacuerdo y resolución | Ninguno. **Orden de despliegue:** los dos pull requests son independientes y no hay migraciones nuevas ni cambios de ruta. **Pendiente de Emily:** mergear los dos pull requests; la corrida de CI de \`main\` tras cada merge queda para el registro del Portafolio. Las cifras de commits del README (8.1) quedan atrasadas con estos commits. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
