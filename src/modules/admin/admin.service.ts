@@ -53,6 +53,24 @@ function mapAdminClient(
   }
 }
 
+// RF-07 — las alergias son un dato de salud y solo las carga la propia clienta, con su
+// consentimiento, al reservar (`PATCH /api/client/appointments/:id/details`). Ni el admin
+// ni las profesionales pueden cargarlas ni editarlas. El formulario del admin reenvía
+// siempre todo el bloque `clinical`, así que se acepta el mismo valor que ya está guardado
+// (o vacío si no hay ninguno) y se rechaza cualquier cambio.
+function assertAllergiesUnchanged(data: any, current: string | null | undefined): void {
+  const incoming = data.clinical?.allergies
+  if (incoming === undefined || incoming === null) return
+  const unchanged = typeof incoming === 'string' && incoming.trim() === (current ?? '').trim()
+  if (!unchanged) {
+    throw new AppError(
+      HTTP.BAD_REQUEST,
+      'Las alergias solo las puede cargar la clienta al reservar',
+      'VALIDATION_ERROR',
+    )
+  }
+}
+
 async function getByIdInternal(id: string) {
   const user = await prisma.user.findUnique({ where: { id }, include: { client: true } })
   if (!user || user.role !== 'client') throw new AppError(HTTP.NOT_FOUND, 'Cliente no encontrado', 'NOT_FOUND')
@@ -100,6 +118,7 @@ export const adminService = {
     if (typeof data.email !== 'string' || !data.email.trim() || typeof data.name !== 'string' || !data.name.trim()) {
       throw new AppError(HTTP.BAD_REQUEST, 'Nombre y email son obligatorios', 'VALIDATION_ERROR')
     }
+    assertAllergiesUnchanged(data, null)
     // El login pasa el email a minúsculas: si se guardara con mayúsculas, la clienta no podría entrar.
     const email = data.email.trim().toLowerCase()
     // Insensible a mayúsculas, para detectar también cuentas viejas guardadas con otras mayúsculas.
@@ -127,7 +146,6 @@ export const adminService = {
       data: {
         userId:       user.id,
         birthDate:    data.birthDate ? new Date(data.birthDate) : null,
-        allergies:    data.clinical?.allergies    ?? null,
         preferences:  data.clinical?.preferences  ?? null,
         observations: data.clinical?.observations ?? null,
       },
@@ -139,6 +157,9 @@ export const adminService = {
   updateClient: async (id: string, data: any) => {
     const user = await prisma.user.findUnique({ where: { id } })
     if (!user || user.role !== 'client') throw new AppError(HTTP.NOT_FOUND, 'Cliente no encontrado', 'NOT_FOUND')
+
+    const profile = await prisma.client.findUnique({ where: { userId: id } })
+    assertAllergiesUnchanged(data, profile?.allergies)
 
     const userUpdate: Record<string, unknown> = {}
     if (data.name   !== undefined) userUpdate.name   = data.name
@@ -160,14 +181,12 @@ export const adminService = {
       create: {
         userId:       id,
         birthDate:    data.birthDate ? new Date(data.birthDate) : null,
-        allergies:    data.clinical?.allergies    ?? null,
         preferences:  data.clinical?.preferences  ?? null,
         observations: data.clinical?.observations ?? null,
         loyaltyPoints: data.loyalty?.points ?? 0,
       },
       update: {
         ...(data.birthDate !== undefined ? { birthDate: data.birthDate ? new Date(data.birthDate) : null } : {}),
-        ...(data.clinical?.allergies    !== undefined ? { allergies: data.clinical.allergies }       : {}),
         ...(data.clinical?.preferences  !== undefined ? { preferences: data.clinical.preferences }   : {}),
         ...(data.clinical?.observations !== undefined ? { observations: data.clinical.observations } : {}),
         ...(data.loyalty?.points !== undefined ? { loyaltyPoints: data.loyalty.points } : {}),

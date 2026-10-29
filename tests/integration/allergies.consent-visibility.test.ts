@@ -3,7 +3,7 @@ import request from 'supertest'
 import { app } from '../../src/app/app'
 import { prisma } from '../../src/app/database/prisma'
 import {
-  createClientUser, createProfessionalUser, createService, createAppointmentDirect, hoursFromNow,
+  createClientUser, createProfessionalUser, createAdminUser, createService, createAppointmentDirect, hoursFromNow,
 } from '../helpers/factories'
 import { cookieFor } from '../helpers/auth'
 
@@ -79,8 +79,95 @@ describe('consentimiento para guardar alergias (RF-07)', () => {
   })
 })
 
-// RNF-03 — la alergia solo aparece en la vista de la profesional asignada al turno.
-describe('visibilidad de las alergias para las profesionales (RNF-03)', () => {
+// RF-07 — solo la clienta carga sus alergias (con consentimiento). El admin no puede cargarlas
+// ni editarlas, y las profesionales tampoco.
+describe('el admin y las profesionales no cargan ni editan alergias (RF-07)', () => {
+  it('el admin no puede cargar alergias en el perfil de una clienta', async () => {
+    const admin  = await createAdminUser()
+    const client = await createClientUser()
+
+    const res = await request(app)
+      .put(`/api/admin/clients/${client.id}`)
+      .set('Cookie', cookieFor(admin))
+      .send({ clinical: { allergies: ALERGIA_PERFIL }, consentAlertas: true })
+
+    expect(res.status).toBe(400)
+    expect(res.body.code).toBe('VALIDATION_ERROR')
+    const profile = await prisma.client.findUniqueOrThrow({ where: { userId: client.id } })
+    expect(profile.allergies).toBeNull()
+    expect(profile.consents).toEqual([])
+  })
+
+  it('el admin no puede cambiar ni borrar una alergia ya cargada', async () => {
+    const admin  = await createAdminUser()
+    const client = await createClientUser()
+    await prisma.client.update({ where: { userId: client.id }, data: { allergies: ALERGIA_PERFIL } })
+
+    for (const allergies of ['Alergia al níquel', '']) {
+      const res = await request(app)
+        .put(`/api/admin/clients/${client.id}`)
+        .set('Cookie', cookieFor(admin))
+        .send({ clinical: { allergies } })
+      expect(res.status).toBe(400)
+    }
+    const profile = await prisma.client.findUniqueOrThrow({ where: { userId: client.id } })
+    expect(profile.allergies).toBe(ALERGIA_PERFIL)
+  })
+
+  it('el admin puede guardar el resto del perfil si reenvía las alergias tal cual están', async () => {
+    const admin  = await createAdminUser()
+    const client = await createClientUser()
+    await prisma.client.update({ where: { userId: client.id }, data: { allergies: ALERGIA_PERFIL } })
+
+    // El formulario del admin manda siempre todo el bloque clínico.
+    const res = await request(app)
+      .put(`/api/admin/clients/${client.id}`)
+      .set('Cookie', cookieFor(admin))
+      .send({ phone: '3764000000', clinical: { allergies: ALERGIA_PERFIL, preferences: 'Prefiere silencio' } })
+
+    expect(res.status).toBe(200)
+    const profile = await prisma.client.findUniqueOrThrow({ where: { userId: client.id } })
+    expect(profile.allergies).toBe(ALERGIA_PERFIL)
+    expect(profile.preferences).toBe('Prefiere silencio')
+  })
+
+  it('el admin tampoco puede crear una clienta con alergias, y no deja la cuenta a medias', async () => {
+    const admin = await createAdminUser()
+
+    const res = await request(app)
+      .post('/api/admin/clients')
+      .set('Cookie', cookieFor(admin))
+      .send({ name: 'Nueva Clienta', email: 'nueva@test.local', clinical: { allergies: ALERGIA_PERFIL } })
+
+    expect(res.status).toBe(400)
+    expect(await prisma.user.findFirst({ where: { email: 'nueva@test.local' } })).toBeNull()
+  })
+
+  it('ni el admin ni la profesional cambian la alergia de un turno desde sus rutas de turnos', async () => {
+    const { client, pro, appt } = await setup()
+    await prisma.appointment.update({ where: { id: appt.id }, data: { allergies: ALERGIA_TURNO } })
+    const admin = await createAdminUser()
+    const body  = { allergies: 'Otra alergia', details: { allergies: 'Otra alergia' }, internalNotes: 'nota' }
+
+    const byAdmin = await request(app)
+      .patch(`/api/admin/appointments/${appt.id}`).set('Cookie', cookieFor(admin)).send(body)
+    const byPro = await request(app)
+      .patch(`/api/professional/appointments/${appt.id}`).set('Cookie', cookieFor(pro)).send(body)
+    expect(byAdmin.status).toBe(200)
+    expect(byPro.status).toBe(200)
+
+    const row = await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } })
+    expect(row.allergies).toBe(ALERGIA_TURNO)
+    const profile = await prisma.client.findUniqueOrThrow({ where: { userId: client.id } })
+    expect(profile.allergies).toBeNull()
+  })
+})
+
+// RNF-03 — quién puede ver una alergia (criterio del catálogo: «una profesional distinta a
+// la asignada» no la ve). En sentido estricto la ven, además de la profesional asignada:
+// el admin, la propia clienta y cualquier profesional que haya atendido alguna vez a esa
+// clienta (esta última solo la alergia del perfil, no la del turno de otra profesional).
+describe('visibilidad de las alergias (RNF-03)', () => {
   async function setupWithAllergies() {
     const base = await setup()
     await prisma.appointment.update({ where: { id: base.appt.id }, data: { allergies: ALERGIA_TURNO } })
@@ -101,7 +188,7 @@ describe('visibilidad de las alergias para las profesionales (RNF-03)', () => {
     expect(view.client.allergies).toBe(ALERGIA_PERFIL)
   })
 
-  it('otra profesional no ve ni el turno ni ninguna de las dos alergias', async () => {
+  it('una profesional que nunca atendió a la clienta no ve ni el turno ni ninguna de las dos alergias', async () => {
     const { other } = await setupWithAllergies()
 
     const agenda = await request(app).get('/api/professional/appointments').set('Cookie', cookieFor(other))
@@ -113,6 +200,37 @@ describe('visibilidad de las alergias para las profesionales (RNF-03)', () => {
     const clients = await request(app).get('/api/professional/clients').set('Cookie', cookieFor(other))
     expect(clients.status).toBe(200)
     expect(JSON.stringify(clients.body)).not.toContain('penicilina')
+  })
+
+  it('el admin y la propia clienta ven las alergias', async () => {
+    const { client } = await setupWithAllergies()
+    const admin = await createAdminUser()
+
+    const adminRes = await request(app).get('/api/admin/clients').set('Cookie', cookieFor(admin))
+    expect(adminRes.status).toBe(200)
+    const row = adminRes.body.clients.find((c: any) => c.id === client.id)
+    expect(row.clinical.allergies).toBe(ALERGIA_PERFIL)
+
+    const own = await request(app).get('/api/client/appointments').set('Cookie', cookieFor(client))
+    expect(own.status).toBe(200)
+    expect(own.body.appointments[0].details.allergies).toBe(ALERGIA_TURNO)
+  })
+
+  it('una profesional que atendió antes a la clienta ve la alergia del perfil, pero no la del turno ajeno', async () => {
+    const { client, other } = await setupWithAllergies()
+    const svc  = await createService()
+    const past = hoursFromNow(-48)
+    await createAppointmentDirect({
+      clientId: client.id, professionalId: other.id, serviceId: svc.id, date: past.date, time: past.time,
+      status: 'finished',
+    })
+
+    const clients = await request(app).get('/api/professional/clients').set('Cookie', cookieFor(other))
+    expect(clients.status).toBe(200)
+    expect(JSON.stringify(clients.body)).toContain('penicilina')
+
+    const agenda = await request(app).get('/api/professional/appointments').set('Cookie', cookieFor(other))
+    expect(JSON.stringify(agenda.body)).not.toContain('látex')
   })
 
   it('otra profesional tampoco puede abrir el turno ajeno por su id', async () => {
