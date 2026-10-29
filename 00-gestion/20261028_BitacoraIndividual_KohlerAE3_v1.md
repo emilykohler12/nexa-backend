@@ -1,7 +1,12 @@
-# Bitácora 3: configuración de Claude Code en nexa-backend
+# Bitácora individual de proceso y decisiones · AE3
 
-Registro de cada cambio hecho en la rama `chore/claude-config`. Cada entrada consigna los seis elementos de la Bitácora Individual de Proceso y Decisiones (Proyecto Final de Grado 2026, UCP, Comisión A).
+**Proyecto:** «Nexa: sistema de gestión de turnos y clientes para un estudio de belleza» · **Autora:** Kohler, Emily Noralí, DNI 45.555.841 · **Docente titular:** PosDr. Darío Ezequiel Díaz · Comisión A · Sede Posadas.
 
+**Período:** desde el 23/10/2026.
+
+Esta bitácora **continúa la de la AE2** ([`20261006_BitacoraIndividual_KohlerAE2_v5.docx`](20261006_BitacoraIndividual_KohlerAE2_v5.docx)), que terminó el **06/10/2026**, y esa a su vez continúa la de la AE1 ([`BITACORA.md`](BITACORA.md)). Cada entrada consigna los seis elementos de la Bitácora Individual de Proceso y Decisiones (Proyecto Final de Grado 2026, UCP, Comisión A) y se agrega al final, en el mismo cambio que la motiva. Las entradas se numeran desde 1 en este archivo; la bitácora de la AE2 las identifica por fecha y tema.
+
+Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período es el del correo de contacto del pie de página del frontend (commit `e3c4b52`, 17/10/2026), que no tiene entrada propia. Hasta la entrada 59 inclusive el archivo se llamaba `bitacora3.md` y estaba en la raíz de nexa-backend; el cambio de nombre y de lugar está en la entrada 60. En las entradas anteriores, «la bitácora 3» es este archivo.
 ---
 
 ## Entrada 1: rama de trabajo y verificación de hallazgos
@@ -770,3 +775,16 @@ Registro de cada cambio hecho en la rama `chore/claude-config`. Cada entrada con
 | 4 | Aporte personal | Emily eligió arreglarlo («Arreglar») cuando se le propuso. |
 | 5 | Desacuerdo y resolución | Ninguno. **Pendiente de Emily:** subir la rama, abrir el pull request y mergearlo. El README de los dos repositorios pasó a decir 77 tests del frontend (decía 74 en la entrada 56). La rama `docs/readme-cifras-8-1` ya no existe: se renombró y el pull request único lleva el README y el arreglo. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5), con Playwright 1.62.1 para la prueba en el navegador. Revisión de Emily pendiente. |
+
+## Entrada 60: la bitácora pasa a `00-gestion` como bitácora de la AE3, y cambios en el README de los dos repositorios
+
+**Fecha:** 2026-10-28, 23:00 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **(a)** Mover `bitacora3.md` (raíz de nexa-backend) a `00-gestion/20261028_BitacoraIndividual_KohlerAE3_v1.md` con `git mv`, siguiendo el nombre de la bitácora de la AE2 (`20261006_BitacoraIndividual_KohlerAE2_v5.docx`) con la fecha de hoy y AE3. **(b)** Cambiar el encabezado del archivo (antes «Bitácora 3: configuración de Claude Code…») por el de una bitácora individual de la AE3 que **continúa la de la AE2, terminada el 06/10/2026**, y esa a su vez la de la AE1; aclara que las entradas se numeran desde 1 en este archivo, que entre el 07/10 y el 22/10 no hay entradas (solo el commit \`e3c4b52\` del frontend, 17/10) y que hasta la entrada 59 el archivo se llamaba \`bitacora3.md\`. **(c)** README de nexa-backend y nexa-frontend: se borra la fila «Grupo de encuadre»; «Instancia» pasa de AE2 a AE3; la versión ya figuraba como v1.3 y solo queda \`v1.2\` en la lista de etiquetas que se conservan; la bitácora de la AE3 se suma debajo de las otras dos en la tabla 1.5 y en la declaración de uso de IA (sección 8), y las menciones a «la bitácora 3» en 8.2 pasan a «la bitácora de la AE3» con el enlace nuevo. **(d)** Se actualizó la ruta en \`CLAUDE.md\`, en \`.claude/skills/nueva-migracion/SKILL.md\` y en el archivo de memoria de Claude Code que recuerda dónde anotar. |
+| 2 | Alternativas y criterio de descarte | Renumerar las entradas para seguir la numeración de la AE2: descartado, la AE2 no numera las entradas (las titula «Entrada · fecha · tema») y renumerar rompería las referencias cruzadas («entrada 52», «entrada 56»). Cambiar «AE2» por «AE3» también en las filas que nombran la bitácora de la AE2: descartado, ese documento sigue llamándose AE2 y está en \`00-gestion\`. Convertir la bitácora a \`.docx\`: descartado por ahora, no hay herramienta para generarlo con tablas y se conserva el formato \`.md\` de las 59 entradas anteriores. |
+| 3 | Evidencia que la sostiene | \`git status\` muestra el cambio de nombre (\`R bitacora3.md -> 00-gestion/20261028_BitacoraIndividual_KohlerAE3_v1.md\`). \`grep\` de \`bitacora3\` en \`README.md\`, \`CLAUDE.md\` y \`.claude\` ya no encuentra nada fuera de las entradas históricas de la propia bitácora. Los dos README quedaron iguales salvo las líneas que nombran al repositorio propio. |
+| 4 | Aporte personal | Emily pidió borrar el grupo de encuadre, pasar a AE3, mover y renombrar la bitácora para que continúe la de la AE2, nombrarla en el README debajo de las otras dos y en la declaración de uso de IA, y subir todo a GitHub para hacer ella el merge. |
+| 5 | Desacuerdo y resolución | Ninguno. **A tener en cuenta:** la fecha del nombre del archivo (28/10/2026) es la del traslado, y el período arranca el 23/10; las entradas anteriores dicen «bitácora 3» y no se tocaron. **Pendiente de Emily:** decidir si quiere esta bitácora también como \`.docx\` para entregarla junto a la de la AE2. La entrada del push y los pull requests va en la entrada 61. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |

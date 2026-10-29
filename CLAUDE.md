@@ -54,7 +54,7 @@ Necesitan un PostgreSQL de pruebas apuntado por `.env.test` (copiar de `.env.tes
 ## Forma de trabajar
 
 - **Context7 siempre que se pueda.** Antes de escribir o cambiar código que dependa de una librería (Express 5, Prisma 6, zod 4, Vitest, Supertest, multer, node-cron, Mercado Pago, Sentry, Supabase), consultar su documentación vigente con el MCP `context7` (`resolve-library-id` y después `query-docs`). No usarlo para lógica de negocio propia. En las consultas no pegar código del proyecto ni datos reales.
-- **Bitácora obligatoria.** Todo cambio en el código, la configuración o GitHub (ediciones, borrados, commits, push, ramas, pull requests) se anota en `bitacora3.md` con fecha y hora exactas y los seis elementos: qué se decidió, alternativas y criterio de descarte, evidencia, aporte personal, desacuerdo y resolución, y herramienta auxiliar. Las entradas se agregan al final, en el mismo cambio que las motiva.
+- **Bitácora obligatoria.** Todo cambio en el código, la configuración o GitHub (ediciones, borrados, commits, push, ramas, pull requests) se anota en `00-gestion/20261028_BitacoraIndividual_KohlerAE3_v1.md` (bitácora de la AE3, continúa la de la AE2) con fecha y hora exactas y los seis elementos: qué se decidió, alternativas y criterio de descarte, evidencia, aporte personal, desacuerdo y resolución, y herramienta auxiliar. Las entradas se agregan al final, en el mismo cambio que las motiva.
 
 ## Antes de dar algo por terminado
 

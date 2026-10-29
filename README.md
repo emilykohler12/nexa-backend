@@ -18,9 +18,8 @@ El sistema está dividido en dos repositorios que se clonan uno al lado del otro
 | Proyecto | Nexa — Sistema de Gestión de Turnos para Estudio de Belleza (cliente real: Loren Estudio de Belleza) |
 | Autora | Kohler, Emily Noralí — DNI 45.555.841 |
 | Comisión | A |
-| Instancia | Proyecto Final de Grado — AE2 |
+| Instancia | Proyecto Final de Grado — AE3 |
 | Docente | PosDr. Darío Ezequiel Díaz |
-| Grupo de encuadre | Geneyro, Lautaro, y Leal, Thiago |
 | Versión | v1.3 (etiqueta anotada `v1.3` en ambos repos; `v1`, `v1.1` y `v1.2` se conservan) |
 
 ### 1.2 Versiones exactas del entorno
@@ -68,7 +67,7 @@ Vive en el repositorio **nexa-backend**:
 | ADR-003: JWT para autenticación | `04-diseno/adr-003-jwt-auth.md` |
 | Bitácora de decisiones, AE1 (hasta el 03/09/2026) | `00-gestion/BITACORA.md` |
 | Bitácora de decisiones, AE2 (10/09 al 06/10/2026; continúa la anterior) | `00-gestion/20261006_BitacoraIndividual_KohlerAE2_v5.docx` |
-| Bitácora 3 (desde el 23/10/2026: configuración de Claude Code y cambios posteriores) | `bitacora3.md` |
+| Bitácora de decisiones, AE3 (desde el 23/10/2026; continúa la anterior) | `00-gestion/20261028_BitacoraIndividual_KohlerAE3_v1.md` |
 | Backup y restauración, RUNBOOK y SOP | `00-gestion/` |
 
 ---
@@ -344,7 +343,7 @@ Test Files  16 passed (16)
 
 ## 8. Declaración de uso de IA
 
-En este proyecto se usó **Claude Code** (Anthropic) como asistente de programación, con los modelos Claude Sonnet 5, Claude Sonnet 5.5, Claude Haiku 4.5 y Claude Opus 5.5. Toda decisión de dominio (entidades, reglas, alcance del MVP, iteraciones) la tomó la autora; el detalle de cada decisión, las alternativas descartadas y en qué intervino la IA está en la bitácora: [`00-gestion/BITACORA.md`](00-gestion/BITACORA.md) (AE1, hasta el 03/09/2026) y su continuación [`00-gestion/20261006_BitacoraIndividual_KohlerAE2_v5.docx`](00-gestion/20261006_BitacoraIndividual_KohlerAE2_v5.docx) (AE2, del 10/09 al 06/10/2026) y [`bitacora3.md`](bitacora3.md) (desde el 23/10/2026).
+En este proyecto se usó **Claude Code** (Anthropic) como asistente de programación, con los modelos Claude Sonnet 5, Claude Sonnet 5.5, Claude Haiku 4.5 y Claude Opus 5.5. Toda decisión de dominio (entidades, reglas, alcance del MVP, iteraciones) la tomó la autora; el detalle de cada decisión, las alternativas descartadas y en qué intervino la IA está en la bitácora: [`00-gestion/BITACORA.md`](00-gestion/BITACORA.md) (AE1, hasta el 03/09/2026) y su continuación [`00-gestion/20261006_BitacoraIndividual_KohlerAE2_v5.docx`](00-gestion/20261006_BitacoraIndividual_KohlerAE2_v5.docx) (AE2, del 10/09 al 06/10/2026) y [`00-gestion/20261028_BitacoraIndividual_KohlerAE3_v1.md`](00-gestion/20261028_BitacoraIndividual_KohlerAE3_v1.md) (AE3, desde el 23/10/2026).
 
 También se usó **Claude** (chat, Anthropic) sobre documentos —el informe, los instrumentos, el libro de requisitos, el acta, el tablero y la bitácora—; ese uso está declarado en la bitácora y en el Anexo III.
 
@@ -383,7 +382,7 @@ git log --no-merges -i --invert-grep --grep='^Co-Authored-By: Claude' --oneline 
 
 ### 8.2 Commits sin la línea, hechos con Claude Code
 
-Todos los commits que no son merges, ediciones web ni los primeros de agosto los hizo Claude Code, a pedido de la autora y con el nombre de ella como autor del commit. Desde el 25/09 se dejó de agregar la línea `Co-Authored-By`. Para no subdeclarar, cada commit sin la línea se cruzó con el registro de sesiones de Claude Code (el comando `git commit` ejecutado por el asistente y el modelo de esa sesión), y los posteriores al 06/10 con la bitácora 3 ([`bitacora3.md`](bitacora3.md)):
+Todos los commits que no son merges, ediciones web ni los primeros de agosto los hizo Claude Code, a pedido de la autora y con el nombre de ella como autor del commit. Desde el 25/09 se dejó de agregar la línea `Co-Authored-By`. Para no subdeclarar, cada commit sin la línea se cruzó con el registro de sesiones de Claude Code (el comando `git commit` ejecutado por el asistente y el modelo de esa sesión), y los posteriores al 06/10 con la bitácora de la AE3 ([`00-gestion/20261028_BitacoraIndividual_KohlerAE3_v1.md`](00-gestion/20261028_BitacoraIndividual_KohlerAE3_v1.md)):
 
 | Modelo | nexa-backend | nexa-frontend |
 |---|---|---|
@@ -391,10 +390,10 @@ Todos los commits que no son merges, ediciones web ni los primeros de agosto los
 | Claude Sonnet 5.5 (hasta el 06/10) | 4 — `92cd761`, `2836e1d`, `ce550a9`, `9bdc3ee` | 2 — `2e7734f`, `4bf842e` |
 | Claude Sonnet 5 | 9 — `adfe572`, `f4e40cb`, `342b59f`, `f2c9d9f`, `c413f0f`, `f8d0455`, `984862f`, `d7ac9fc`, `3ebba2b` | 5 — `0bede0a`, `174ed11`, `dc7f5df`, `858e2be`, `5b74e37` |
 | Claude Haiku 4.5 | 9 — `f5d2eb4`, `9a8651b`, `57d1928`, `f4ba7e4`, `c6241b9`, `6d76104`, `edb0bc4`, `4a0fecb`, `8fa18f7` | 4 — `245dcc0`, `8aed419`, `40d4d08`, `7bde3e7` |
-| Claude Code, modelo Sonnet 5.5 según la bitácora 3 (después del 06/10) | 26 | 9 |
+| Claude Code, modelo Sonnet 5.5 según la bitácora de la AE3 (después del 06/10) | 26 | 9 |
 | **Total sin la línea** | **59** | **28** |
 
-Los commits `54933ca` y `ec976da` son los del README v1.1; `ce550a9` y `2e7734f`, los de la corrección de ese README, y `9bdc3ee` y `4bf842e`, los de la bitácora de la AE2. La última fila reúne los commits sin la línea (sin contar merges) entre `9bdc3ee..3fe5704` en el backend y `4bf842e..71327ef` en el frontend; la bitácora 3 describe el trabajo desde el 23/10.
+Los commits `54933ca` y `ec976da` son los del README v1.1; `ce550a9` y `2e7734f`, los de la corrección de ese README, y `9bdc3ee` y `4bf842e`, los de la bitácora de la AE2. La última fila reúne los commits sin la línea (sin contar merges) entre `9bdc3ee..3fe5704` en el backend y `4bf842e..71327ef` en el frontend; la bitácora de la AE3 describe el trabajo desde el 23/10.
 
 ---
 

@@ -59,7 +59,7 @@ Antes de migrar producción, que exista un backup reciente (workflow "Backup dia
 ## Cómo documentarla
 
 - Comentario inicial en el `migration.sql` explicando el motivo y si borra algo.
-- Entrada en `bitacora3.md` (o en la bitácora que corresponda) con fecha exacta y los seis elementos.
+- Entrada en `00-gestion/20261028_BitacoraIndividual_KohlerAE3_v1.md` (o en la bitácora que corresponda) con fecha exacta y los seis elementos.
 - Si cambia una regla de negocio de reservas, proponé actualizar el ADR-002 (no se edita `04-diseno/` sin pedido de Emily).
 - Si cambia la forma de alguna respuesta de la API, seguí también la skill `cambio-de-contrato`.
 - Mencionar la migración en el mensaje de commit (el commit lo pide Emily).
