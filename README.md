@@ -335,8 +335,8 @@ npm test
 **Esperado:**
 
 ```
-Test Files  16 passed (16)
-     Tests  77 passed (77)
+Test Files  17 passed (17)
+     Tests  80 passed (80)
 ```
 
 ---
@@ -417,6 +417,22 @@ Cada push a `main` corre GitHub Actions en los dos repos. El registro de corrida
 cd nexa-backend  && npm run build   # genera dist/
 cd nexa-frontend && npm run build   # genera dist/
 ```
+
+### 10.1 Indexación en Google (SEO)
+
+El frontend se publica en Vercel (https://lorenestudiodebelleza.vercel.app) y trae lo necesario para que Google lo indexe. Todo está en `nexa-frontend`; el backend no interviene.
+
+| Qué | Dónde |
+|---|---|
+| Título, descripción, canonical, Open Graph y Twitter de la home | `index.html` |
+| Etiqueta de verificación de Google Search Console (no se debe quitar) | `index.html` |
+| `robots.txt`: permite el sitio y bloquea los paneles `/admin`, `/client` y `/professional` | `public/robots.txt` |
+| `sitemap.xml` con la home y las dos páginas legales | `public/sitemap.xml` |
+| `X-Robots-Tag: noindex` en `/login`, `/registro-profesional` y `/pago/*` | `vercel.json` |
+| Título, descripción y canonical por página (y `noindex` en las privadas) | `src/shared/hooks/usePageMeta.ts` |
+| Dominio y nombre del sitio | `src/app/config/seo.config.ts` |
+
+Para un estudio nuevo hay que cambiar el dominio y el nombre en `seo.config.ts`, `index.html`, `public/robots.txt` y `public/sitemap.xml` (los tres últimos lo llevan escrito a mano). Después de desplegar: verificar la propiedad en Search Console, enviar `sitemap.xml` y pedir la indexación de la home con «Inspección de URL».
 
 ---
 

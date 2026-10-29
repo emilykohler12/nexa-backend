@@ -801,3 +801,29 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily pidió subir todos los cambios a GitHub y dijo que hace ella el merge. |
 | 5 | Desacuerdo y resolución | Ninguno. **Orden de despliegue:** los dos pull requests son independientes y no hay migraciones nuevas ni cambios de ruta. **Pendiente de Emily:** mergear los dos pull requests; la corrida de CI de \`main\` tras cada merge queda para el registro del Portafolio. Las cifras de commits del README (8.1) quedan atrasadas con estos commits. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
+
+## Entrada 62: SEO del frontend para que Google indexe el sitio (rama `feat/seo-indexacion-google`, commit `e8b42c2`)
+
+**Fecha:** 2026-10-28, 23:20 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Preparar `nexa-frontend` para Google Search Console, con el dominio `https://lorenestudiodebelleza.vercel.app`. En `index.html`: la etiqueta `google-site-verification` que dio Google (no se puede quitar si se quiere mantener la verificación), descripción, canonical, Open Graph y Twitter. Archivos nuevos `public/robots.txt` (permite el sitio, bloquea `/admin`, `/client` y `/professional`, y apunta al sitemap) y `public/sitemap.xml` (home y las dos páginas legales). `vercel.json` suma `X-Robots-Tag: noindex, nofollow` en `/login`, `/registro-profesional` y `/pago/*`. Hook nuevo `usePageMeta` (título, descripción, canonical y `noindex` por página) usado en la home, las páginas legales, el login, el registro de profesional y el resultado de pago, más `seo.config.ts` con el dominio y el nombre. El `h1` de la home suma el nombre del estudio solo para lectores de pantalla y las fotos de la galería tienen `alt` descriptivo en lugar de «Antes» y «Después». README de los dos repositorios: sección 10.1 y 80 tests del frontend. El backend no cambia. |
+| 2 | Alternativas y criterio de descarte | `<title>` y `<meta>` nativos de React 19 (consultados en Context7): descartados porque agregan una segunda etiqueta al lado de la de `index.html` y quedarían duplicadas (razonado con la documentación, no probado en el navegador). `react-helmet-async`: descartado, es una dependencia nueva para algo que resuelven 70 líneas. Prerenderizar o pasar a SSR: descartado, Google ejecuta el JavaScript del SPA y es un cambio de arquitectura. Darle URL propia a servicios, profesionales y tienda: descartado por ahora, hoy son estado de la home y es un cambio grande. `Disallow: /login` en `robots.txt`: descartado, si Google no puede entrar no ve el `noindex`; por eso `/login`, `/registro-profesional` y `/pago/` quedan rastreables con `noindex`, y solo los paneles tienen `Disallow`. `noindex` en los layouts de los paneles: descartado, con `Disallow` Google no llega a verlo y detrás del login no hay nada para mostrar. Datos estructurados JSON-LD: descartado, faltan dirección y teléfono reales. |
+| 3 | Evidencia que la sostiene | Antes: no había `robots.txt`, `sitemap.xml`, descripción, canonical ni Open Graph, y ningún `noindex` en el frontend ni en el backend (búsqueda de `noindex`, `X-Robots-Tag` y `robots` en `src` de los dos). Después, en el frontend: lint sin errores, `typecheck:all` sin errores, 80 tests en verde (3 nuevos de `usePageMeta`: cambia y restaura las etiquetas, no las duplica y `noindex` saca el canonical) y `npm run build` correcto, con la etiqueta de verificación, `robots.txt` y `sitemap.xml` en `dist`. No se probó en el navegador ni en Vercel todavía. |
+| 4 | Aporte personal | Emily pidió revisar la indexación en Google, pasó el dominio y la etiqueta de verificación de Search Console, pidió el plan de cambios, anotar todo en esta bitácora, revisar el README y subir los cambios a GitHub para hacer ella el merge. |
+| 5 | Desacuerdo y resolución | Ninguno. **Pendiente de Emily, después del merge y del despliegue en Vercel:** en Search Console tocar «Verificar» (la etiqueta tiene que estar publicada antes), enviar `https://lorenestudiodebelleza.vercel.app/sitemap.xml` y pedir indexar la home con «Inspección de URL». Indexar lleva días y no lo controla el código. Ninguna ruta, método ni respuesta de la API cambia, así que el backend no se ve afectado. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5), con la documentación de React consultada en Context7. Revisión de Emily pendiente. |
+
+## Entrada 63: push de la rama de SEO y pull request del frontend (#9)
+
+**Fecha:** 2026-10-28, 23:21 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Subir `feat/seo-indexacion-google` (frontend) y abrir el pull request https://github.com/emilykohler12/nexa-frontend/pull/9 con base `main`, sin mergear. En el backend, el README y esta bitácora (entradas 62 y 63) se suman en un commit más sobre `fix/alergias-solo-la-clienta`, que ya tiene el pull request #12 abierto. |
+| 2 | Alternativas y criterio de descarte | Push a `main`: descartado, redespliega Vercel y Render y la regla del proyecto lo prohíbe sin pedido. Una rama nueva en el backend solo para la bitácora: descartado, la entrada 61 ya sumó su commit a esta rama y evita un tercer pull request. |
+| 3 | Evidencia que la sostiene | `git push -u origin` creó la rama remota del frontend y `gh pr create` devolvió la URL del #9. |
+| 4 | Aporte personal | Emily pidió subir los cambios a GitHub y dijo que hace ella el merge. |
+| 5 | Desacuerdo y resolución | Ninguno. **Orden de merge:** la rama de SEO sale de `fix/anonimizar-datos-y-readme` (frontend #8), así que el #9 trae también esos commits hasta que se mergee el #8; conviene mergear primero el #8. Las cifras de commits del README (8.1) siguen atrasadas. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
