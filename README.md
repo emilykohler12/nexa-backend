@@ -337,7 +337,7 @@ npm test
 
 ```
 Test Files  16 passed (16)
-     Tests  74 passed (74)
+     Tests  77 passed (77)
 ```
 
 ---
