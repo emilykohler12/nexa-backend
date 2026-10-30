@@ -315,7 +315,7 @@ npm test
 
 ```
 Test Files  32 passed (32)
-     Tests  303 passed (303)
+     Tests  310 passed (310)
 ```
 
 Los tests del caso de uso vertical están en `tests/integration/appointments.booking.test.ts`, entre ellos:
@@ -349,17 +349,17 @@ También se usó **Claude** (chat, Anthropic) sobre documentos —el informe, lo
 
 ### 8.1 Cifras (calculadas con `git log`)
 
-Corte: commit `3fe5704` en nexa-backend y `71327ef` en nexa-frontend (2026-10-28), el último de cada repositorio al escribir esto. No cuentan el commit de este README ni los que se hagan después: un commit no puede citar su propio hash.
+Corte: commit `6e7d8c0` en nexa-backend y `3090b89` en nexa-frontend (2026-10-28, los merges de los pull requests #12 y #9 en `main`), el último de cada repositorio al escribir esto. No cuentan el commit de este README ni los que se hagan después: un commit no puede citar su propio hash.
 
 | | nexa-backend | nexa-frontend |
 |---|---|---|
-| Commits totales | 113 | 77 |
-| Merges de pull requests (botón de GitHub, los hace la autora) | 11 | 7 |
+| Commits totales | 119 | 84 |
+| Merges de pull requests (botón de GitHub, los hace la autora) | 12 | 9 |
 | Ediciones del README desde la web de GitHub (la autora) | 1 — `47f4a96` | 1 — `087ee9b` |
 | Primeros commits del 25 al 28/08, antes de la línea de coautoría (sin registro de Claude Code) | 6 | 5 |
-| **Commits hechos con Claude Code** | **95** | **64** |
+| **Commits hechos con Claude Code** | **100** | **69** |
 | de ellos, con la línea `Co-Authored-By: Claude …` | 36 | 36 |
-| de ellos, sin la línea | 59 | 28 |
+| de ellos, sin la línea | 64 | 33 |
 
 La línea de coautoría, por modelo:
 
@@ -390,10 +390,10 @@ Todos los commits que no son merges, ediciones web ni los primeros de agosto los
 | Claude Sonnet 5.5 (hasta el 06/10) | 4 — `92cd761`, `2836e1d`, `ce550a9`, `9bdc3ee` | 2 — `2e7734f`, `4bf842e` |
 | Claude Sonnet 5 | 9 — `adfe572`, `f4e40cb`, `342b59f`, `f2c9d9f`, `c413f0f`, `f8d0455`, `984862f`, `d7ac9fc`, `3ebba2b` | 5 — `0bede0a`, `174ed11`, `dc7f5df`, `858e2be`, `5b74e37` |
 | Claude Haiku 4.5 | 9 — `f5d2eb4`, `9a8651b`, `57d1928`, `f4ba7e4`, `c6241b9`, `6d76104`, `edb0bc4`, `4a0fecb`, `8fa18f7` | 4 — `245dcc0`, `8aed419`, `40d4d08`, `7bde3e7` |
-| Claude Code, modelo Sonnet 5.5 según la bitácora de la AE3 (después del 06/10) | 26 | 9 |
-| **Total sin la línea** | **59** | **28** |
+| Claude Code, modelo Sonnet 5.5 según la bitácora de la AE3 (después del 06/10) | 31 | 14 |
+| **Total sin la línea** | **64** | **33** |
 
-Los commits `54933ca` y `ec976da` son los del README v1.1; `ce550a9` y `2e7734f`, los de la corrección de ese README, y `9bdc3ee` y `4bf842e`, los de la bitácora de la AE2. La última fila reúne los commits sin la línea (sin contar merges) entre `9bdc3ee..3fe5704` en el backend y `4bf842e..71327ef` en el frontend; la bitácora de la AE3 describe el trabajo desde el 23/10.
+Los commits `54933ca` y `ec976da` son los del README v1.1; `ce550a9` y `2e7734f`, los de la corrección de ese README, y `9bdc3ee` y `4bf842e`, los de la bitácora de la AE2. La última fila reúne los commits sin la línea (sin contar merges) entre `9bdc3ee..6e7d8c0` en el backend y `4bf842e..3090b89` en el frontend; la bitácora de la AE3 describe el trabajo desde el 23/10.
 
 ---
 

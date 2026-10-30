@@ -4,11 +4,60 @@ import { nodeProfilingIntegration } from "@sentry/profiling-node";
 // Cabeceras que nunca deben llegar a Sentry: sesión, firmas de webhook y credenciales.
 const SENSITIVE_HEADERS = ['authorization', 'proxy-authorization', 'cookie', 'set-cookie', 'x-signature', 'x-api-key']
 
-// Quita de un evento los datos del pedido que pueden ser sensibles: cookies de sesión
+// Contextos que pone el propio SDK y no llevan datos de la clienta. Cualquier otro se descarta.
+const SAFE_CONTEXTS = ['trace', 'runtime', 'os', 'device', 'app', 'culture', 'cloud_resource', 'profile', 'response']
+
+// Lo único que se conserva de los datos de un breadcrumb: método, estado y URL (sin query).
+const SAFE_BREADCRUMB_DATA = ['method', 'status_code', 'url', 'reason']
+
+const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g
+
+// Los errores de Prisma traen en el mensaje el código de la consulta con los valores que se
+// le pasaron (por ejemplo una alergia), así que de esos solo quedan el encabezado y la última
+// línea, que es el motivo. A cualquier texto se le tapan los emails.
+function cleanText(text: string | undefined): string | undefined {
+  if (typeof text !== 'string') return text
+  let clean = text
+  if (/prisma\./i.test(clean) && /invocation/i.test(clean)) {
+    const lines = clean.split('\n').map(l => l.trim()).filter(Boolean)
+    clean = lines.length > 1 ? `${lines[0]} … ${lines[lines.length - 1]}` : (lines[0] ?? '')
+  }
+  return clean.replace(EMAIL_RE, '[email]')
+}
+
+function stripQuery(url: unknown): unknown {
+  return typeof url === 'string' ? url.split('?')[0] : url
+}
+
+// Quita de un evento los datos que pueden ser sensibles: cookies de sesión
 // (access_token / refresh_token), cuerpo (contraseñas, datos de pago), query string
-// (por ejemplo el token de verify-email) y datos personales del usuario. Se conserva
-// el id de usuario para poder ubicar el error.
+// (por ejemplo el token de verify-email), datos personales del usuario, el texto de los
+// errores y breadcrumbs (puede traer valores de la consulta), `extra` y los contextos
+// que no son del SDK. Se conserva el id de usuario para poder ubicar el error.
 export function scrubSensitiveData<E extends Sentry.ErrorEvent>(event: E): E {
+  event.message = cleanText(event.message)
+  if (event.logentry?.message) event.logentry.message = cleanText(event.logentry.message)
+  for (const ex of event.exception?.values ?? []) {
+    ex.value = cleanText(ex.value)
+    for (const frame of ex.stacktrace?.frames ?? []) delete frame.vars
+  }
+  for (const crumb of event.breadcrumbs ?? []) {
+    crumb.message = cleanText(crumb.message)
+    if (crumb.data) {
+      const kept: Record<string, unknown> = {}
+      for (const key of SAFE_BREADCRUMB_DATA) {
+        if (key in crumb.data) kept[key] = key === 'url' ? stripQuery(crumb.data[key]) : crumb.data[key]
+      }
+      crumb.data = kept
+    }
+  }
+  delete event.extra
+  if (event.contexts) {
+    for (const name of Object.keys(event.contexts)) {
+      if (!SAFE_CONTEXTS.includes(name)) delete event.contexts[name]
+    }
+  }
+
   const req = event.request
   if (req) {
     delete req.cookies

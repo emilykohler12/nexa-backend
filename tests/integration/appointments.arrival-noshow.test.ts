@@ -171,6 +171,39 @@ describe('job de no-show automático', () => {
     expect(result.marked).toBe(0)
   })
 
+  // Caso del catálogo (R-03): turno a las 10:00 y a las 10:21 sigue sin registro de llegada.
+  it('marca cancelled_no_show un turno confirmado 21 min pasada su hora (caso 10:00 → 10:21 del catálogo)', async () => {
+    const client = await createClientUser()
+    const pro    = await createProfessionalUser()
+    const svc    = await createService()
+    const late   = minutesAgo(21)
+    const appt   = await createAppointmentDirect({
+      clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: late.date, time: late.time,
+    })
+
+    const result = await runAutoNoShowJob()
+    expect(result.marked).toBe(1)
+
+    const fresh = await prisma.appointment.findUnique({ where: { id: appt.id } })
+    expect(fresh?.status).toBe('cancelled_no_show')
+  })
+
+  it('NO marca un turno a 19 min de su hora (todavía dentro de la tolerancia de 20 minutos)', async () => {
+    const client = await createClientUser()
+    const pro    = await createProfessionalUser()
+    const svc    = await createService()
+    const late   = minutesAgo(19)
+    const appt   = await createAppointmentDirect({
+      clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: late.date, time: late.time,
+    })
+
+    const result = await runAutoNoShowJob()
+    expect(result.marked).toBe(0)
+
+    const fresh = await prisma.appointment.findUnique({ where: { id: appt.id } })
+    expect(fresh?.status).toBe('confirmed')
+  })
+
   it('libera el horario — después de marcar cancelled_no_show, se puede reservar la misma profesional/fecha/hora de nuevo', async () => {
     const client1 = await createClientUser()
     const client2 = await createClientUser()
