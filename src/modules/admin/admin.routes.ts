@@ -3,7 +3,6 @@ import { Router } from 'express'
 import { adminController } from './admin.controller'
 import { appointmentController } from '../appointments/appointment.controller'
 import { promotionController }   from '../promotions/promotion.controller'
-import { autoPromotionController } from '../promotions/autoPromotion.controller'
 import { specialEventController } from '../specialEvents/specialEvent.controller'
 import { reviewController }      from '../reviews/review.controller'
 import { orderController }       from '../orders/order.controller'
@@ -27,7 +26,6 @@ router.patch('/clients/:id/block',  adminController.setClientBlocked)
 // fila (mantiene turnos e historial contable), solo anonimiza nombre/email/teléfono.
 router.post('/clients/:id/anonymize', adminController.anonymizeClient)
 router.get ('/clients/:id/reviews', reviewController.getForClient)
-router.get ('/clients/:id/auto-promotions', autoPromotionController.getForClient)
 
 router.get('/appointments',      appointmentController.listForAdmin)
 router.post('/appointments',      appointmentController.createForAdmin)
@@ -44,13 +42,6 @@ router.get   ('/promotions',     promotionController.getAll)
 router.post  ('/promotions',     promotionController.create)
 router.put   ('/promotions/:id', promotionController.update)
 router.delete('/promotions/:id', promotionController.delete)
-
-// Campañas automáticas (cumpleaños, turno N, etc.) — nunca se muestran en el
-// home, son reglas que evalúa un job diario (ver src/jobs/autoPromotions.job.ts).
-router.get   ('/auto-promotions',     autoPromotionController.getAll)
-router.post  ('/auto-promotions',     autoPromotionController.create)
-router.put   ('/auto-promotions/:id', autoPromotionController.update)
-router.delete('/auto-promotions/:id', autoPromotionController.delete)
 
 // Eventos especiales destacados en el home (ej: jornada de Depilación
 // definitiva con una profesional puntual) — sí se muestran en el home.

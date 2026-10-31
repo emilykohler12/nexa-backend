@@ -40,7 +40,7 @@ vi.mock('../src/modules/auth/providers/social.provider', () => ({
 const TABLES = [
   'users', 'refresh_sessions', 'professionals', 'professional_availability', 'invitations', 'password_resets',
   'clients', 'professional_services', 'services', 'appointments', 'products',
-  'inventory_movements', 'orders', 'product_orders', 'auto_promotions', 'auto_promotion_sends',
+  'inventory_movements', 'orders', 'product_orders',
   'promotions', 'special_events', 'payment_settings', 'business_settings', 'business_schedule_days',
   'business_holidays', 'client_gallery_photos', 'activity_logs', 'reviews',
   'professional_notifications', 'client_notifications',

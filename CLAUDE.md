@@ -6,7 +6,7 @@ API REST de Nexa (gestión de turnos de Loren Estudio de Belleza). Es el Proyect
 
 - `src/app/`: `app.ts` (middlewares), `server.ts`, `routes.ts` (monta todos los routers bajo `/api`), `config/env.ts` (zod; si falta una variable el proceso hace `exit(1)`), `middlewares/errorHandler.ts` (`AppError`), `constants/http.ts`, `validators/datetime.ts`, `database/prisma.ts`.
 - `src/modules/<modulo>/`: **las capas no son uniformes**, mirar el módulo vecino antes de crear uno. Lo común es `*.routes.ts` → `*.controller.ts` → `*.service.ts`. Algunos suman `*.repository.ts` (auth, invitations, professionals), `*.model.ts` (products, promotions, services, specialEvents), `dto/`, `middleware/`, `providers/`, `templates/`. `appointments` no tiene routes propio: `appointment.controller.ts` se monta desde `clients/client.routes.ts`, `professionals/professional.routes.ts` y `admin/`.
-- `src/jobs/`: `scheduler.ts` registra los cron (node-cron) de autoNoShow, autoPromotions, inactivityReminder y releaseUnpaidAppointments.
+- `src/jobs/`: `scheduler.ts` registra los cron (node-cron) de autoNoShow y releaseUnpaidAppointments, los únicos vigentes (las campañas automáticas y el recordatorio de inactividad se eliminaron el 30/10/2026: el sistema no manda mails a las clientas por iniciativa propia).
 - `prisma/schema.prisma` y `prisma/migrations/`. `scripts/seed-demo.ts`. `src/generated/prisma` es generado.
 - `tests/integration/*.test.ts`, `tests/helpers/{auth,factories}.ts`, `tests/setup.ts`.
 - `00-gestion/` a `05-entregas/` es documentación académica y de gestión que forma parte de la entrega: no editarla salvo pedido expreso.

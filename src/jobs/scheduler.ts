@@ -1,38 +1,16 @@
 // src/jobs/scheduler.ts
 import cron from 'node-cron'
-import { runInactivityReminderJob } from './inactivityReminder.job'
 import { runReleaseUnpaidAppointmentsJob } from './releaseUnpaidAppointments.job'
-import { runAutoPromotionsJob } from './autoPromotions.job'
 import { runAutoNoShowJob } from './autoNoShow.job'
 import { ARGENTINA_TIME_ZONE } from '../app/utils/argentinaTime'
 
 // Los horarios de abajo son hora de Argentina aunque el servidor (Render) corra en UTC.
 const CRON_OPTIONS = { timezone: ARGENTINA_TIME_ZONE }
 
+// Los únicos trabajos programados que quedan. Las campañas automáticas y el recordatorio
+// de inactividad se eliminaron (ver bitácora, entrada 70): el sistema ya no manda mails
+// a las clientas por iniciativa propia.
 export function startScheduledJobs(): void {
-  // Todos los días a las 9:00 (hora de Argentina) — horario razonable para un
-  // mail de "te extrañamos", ni de madrugada ni tarde en la noche.
-  cron.schedule('0 9 * * *', async () => {
-    console.log('[jobs] corriendo inactivity-reminder...')
-    try {
-      const result = await runInactivityReminderJob()
-      console.log(`[jobs] inactivity-reminder: ${result.sent} enviados, ${result.failed} con error, ${result.eligible} elegibles`)
-    } catch (err) {
-      console.error('[jobs] error corriendo inactivity-reminder:', err)
-    }
-  }, CRON_OPTIONS)
-
-  // Todos los días a las 9:15 — campañas automáticas (cumpleaños, turno N, etc.).
-  cron.schedule('15 9 * * *', async () => {
-    console.log('[jobs] corriendo auto-promotions...')
-    try {
-      const result = await runAutoPromotionsJob()
-      console.log(`[jobs] auto-promotions: ${result.sent} enviados, ${result.failed} con error, ${result.rules} campaña(s) activa(s)`)
-    } catch (err) {
-      console.error('[jobs] error corriendo auto-promotions:', err)
-    }
-  }, CRON_OPTIONS)
-
   // Cada 5 minutos — libera turnos cuya seña nunca se pagó (checkout de Mercado
   // Pago abandonado). Barato: la mayoría de las corridas no encuentra nada.
   cron.schedule('*/5 * * * *', async () => {
@@ -59,5 +37,5 @@ export function startScheduledJobs(): void {
     }
   }, CRON_OPTIONS)
 
-  console.log('[jobs] scheduler iniciado (hora de Argentina) — inactivity-reminder (diario 9:00) + auto-promotions (diario 9:15) + release-unpaid (cada 5 min) + auto-no-show (cada 5 min)')
+  console.log('[jobs] scheduler iniciado (hora de Argentina) — release-unpaid (cada 5 min) + auto-no-show (cada 5 min)')
 }
