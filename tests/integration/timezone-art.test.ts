@@ -54,14 +54,17 @@ describe('no-show automático en hora de Argentina', () => {
     expect((await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } })).status).toBe('confirmed')
   })
 
-  it('marca ausente pasados los 20 minutos de la hora del turno', async () => {
+  it('marca ausente pasados los 30 minutos de la hora del turno, no antes', async () => {
     const { appt } = await confirmedAppointment('2026-10-24', '10:00')
 
-    setNow('2026-10-24T13:30:00Z') // 10:30 en Argentina
+    setNow('2026-10-24T13:30:00Z') // 10:30 en Argentina: 30 minutos exactos, todavía no
+    expect((await runAutoNoShowJob()).marked).toBe(0)
+
+    setNow('2026-10-24T13:35:00Z') // 10:35 en Argentina
     const result = await runAutoNoShowJob()
 
     expect(result.marked).toBe(1)
-    expect((await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } })).status).toBe('cancelled_no_show')
+    expect((await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } })).status).toBe('no_show_auto')
   })
 
   it('un turno nocturno se evalúa con la fecha de Argentina (22:30 ART ya es el día siguiente en UTC)', async () => {
@@ -70,9 +73,9 @@ describe('no-show automático en hora de Argentina', () => {
     setNow('2026-10-25T01:10:00Z') // 22:10 del 24 en Argentina
     expect((await runAutoNoShowJob()).marked).toBe(0)
 
-    setNow('2026-10-25T01:30:00Z') // 22:30 del 24 en Argentina
+    setNow('2026-10-25T01:35:00Z') // 22:35 del 24 en Argentina (más de 30 minutos)
     expect((await runAutoNoShowJob()).marked).toBe(1)
-    expect((await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } })).status).toBe('cancelled_no_show')
+    expect((await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } })).status).toBe('no_show_auto')
   })
 })
 
