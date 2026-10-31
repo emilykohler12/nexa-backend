@@ -1,5 +1,7 @@
 // src/modules/settings/settings.service.ts
 import { prisma } from '../../app/database/prisma'
+import { AppError } from '../../app/middlewares/errorHandler'
+import { HTTP }     from '../../app/constants/http'
 
 const DAY_KEYS  = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
 const DAY_LABEL: Record<string, string> = {
@@ -212,8 +214,16 @@ export const settingsService = {
     return mapPaymentSettings(row)
   },
 
-  updatePaymentSettings: async (data: any) => {
+  updatePaymentSettings: async (data: {
+    depositAmount?: number; depositPercent?: boolean; cancellationHours?: number; refundPolicy?: 'full' | 'none'
+  }) => {
     const current = await getOrCreatePaymentSettings()
+    // Como porcentaje, la seña no puede superar 100: se mira el valor que quedaría después del cambio.
+    const percent = data.depositPercent ?? current.depositPercent
+    const amount  = data.depositAmount  ?? Number(current.depositAmount)
+    if (percent && amount > 100) {
+      throw new AppError(HTTP.BAD_REQUEST, 'El porcentaje de la seña no puede superar 100', 'VALIDATION_ERROR')
+    }
     const updated = await prisma.paymentSettings.update({
       where: { id: current.id },
       data: {
@@ -257,7 +267,8 @@ function mapPaymentSettings(row: {
     depositAmount:     Number(row.depositAmount),
     depositPercent:    row.depositPercent,
     cancellationHours: row.cancellationHours,
-    refundPolicy:      row.refundPolicy as 'full' | 'partial' | 'none',
+    // Solo 'full' o 'none'. Un 'partial' viejo (antes de la migración de la fase 3) se lee como 'full'.
+    refundPolicy:      (row.refundPolicy === 'none' ? 'none' : 'full') as 'full' | 'none',
   }
 }
 

@@ -224,6 +224,8 @@ Argentina. Lo que cambia respecto de las secciones 2 a 4:
    `GET /api/professional/:id/availability`) más la validación al reservar dentro del rango de la ventana. Una hora fuera
    de ese rango y de la grilla sigue siendo aceptable si cae dentro de la franja, como antes.
 
+**Actualización del mismo día (fase 3).** Cancelar un turno que ya empezó (la clienta desde la app, el personal con `cancelledBy`, o la liberación por falta de pago) también deja `slot_locked = true` en la misma sentencia y, si pasaron hasta 40 minutos desde el inicio, abre un horario reabierto, igual que la marca de «No asistió». Una cancelación antes de la hora de inicio libera el horario enseguida (se puede reservar hasta 15 minutos después de su hora, por la reserva tardía). Pruebas: `appointments.cancellation-refund.test.ts`.
+
 **Limitaciones que quedan.** (a) La verificación por duración existe solo para los inicios de un horario reabierto: el
 resto de las reservas sigue comparando solo la hora de inicio (sección 4). (b) Los horarios reabiertos no cruzan la
 medianoche (el último inicio es 23:55). (c) Una profesional con dos ventanas el mismo día las ve unidas.

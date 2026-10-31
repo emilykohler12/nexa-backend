@@ -151,7 +151,7 @@ describe('reserva de combos simultáneos', () => {
     const res = await request(app)
       .patch(`/api/admin/appointments/${legs[0].id}`)
       .set('Cookie', cookieFor(admin))
-      .send({ status: 'cancelled' })
+      .send({ status: 'cancelled', cancelledBy: 'studio' })
     expect(res.status).toBe(200)
 
     // ...pero el backend cancela TODO el grupo — la otra pata también queda

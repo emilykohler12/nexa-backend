@@ -51,7 +51,8 @@ La disponibilidad se garantiza en el **backend**, no solo en la interfaz:
 - La fuente de verdad es un **índice único parcial** en PostgreSQL sobre `(professional_id, date, time)` que excluye los turnos `cancelled` y `cancelled_no_show`, salvo los que tienen el horario original bloqueado (`slot_locked`: marcados como no asistidos o cancelados ya empezados). Un turno `no_show_auto` sigue ocupando el horario. Es atómico: aunque dos reservas lleguen a la vez o alguien salte la interfaz, solo una se guarda y la otra recibe **HTTP 409** (`PROFESSIONAL_SLOT_TAKEN`). No hay consulta previa.
 - La reserva de la clienta (simple, combo y reprogramación) además exige que la hora caiga dentro de las franjas que definió la profesional: si no, **HTTP 400** (`OUT_OF_HOURS`). Los turnos manuales del admin no se validan contra la franja.
 - **Inasistencia, horario reabierto y reserva tardía** (reglas confirmadas por la propietaria el 30/10/2026; ver el ADR-002, revisión del 31/10/2026): el job pasa a `no_show_auto` («No asistió (automático)») un turno confirmado sin llegada registrada a los **más de 30 minutos** de su hora de inicio (cada 5 minutos); la seña no cambia. El personal puede marcar «No asistió» desde la hora de inicio: hasta 40 minutos después se reabre el horario en inicios de 5 minutos hasta 60 minutos después de la hora original, siempre que el servicio entre. El horario original nunca se vuelve a reservar. La clienta puede reservar o reprogramar hasta 15 minutos después de la hora de inicio (`START_TIME_PASSED` después). El personal corrige el estado a «Finalizado» siempre o a «Confirmado» si no se superpone.
-- Pruebas automatizadas: `tests/integration/appointments.booking.test.ts`, `tests/integration/appointments.out-of-hours.test.ts`, `tests/integration/appointments.arrival-noshow.test.ts` y `tests/integration/appointments.reopened-slots.test.ts`.
+- **Cancelación y devolución de la seña** (fase 3): el sistema solo **marca** la seña como devuelta, no hace ninguna devolución en Mercado Pago. Si la clienta cancela con 12 horas o más de anticipación (`cancellationHours`) y la seña estaba paga, queda como devuelta; con menos, retenida. Cuando cancela el personal indica si cancela la clienta (con la hora en que avisó, el medio y una nota) o el estudio (devuelve siempre). La política de devolución admite solo `full` o `none`.
+- Pruebas automatizadas: `tests/integration/appointments.booking.test.ts`, `tests/integration/appointments.out-of-hours.test.ts`, `tests/integration/appointments.arrival-noshow.test.ts`, `tests/integration/appointments.reopened-slots.test.ts` y `tests/integration/appointments.cancellation-refund.test.ts`.
 - Alternativas evaluadas y motivo de la elección: `04-diseno/adr-002-validacion-antes-persistencia.md`.
 
 > **Limitación conocida:** el bloqueo compara la **hora de inicio**. Dos turnos de la misma profesional que empiezan a horas distintas pero se pisan por duración (ej. 16:00 de 90 min y 16:30) todavía no se detectan, salvo en los inicios de un horario reabierto, donde sí se verifica la duración. Está registrada como una iteración nueva a planificar.
@@ -315,8 +316,8 @@ npm test
 **Esperado:**
 
 ```
-Test Files  35 passed (35)
-     Tests  367 passed (367)
+Test Files  36 passed (36)
+     Tests  404 passed (404)
 ```
 
 Los tests del caso de uso vertical están en `tests/integration/appointments.booking.test.ts`, entre ellos:
@@ -403,7 +404,8 @@ Las cifras de 8.1 y 8.2 están cortadas en `6e7d8c0`. Desde ahí, cada fase de l
 | Fase | Rama | Commits |
 |---|---|---|
 | 1 — eliminaciones | `refactor/quitar-campanas-puntos-recordatorio-nacimiento` | `b30e849`, `8955406`, `308bb0a` (bitácora, entrada 70), `3139d13` (bitácora, entrada 71) |
-| 2 — inasistencia, horario reabierto y reserva tardía | `feat/inasistencia-horario-reabierto` | `1bfdf67`, `76fe8a3`, `3ccdf53` (bitácora, entrada 72) |
+| 2 — inasistencia, horario reabierto y reserva tardía | `feat/inasistencia-horario-reabierto` | `1bfdf67`, `76fe8a3`, `3ccdf53` (bitácora, entrada 72), `924564f` (bitácora, entrada 73) |
+| 3 — cancelación y devolución | `feat/cancelacion-devolucion-hora-de-aviso` | `7e8a16e`, `60e56b1`, `d41644e` (bitácora, entrada 74) |
 
 ---
 

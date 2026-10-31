@@ -55,6 +55,7 @@ model User {
   appointmentsAsClient      Appointment[] @relation("ClientAppointments")
   appointmentsAsProfessional Appointment[] @relation("ProfessionalAppointments")
   balancePaymentsCollected   Appointment[] @relation("BalanceCollectedBy")
+  cancellationNoticesLoaded  Appointment[] @relation("NoticeLoadedBy")
   galleryPhotos              ClientGalleryPhoto[]
   notifications              ProfessionalNotification[]
   clientNotifications        ClientNotification[]
@@ -301,6 +302,18 @@ model Appointment {
   // (se liberó solo porque nunca se pagó la seña) — para mostrarle al cliente un
   // mensaje distinto de "cancelado" cuando en realidad nunca llegó a confirmarse.
   cancelReason   String?   @map("cancel_reason") @db.VarChar(30)
+  // Quién canceló: 'client' (la clienta, desde la app o avisando al estudio) | 'studio' (el estudio) |
+  // 'system' (liberación por falta de pago). Define si la seña se devuelve (ver cancellationRules.ts).
+  cancelledBy    String?   @map("cancelled_by") @db.VarChar(10)
+  // Cuando cancela el personal por aviso de la clienta (cancelledBy 'client'): cuándo avisó la clienta, por
+  // qué medio ('whatsapp' | 'call' | 'in_person' | 'other'), una nota de hasta 200 caracteres y quién lo
+  // cargó y cuándo. Las horas de aviso salen de clientNoticeAt contra el inicio del turno.
+  clientNoticeAt     DateTime? @map("client_notice_at") @db.Timestamptz
+  noticeChannel      String?   @map("notice_channel") @db.VarChar(20)
+  noticeNote         String?   @map("notice_note") @db.VarChar(200)
+  noticeLoadedById   String?   @map("notice_loaded_by_id") @db.Uuid
+  noticeLoadedBy     User?     @relation("NoticeLoadedBy", fields: [noticeLoadedById], references: [id])
+  noticeLoadedAt     DateTime? @map("notice_loaded_at") @db.Timestamptz
   // Se completa cuando la clienta (o el profesional/admin en su nombre) registra
   // que llegó al local. Si un turno 'confirmed' sigue en null 20 minutos después
   // de la hora pactada, el job autoNoShow.job.ts lo marca 'cancelled_no_show' solo.
@@ -508,6 +521,8 @@ model PaymentSettings {
   depositAmount     Decimal @default(5000) @map("deposit_amount") @db.Decimal(10, 2)
   depositPercent    Boolean @default(false) @map("deposit_percent")
   cancellationHours Int     @default(12) @map("cancellation_hours")
+  // 'full' | 'none': el sistema solo MARCA la seña como devuelta (refunded), no ejecuta ninguna devolución
+  // en Mercado Pago. Con 'none' la seña de una cancelación de la clienta siempre queda retenida.
   refundPolicy      String  @default("full") @map("refund_policy") @db.VarChar(20)
 
   @@map("payment_settings")
