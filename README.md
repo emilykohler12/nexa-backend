@@ -395,6 +395,14 @@ Todos los commits que no son merges, ediciones web ni los primeros de agosto los
 
 Los commits `54933ca` y `ec976da` son los del README v1.1; `ce550a9` y `2e7734f`, los de la corrección de ese README, y `9bdc3ee` y `4bf842e`, los de la bitácora de la AE2. La última fila reúne los commits sin la línea (sin contar merges) entre `9bdc3ee..6e7d8c0` en el backend y `4bf842e..3090b89` en el frontend; la bitácora de la AE3 describe el trabajo desde el 23/10.
 
+### 8.3 Cambios de la AE4 hechos con Claude Code (rama `integracion-ae4`)
+
+Las cifras de 8.1 y 8.2 están cortadas en `6e7d8c0`. Desde ahí, cada fase de la AE4 la hace Claude Code (modelo Sonnet 5.5) sobre su propia rama, a pedido de la autora, con el nombre de ella como autor y sin la línea de coautoría. Cada commit cita solo los anteriores, nunca el suyo ni el del propio README.
+
+| Fase | Rama | Commits |
+|---|---|---|
+| 1 — eliminaciones | `refactor/quitar-campanas-puntos-recordatorio-nacimiento` | `b30e849`, `8955406`, `308bb0a` (bitácora, entrada 70) |
+
 ---
 
 ## 9. Canal de construcción (CI)
