@@ -24,8 +24,8 @@ export function startScheduledJobs(): void {
     }
   }, CRON_OPTIONS)
 
-  // Cada 5 minutos — marca 'cancelled_no_show' los turnos confirmados cuya hora pactada
-  // pasó hace más de 20 minutos sin que se haya registrado la llegada.
+  // Cada 5 minutos — marca 'no_show_auto' los turnos confirmados cuya hora pactada
+  // pasó hace más de 30 minutos sin que se haya registrado la llegada.
   cron.schedule('*/5 * * * *', async () => {
     try {
       const result = await runAutoNoShowJob()

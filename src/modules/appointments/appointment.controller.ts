@@ -127,6 +127,15 @@ const adminUpdateAppointmentSchema = z.object({
   clientEmail:       z.string().email('Email inválido').optional(),
 })
 
+// PATCH de la profesional: solo estado, notas internas y fecha/hora. Cualquier otra clave se descarta.
+// El estado 'no_show_auto' lo asigna solo el sistema (el servicio lo rechaza con INVALID_STATUS_TRANSITION).
+const professionalUpdateAppointmentSchema = z.object({
+  status:        z.enum(APPOINTMENT_STATUSES).optional(),
+  internalNotes: z.string().max(2000).optional(),
+  date:          dateSchema.optional(),
+  time:          timeSchema.optional(),
+})
+
 const adminCreateAppointmentSchema = z.object({
   clientName:     z.string().trim().min(1, 'El nombre del cliente es obligatorio').max(150),
   clientPhone:    z.string().max(30).optional().default(''),
@@ -291,7 +300,8 @@ export const appointmentController = {
 
   updateForProfessional: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const appointment = await appointmentService.updateForProfessional(req.user!.id, getId(req), req.body)
+      const input = parseBody(professionalUpdateAppointmentSchema, req.body)
+      const appointment = await appointmentService.updateForProfessional(req.user!.id, getId(req), input)
       res.json({ appointment })
     } catch (err) { next(err) }
   },

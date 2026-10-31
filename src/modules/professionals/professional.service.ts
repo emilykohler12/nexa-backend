@@ -2,6 +2,7 @@
 import { prisma }   from '../../app/database/prisma'
 import { AppError } from '../../app/middlewares/errorHandler'
 import { HTTP }     from '../../app/constants/http'
+import { OCCUPYING_SLOT_FILTER, earliestBookableStart, reopenedStartsFor } from '../appointments/reopenedSlots'
 
 const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
 const DAY_MAP: Record<string, number> = {
@@ -273,7 +274,15 @@ export const professionalService = {
   // date opcional (YYYY-MM-DD): si se pasa, además de la disponibilidad semanal
   // devuelve los horarios ya ocupados ese día, para que el frontend no ofrezca
   // turnos que van a chocar con la constraint de no-doble-reserva.
-  getPublicAvailability: async (id: string, date?: string) => {
+  //
+  // Para el flujo de la clienta también devuelve, cuando se pasa `date`:
+  //  - earliestStart: primer inicio ("HH:mm") que se puede reservar ese día según la reserva tardía (hasta 15
+  //    minutos después de la hora de inicio); null si la fecha ya pasó. El frontend filtra con esto y NO con
+  //    el reloj del navegador.
+  //  - reopenedStarts: inicios (cada 5 minutos) de los horarios reabiertos vigentes, calculados para la
+  //    duración del servicio `serviceId` (vacío si no se pasa). El horario ORIGINAL de un turno marcado como
+  //    no asistido o cancelado ya empezado figura en bookedTimes y nunca se reabre.
+  getPublicAvailability: async (id: string, date?: string, serviceId?: string) => {
     const user = await prisma.user.findUnique({ where: { id }, select: { role: true, active: true } })
     if (!user || !['professional', 'admin'].includes(user.role) || !user.active) {
       throw new AppError(HTTP.NOT_FOUND, 'Profesional no encontrado', 'NOT_FOUND')
@@ -288,15 +297,26 @@ export const professionalService = {
       : []
 
     let bookedTimes: string[] = []
+    let earliestStart: string | null | undefined
+    let reopenedStarts: string[] = []
     if (date) {
+      // Ocupan el inicio los turnos activos (incluida la inasistencia automática) y los que dejaron su
+      // horario original bloqueado: es el mismo criterio que el índice único parcial.
       const booked = await prisma.appointment.findMany({
-        where:  { professionalId: id, date, status: { notIn: ['cancelled', 'cancelled_no_show'] } },
+        where:  { professionalId: id, date, ...OCCUPYING_SLOT_FILTER },
         select: { time: true },
       })
       bookedTimes = booked.map(b => b.time)
+
+      const now = new Date()
+      earliestStart = earliestBookableStart(date, now)
+      if (serviceId) {
+        const service = await prisma.service.findUnique({ where: { id: serviceId }, select: { duration: true } })
+        if (service) reopenedStarts = await reopenedStartsFor(prisma, { professionalId: id, date, duration: service.duration, now })
+      }
     }
 
-    return { availability, bookedTimes }
+    return { availability, bookedTimes, earliestStart, reopenedStarts }
   },
 
   getAll: async () => {
