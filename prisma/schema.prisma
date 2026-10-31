@@ -305,6 +305,10 @@ model Appointment {
   // que llegó al local. Si un turno 'confirmed' sigue en null 20 minutos después
   // de la hora pactada, el job autoNoShow.job.ts lo marca 'cancelled_no_show' solo.
   arrivedAt      DateTime? @map("arrived_at") @db.Timestamptz
+  // Horario ORIGINAL bloqueado: el turno ya no está activo (cancelled_no_show, o cancelled DESPUÉS de su
+  // hora de inicio) pero su horario no se vuelve a ofrecer nunca. Es parte del predicado del índice único
+  // parcial (ver el comentario de abajo): la fila sigue dentro del índice y nadie puede reservar ese inicio.
+  slotLocked     Boolean   @default(false) @map("slot_locked")
   // Cobro del SALDO restante (precio - seña) en el local — la seña ya se
   // cobra sola por Mercado Pago (mpPaymentId), pero el resto se paga en mano
   // al momento del servicio y hasta ahora no quedaba ningún registro. 'cash' |
@@ -329,13 +333,43 @@ model Appointment {
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  // Evita doble reserva: un mismo profesional no puede tener dos turnos activos
-  // (ni cancelled ni cancelled_no_show) en la misma fecha/hora. Se implementa como un índice
-  // único PARCIAL creado a mano en la migración — Prisma
-  // no puede expresar ese WHERE en el schema, así que intencionalmente no hay
-  // ningún @@unique/@@index acá para esas columnas (evita que `migrate diff`
-  // intente crear un índice plano redundante). Ver migración add_no_double_booking.
+  // Horario reabierto que dejó este turno al marcarse como no asistido (ver ReopenedSlot).
+  reopenedSlot ReopenedSlot?
+
+  // Evita doble reserva: un mismo profesional no puede tener dos turnos en la misma fecha/hora de
+  // inicio salvo que el anterior esté cancelled o cancelled_no_show Y con el horario liberado
+  // (slotLocked en false). Se implementa como un índice único PARCIAL creado a mano en SQL — Prisma
+  // no puede expresar ese WHERE en el schema, así que intencionalmente no hay ningún @@unique/@@index
+  // acá para esas columnas (evita que `migrate diff` intente crear un índice plano redundante).
+  // Nombre: appointments_professional_date_time_active_key. Creado en la migración
+  // 20260826153839_add_orders_promotions_and_details y recreado en 20261028160000 y
+  // 20261031120000_turno_horario_original_bloqueado (predicado actual:
+  // status NOT IN ('cancelled','cancelled_no_show') OR slot_locked).
   @@map("appointments")
+}
+
+// Horario reabierto: cuando un turno se marca como no asistido (o se cancela ya empezado) hasta 40
+// minutos después de su hora de inicio, el profesional queda libre en pasos de 5 minutos hasta 60
+// minutos después de la hora ORIGINAL. El horario original nunca se reabre (ver Appointment.slotLocked).
+// La vigencia es implícita: pasado closesAt ya no se ofrece ni se acepta; closedAt solo se completa
+// cuando el personal corrige el estado del turno de origen.
+model ReopenedSlot {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  appointmentId  String      @unique @map("appointment_id") @db.Uuid
+  appointment    Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  professionalId String      @map("professional_id") @db.Uuid
+  date           String      @db.VarChar(10)
+  originalTime   String      @map("original_time") @db.VarChar(5)
+  // Primer inicio que se ofrece (siguiente múltiplo de 5 minutos a partir de la marca).
+  firstStart     String      @map("first_start") @db.VarChar(5)
+  opensAt        DateTime    @map("opens_at") @db.Timestamptz
+  closesAt       DateTime    @map("closes_at") @db.Timestamptz
+  closedAt       DateTime?   @map("closed_at") @db.Timestamptz
+  closedReason   String?     @map("closed_reason") @db.VarChar(20)
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([professionalId, date])
+  @@map("reopened_slots")
 }
 
 model Product {
@@ -548,8 +582,12 @@ model ActivityLog {
   // poder aprobar/rechazar el comentario desde Actividad. El estado se lee en
   // vivo de Review.status en el momento de listar, no se duplica acá.
   reviewId  String?  @map("review_id") @db.Uuid
+  // Turno que originó la entrada (referencia suelta, sin FK: el registro de actividad no debe
+  // impedir ni arrastrar el borrado de un turno). Solo las entradas que tocan un turno lo traen.
+  appointmentId String? @map("appointment_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
+  @@index([appointmentId])
   @@map("activity_logs")
 }
 
