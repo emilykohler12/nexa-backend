@@ -19,6 +19,11 @@ import { bcryptProvider } from '../auth/providers/bcrypt.provider'
 import type { SpecialSlot } from '../services/service.model'
 import { todayArgentinaStr, appointmentInstant } from '../../app/utils/argentinaTime'
 import { isPaymentAcceptable, type PaidInfo } from '../payments/paidAmount'
+import {
+  NOT_COUNTED_IN_LOAD_STATUSES, NO_SHOW_STATUSES, OCCUPYING_SLOT_FILTER,
+  assertServiceFits, assertStartTimeNotPassed, checkClientStart, closeReopenedSlots, hasOverlap,
+  hasStarted, lockProfessionalDay, openReopenedSlot, STAFF_NO_SHOW_REOPEN_LIMIT_MINUTES,
+} from './reopenedSlots'
 
 function loadTemplate(name: string, replacements: Record<string, string>): string {
   const candidates = [
@@ -51,8 +56,21 @@ function formatDate(date: string): string {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1)
 }
 
-export const APPOINTMENT_STATUSES = ['pending', 'confirmed', 'finished', 'cancelled', 'cancelled_no_show'] as const
+// 'no_show_auto' lo escribe SOLO el job autoNoShow (más de 30 minutos sin llegada registrada); sigue
+// ocupando el horario hasta que el personal lo resuelva (marcar no asistido, finalizar o confirmar).
+export const APPOINTMENT_STATUSES = ['pending', 'confirmed', 'finished', 'cancelled', 'cancelled_no_show', 'no_show_auto'] as const
 export type AppointmentStatus = typeof APPOINTMENT_STATUSES[number]
+
+// Etiquetas para mostrar (displayStatus incluido). El frontend las usa tal cual.
+export const STATUS_LABELS: Record<string, string> = {
+  pending:           'Pendiente',
+  pending_deposit:   'Pendiente de seña',
+  confirmed:         'Confirmado',
+  finished:          'Finalizado',
+  cancelled:         'Cancelado',
+  cancelled_no_show: 'No asistió',
+  no_show_auto:      'No asistió (automático)',
+}
 
 function assertValidStatus(status: string) {
   if (!APPOINTMENT_STATUSES.includes(status as AppointmentStatus)) {
@@ -114,6 +132,7 @@ function toClientView(a: AppointmentRow) {
     depositAmount:     Number(a.depositAmount),
     status:            a.status,
     displayStatus:     displayStatusOf(a),
+    statusLabel:       STATUS_LABELS[displayStatusOf(a)] ?? a.status,
     cancelReason:      a.cancelReason,
     paymentStatus:     a.paymentStatus,
     depositMethod:     a.depositMethod,
@@ -164,6 +183,7 @@ function toProfessionalView(a: AppointmentRow, peers: ComboPeer[] | null = null)
     time:           a.time,
     status:         a.status,
     displayStatus:  displayStatusOf(a),
+    statusLabel:    STATUS_LABELS[displayStatusOf(a)] ?? a.status,
     cancelReason:   a.cancelReason,
     paymentStatus:  a.paymentStatus,
     arrivedAt:      a.arrivedAt ? a.arrivedAt.toISOString() : null,
@@ -199,6 +219,7 @@ function toAdminView(a: AppointmentRow, peers: ComboPeer[] | null = null) {
     end,
     status:            a.status,
     displayStatus:     displayStatusOf(a),
+    statusLabel:       STATUS_LABELS[displayStatusOf(a)] ?? a.status,
     cancelReason:      a.cancelReason,
     paymentStatus:     a.paymentStatus,
     depositMethod:     a.depositMethod,
@@ -247,7 +268,7 @@ async function notifyProfessionalOfNewAppointment(a: AppointmentRow) {
   } catch (err: any) {
     console.error('[mail] error notificando nuevo turno:', err.message)
     await activityService.log({
-      action: 'No se pudo enviar el mail de aviso de turno nuevo', module: 'system', level: 'warning',
+      action: 'No se pudo enviar el mail de aviso de turno nuevo', module: 'system', level: 'warning', appointmentId: a.id,
       detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}: ${err.message}`,
     })
   }
@@ -255,7 +276,7 @@ async function notifyProfessionalOfNewAppointment(a: AppointmentRow) {
 
 async function afterCreate(a: AppointmentRow) {
   await activityService.log({
-    action: 'Nuevo turno', module: 'appointments', level: 'success',
+    action: 'Nuevo turno', module: 'appointments', level: 'success', appointmentId: a.id,
     detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}`,
   })
   await notifyProfessionalOfNewAppointment(a)
@@ -271,7 +292,7 @@ async function afterCreateGroup(legs: AppointmentRow[]) {
 
   const summary = legs.map(l => `${l.service.name} con ${l.professional.name}`).join(', ')
   await activityService.log({
-    action: 'Nuevo turno simultáneo', module: 'appointments', level: 'success',
+    action: 'Nuevo turno simultáneo', module: 'appointments', level: 'success', appointmentId: legs[0].id,
     detail: `${fullName(legs[0].client)} el ${legs[0].date} ${legs[0].time}: ${summary}`,
   })
   for (const leg of legs) await notifyProfessionalOfNewAppointment(leg)
@@ -279,7 +300,7 @@ async function afterCreateGroup(legs: AppointmentRow[]) {
 
 async function afterCancel(a: AppointmentRow, emailClient: boolean) {
   await activityService.log({
-    action: 'Turno cancelado', module: 'appointments', level: 'warning',
+    action: 'Turno cancelado', module: 'appointments', level: 'warning', appointmentId: a.id,
     detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}`,
   })
   await notificationService.notify(a.professionalId, {
@@ -305,13 +326,110 @@ async function afterCancel(a: AppointmentRow, emailClient: boolean) {
 // (la cancelación ya se audita aparte en afterCancel). Cubre tanto los cambios
 // manuales (profesional/admin marcando "no asistió", "finalizado", etc.) como
 // el marcado automático del job autoNoShow.job.ts.
-async function logStatusChange(a: AppointmentRow, from: string, to: string, actorName: string) {
+async function logStatusChange(a: AppointmentRow, from: string, to: string, actorName: string, extra = '') {
   await activityService.log({
-    userName: actorName,
-    action:   'Cambio de estado de turno',
-    module:   'appointments',
-    detail:   `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}: "${from}" → "${to}"`,
+    userName:      actorName,
+    action:        'Cambio de estado de turno',
+    module:        'appointments',
+    appointmentId: a.id,
+    detail:        `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}: "${from}" → "${to}"${extra}`,
   })
+}
+
+// Cambio de estado hecho por el personal (profesional o administrador), con las reglas de la AE4:
+//  - 'no_show_auto' lo escribe solo el sistema.
+//  - Marcar 'cancelled_no_show' vale para un turno confirmado o ya marcado automáticamente, y solo desde su
+//    hora de inicio. Hasta 40 minutos después se genera un horario reabierto; pasado ese margen se marca igual.
+//    La seña NO cambia (queda retenida). El horario original queda bloqueado (slot_locked).
+//  - Corrección (regla 2.7): de 'no_show_auto' o 'cancelled_no_show' se puede pasar a 'finished' siempre, y
+//    a 'confirmed' solo si no se superpone con otro turno activo de la profesional. El horario reabierto sin
+//    reservar se cierra y queda en el registro de actividad quién, cuándo y de qué estado a cuál.
+//  - Corregir a 'confirmed' deja registrada la llegada (arrivedAt = ahora): si no, el job lo volvería a
+//    marcar como no asistido en la corrida siguiente.
+// El cambio y el horario reabierto se escriben en una sola transacción.
+async function changeStatusByStaff(appointment: AppointmentRow, to: string, actorName: string, now: Date = new Date()): Promise<AppointmentRow> {
+  const from = appointment.status
+  if (from === to) return appointment
+
+  const invalid = (message: string) => new AppError(HTTP.BAD_REQUEST, message, 'INVALID_STATUS_TRANSITION')
+  const fromNoShow = (NO_SHOW_STATUSES as readonly string[]).includes(from)
+
+  if (to === 'no_show_auto') {
+    throw invalid('El estado "No asistió (automático)" lo asigna solo el sistema')
+  }
+  if (to === 'cancelled_no_show') {
+    if (!['confirmed', 'no_show_auto'].includes(from)) {
+      throw invalid('Solo se puede marcar como "No asistió" un turno confirmado o ya marcado como no asistido automáticamente')
+    }
+    if (!hasStarted(appointment, now)) {
+      throw new AppError(HTTP.BAD_REQUEST, 'No se puede marcar como "No asistió" un turno que todavía no empezó', 'NO_SHOW_BEFORE_START')
+    }
+  } else if (fromNoShow && !['finished', 'confirmed'].includes(to)) {
+    throw invalid('Un turno marcado como no asistido solo se puede corregir a "Finalizado" o "Confirmado"')
+  }
+  const correcting = fromNoShow && ['finished', 'confirmed'].includes(to)
+
+  if (correcting && to === 'confirmed' && await hasOverlap(prisma, {
+    professionalId: appointment.professionalId, date: appointment.date, time: appointment.time,
+    duration: appointment.duration, excludeAppointmentId: appointment.id,
+  })) {
+    throw new AppError(HTTP.CONFLICT, 'No se puede confirmar: el turno se superpone con otro turno activo de la profesional', 'APPOINTMENT_OVERLAP')
+  }
+
+  const { updated, reopenedFrom } = await prisma.$transaction(async (tx) => {
+    const row = await tx.appointment.update({
+      where: { id: appointment.id },
+      data: {
+        status:     to,
+        slotLocked: to === 'cancelled_no_show',
+        ...(correcting && to === 'confirmed' && !appointment.arrivedAt ? { arrivedAt: now } : {}),
+      },
+      include: APPOINTMENT_INCLUDE,
+    })
+    let firstStart: string | null = null
+    if (to === 'cancelled_no_show') {
+      firstStart = (await openReopenedSlot(tx, row, now))?.firstStart ?? null
+    }
+    if (correcting) await closeReopenedSlots(tx, row.id, 'corrected', now)
+    return { updated: row, reopenedFrom: firstStart }
+  })
+
+  const extra = correcting
+    ? ' (corrección del personal)'
+    : to === 'cancelled_no_show'
+      ? (reopenedFrom ? `; se reabre el horario desde las ${reopenedFrom}` : `; pasaron más de ${STAFF_NO_SHOW_REOPEN_LIMIT_MINUTES} minutos de la hora de inicio, no se reabre el horario`)
+      : ''
+  await logStatusChange(updated, from, to, actorName, extra)
+  return updated
+}
+
+// ¿El cambio de estado toca la inasistencia (marcarla, o salir de ella)? Esos cambios van por changeStatusByStaff.
+function isNoShowTransition(from: string, to: string): boolean {
+  return to === 'cancelled_no_show' || to === 'no_show_auto' || (NO_SHOW_STATUSES as readonly string[]).includes(from)
+}
+
+// Un turno marcado como no asistido no se cancela ni se reprograma: primero se corrige su estado (2.7).
+function assertNoShowStateAllowsChange(a: { status: string }, change: { cancelling: boolean; rescheduling: boolean }): void {
+  if (!(NO_SHOW_STATUSES as readonly string[]).includes(a.status)) return
+  if (change.cancelling || change.rescheduling) {
+    throw new AppError(
+      HTTP.BAD_REQUEST,
+      `Un turno marcado como no asistido no se ${change.cancelling ? 'cancela' : 'reprograma'}: corregí primero su estado`,
+      'INVALID_STATUS_TRANSITION',
+    )
+  }
+}
+
+// Update del personal: un horario ocupado (índice único parcial) responde 409 en lugar de un error 500.
+async function updateAppointmentRow(id: string, data: Prisma.AppointmentUpdateInput): Promise<AppointmentRow> {
+  try {
+    return await prisma.appointment.update({ where: { id }, data, include: APPOINTMENT_INCLUDE })
+  } catch (err: any) {
+    if (isSlotConflict(err)) {
+      throw new AppError(HTTP.CONFLICT, 'Ese horario ya no está disponible para este profesional. Elegí otro horario.', 'PROFESSIONAL_SLOT_TAKEN')
+    }
+    throw err
+  }
 }
 
 async function afterReschedule(a: AppointmentRow, previousDate?: string | null, previousTime?: string | null) {
@@ -320,7 +438,7 @@ async function afterReschedule(a: AppointmentRow, previousDate?: string | null, 
     : `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} → ${a.date} ${a.time}`
 
   await activityService.log({
-    action: 'Turno reprogramado', module: 'appointments', level: 'warning',
+    action: 'Turno reprogramado', module: 'appointments', level: 'warning', appointmentId: a.id,
     detail,
   })
   await notificationService.notify(a.professionalId, {
@@ -346,7 +464,7 @@ async function afterReschedule(a: AppointmentRow, previousDate?: string | null, 
 // rescheduleNoticePending hasta que lo confirma vía acknowledge-reschedule.
 async function afterStaffReschedule(a: AppointmentRow, previousDate: string, previousTime: string) {
   await activityService.log({
-    action: 'Turno reprogramado', module: 'appointments', level: 'warning',
+    action: 'Turno reprogramado', module: 'appointments', level: 'warning', appointmentId: a.id,
     detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name}: ${previousDate} ${previousTime} → ${a.date} ${a.time}`,
   })
   await notificationService.notify(a.professionalId, {
@@ -398,7 +516,7 @@ async function registerBalancePayment(
   if (!(data.amount > 0)) {
     throw new AppError(HTTP.BAD_REQUEST, 'El monto tiene que ser mayor a cero', 'INVALID_AMOUNT')
   }
-  if (['cancelled', 'cancelled_no_show'].includes(appointment.status)) {
+  if (['cancelled', 'cancelled_no_show', 'no_show_auto'].includes(appointment.status)) {
     throw new AppError(HTTP.BAD_REQUEST, 'No se puede registrar un cobro sobre un turno cancelado o no asistido', 'INVALID_STATUS')
   }
 
@@ -424,6 +542,7 @@ async function registerBalancePayment(
     userName: updated.balanceCollectedBy?.name ?? 'Admin',
     action: 'Cobro de saldo registrado',
     module: 'payments',
+    appointmentId: updated.id,
     detail: `${updated.service.name} — ${fullName(updated.client)} con ${updated.professional.name}: $${data.amount} en ${methodLabel} (turno ${appointment.id})`,
   })
 
@@ -438,9 +557,11 @@ async function registerBalancePayment(
 async function cancelWithGroup(appointment: AppointmentRow, emailClient: boolean, reason: string = 'user_cancelled'): Promise<AppointmentRow[]> {
   const paymentSettings = await settingsService.getPaymentSettings()
 
+  // Solo las patas que todavía se pueden cancelar: una pata finalizada o ya marcada como no asistida
+  // conserva su estado.
   const group = appointment.comboGroupId
     ? await prisma.appointment.findMany({
-        where:   { comboGroupId: appointment.comboGroupId, status: { not: 'cancelled' } },
+        where:   { comboGroupId: appointment.comboGroupId, status: { in: ['pending', 'confirmed'] } },
         include: APPOINTMENT_INCLUDE,
       })
     : [appointment]
@@ -459,6 +580,8 @@ async function cancelWithGroup(appointment: AppointmentRow, emailClient: boolean
         cancelledAt:   new Date(),
         cancelReason:  reason,
         paymentStatus: refunded ? 'refunded' : a.paymentStatus,
+        // Cancelada ya empezada: el horario ORIGINAL queda bloqueado (no se vuelve a reservar).
+        slotLocked:    hasStarted(a),
       },
       include: APPOINTMENT_INCLUDE,
     })
@@ -591,9 +714,9 @@ export const ANY_PROFESSIONAL_SENTINEL = 'any'
 
 // R-04 (RF-06) — "Cualquiera". Candidatas: profesionales activas, habilitadas
 // para el servicio, con una franja de disponibilidad que cubra ese día y hora,
-// sin vacaciones esa fecha y sin turno activo (ni cancelado ni cancelled_no_show) a esa
-// misma hora de inicio. Entre ellas, la de menor carga de la SEMANA de la fecha
-// pedida (lunes a domingo, turnos no cancelados ni cancelled_no_show); a igual carga, la
+// sin vacaciones esa fecha y sin turno que ocupe esa hora de inicio (activo, incluida la inasistencia
+// automática, o con el horario original bloqueado). Entre ellas, la de menor carga de la SEMANA de la fecha
+// pedida (lunes a domingo, turnos no cancelados ni marcados como no asistidos: cancelled_no_show y no_show_auto); a igual carga, la
 // de mayor antigüedad (Professional.createdAt ascendente). Si hay profesionales
 // para el servicio pero ninguna libre en ese horario → 409.
 // `excludeIds` saca profesionales ya asignados a otro servicio del mismo combo
@@ -629,18 +752,34 @@ async function resolveProfessionalId(
     throw new AppError(HTTP.BAD_REQUEST, 'No hay profesionales disponibles para este servicio', 'NO_PROFESSIONAL_AVAILABLE')
   }
 
+  // Ocupa el inicio todo turno activo (incluida la inasistencia automática) y los que dejaron el horario
+  // original bloqueado: es el mismo criterio que el índice único parcial.
   const busy = await prisma.appointment.findMany({
-    where:  { professionalId: { in: enabled.map(u => u.id) }, date: slot.date, time: slot.time, status: { notIn: ['cancelled', 'cancelled_no_show'] } },
+    where:  { professionalId: { in: enabled.map(u => u.id) }, date: slot.date, time: slot.time, ...OCCUPYING_SLOT_FILTER },
     select: { professionalId: true },
   })
   const busyIds = new Set(busy.map(b => b.professionalId))
 
-  const candidates = enabled.filter(u =>
+  let candidates = enabled.filter(u =>
     u.professional &&
     !busyIds.has(u.id) &&
     !isOnVacation(u.professional, slot.date) &&
     isTimeInRanges(u.professional.availability, slot.time),
   )
+
+  // Si el inicio cae dentro de un horario reabierto de alguna candidata, solo sirve la que lo tiene vigente
+  // y el servicio le entra (ver checkClientStart). Fuera de los horarios reabiertos no cambia nada.
+  const service = await prisma.service.findUnique({ where: { id: serviceId }, select: { duration: true } })
+  const checked: typeof candidates = []
+  for (const u of candidates) {
+    try {
+      await checkClientStart(prisma, { professionalId: u.id, date: slot.date, time: slot.time, duration: service?.duration ?? 0, now: new Date() })
+      checked.push(u)
+    } catch (err) {
+      if (!(err instanceof AppError)) throw err
+    }
+  }
+  candidates = checked
   if (candidates.length === 0) {
     throw new AppError(HTTP.CONFLICT, 'Ninguna profesional está libre en ese día y horario. Elegí otro horario.', 'NO_PROFESSIONAL_FREE')
   }
@@ -651,7 +790,8 @@ async function resolveProfessionalId(
     where:  {
       professionalId: { in: candidates.map(c => c.id) },
       date:           { gte: week.from, lte: week.to },
-      status:         { notIn: ['cancelled', 'cancelled_no_show'] },
+      // La inasistencia automática ocupa el horario pero NO suma a la carga semanal.
+      status:         { notIn: [...NOT_COUNTED_IN_LOAD_STATUSES] },
     },
     _count: { id: true },
   })
@@ -747,12 +887,18 @@ export const appointmentService = {
       throw new AppError(HTTP.BAD_REQUEST, 'Servicio no disponible', 'SERVICE_NOT_FOUND')
     }
 
+    // Reserva tardía: hasta 15 minutos después de la hora de inicio. Va antes de elegir profesional.
+    const now = new Date()
+    assertStartTimeNotPassed(input.date, input.time, now)
+
     const professionalId = await resolveProfessionalId(input.serviceId, input.professionalId, { date: input.date, time: input.time })
     const professional = await prisma.user.findUnique({ where: { id: professionalId } })
     if (!professional || !['professional', 'admin'].includes(professional.role) || !professional.active) {
       throw new AppError(HTTP.BAD_REQUEST, 'Profesional no disponible', 'PROFESSIONAL_NOT_FOUND')
     }
     await assertWithinAvailability(professionalId, input.date, input.time)
+    // Horario reabierto: valida el inicio y la duración (ver reopenedSlots.ts).
+    const startCheck = await checkClientStart(prisma, { professionalId, date: input.date, time: input.time, duration: service.duration, now })
 
     const paymentSettings = await settingsService.getPaymentSettings()
     const price   = input.promotionId ? await resolveServicePromotion(input.promotionId, input.serviceId) : Number(service.price)
@@ -760,7 +906,9 @@ export const appointmentService = {
 
     let appointment: AppointmentRow
     try {
-      appointment = await prisma.appointment.create({
+      // En un horario reabierto la verificación por duración se repite adentro de la transacción, bajo un
+      // lock por profesional y día, para que dos reservas simultáneas no se pisen.
+      const createRow = (db: Prisma.TransactionClient) => db.appointment.create({
         data: {
           clientId,
           professionalId,
@@ -781,7 +929,15 @@ export const appointmentService = {
         },
         include: APPOINTMENT_INCLUDE,
       })
+      appointment = startCheck.reopened
+        ? await prisma.$transaction(async (tx) => {
+            await lockProfessionalDay(tx, professionalId, input.date)
+            await assertServiceFits(tx, { professionalId, date: input.date, time: input.time, duration: service.duration })
+            return createRow(tx)
+          })
+        : await createRow(prisma)
     } catch (err: any) {
+      if (err instanceof AppError) throw err
       if (isSlotConflict(err)) {
         throw new AppError(HTTP.CONFLICT, 'Ese horario ya no está disponible para este profesional. Elegí otro horario.', 'PROFESSIONAL_SLOT_TAKEN')
       }
@@ -843,8 +999,11 @@ export const appointmentService = {
     // "Cualquiera" se resuelve antes de entrar a la transacción — cada componente
     // se resuelve en orden. En simultáneo se van excluyendo los profesionales ya
     // asignados: nadie puede hacer dos servicios a la vez.
-    const resolvedComponents: { serviceId: string; professionalId: string; date: string; time: string }[] = []
+    const resolvedComponents: { serviceId: string; professionalId: string; date: string; time: string; reopened?: boolean }[] = []
+    const now = new Date()
     for (const component of input.components) {
+      // Reserva tardía: hasta 15 minutos después de la hora de inicio.
+      assertStartTimeNotPassed(component.date, component.time, now)
       const excludeIds = input.simultaneous ? resolvedComponents.map(c => c.professionalId) : []
       const allowedIds = comboProfessionals[component.serviceId]
       if (
@@ -856,7 +1015,11 @@ export const appointmentService = {
       }
       const professionalId = await resolveProfessionalId(component.serviceId, component.professionalId, { date: component.date, time: component.time }, excludeIds, allowedIds)
       await assertWithinAvailability(professionalId, component.date, component.time)
-      resolvedComponents.push({ ...component, professionalId })
+      const componentService = await prisma.service.findUnique({ where: { id: component.serviceId }, select: { duration: true } })
+      const startCheck = await checkClientStart(prisma, {
+        professionalId, date: component.date, time: component.time, duration: componentService?.duration ?? 0, now,
+      })
+      resolvedComponents.push({ ...component, professionalId, reopened: startCheck.reopened })
     }
 
     if (input.simultaneous) {
@@ -908,6 +1071,11 @@ export const appointmentService = {
           const professional = await tx.user.findUnique({ where: { id: component.professionalId } })
           if (!professional || !['professional', 'admin'].includes(professional.role) || !professional.active) {
             throw new AppError(HTTP.BAD_REQUEST, 'Profesional no disponible', 'PROFESSIONAL_NOT_FOUND')
+          }
+          // Horario reabierto: verificación por duración bajo lock (ver reopenedSlots.ts).
+          if (component.reopened) {
+            await lockProfessionalDay(tx, component.professionalId, component.date)
+            await assertServiceFits(tx, { professionalId: component.professionalId, date: component.date, time: component.time, duration: service.duration })
           }
 
           // La última pata se lleva el resto, así la suma da exacto el precio del combo.
@@ -1044,7 +1212,7 @@ export const appointmentService = {
     if (claimed.count === 0) return
 
     await activityService.log({
-      action: 'Pago de seña recibido', module: 'payments',
+      action: 'Pago de seña recibido', module: 'payments', appointmentId: legs[0].id,
       detail: `Combo ${comboGroupId} — Mercado Pago informó estado "${status}"`,
     })
 
@@ -1080,7 +1248,7 @@ export const appointmentService = {
           data:  { paymentStatus: 'partial' },
         })
         await activityService.log({
-          action: 'Seña coordinada por WhatsApp marcada como paga', module: 'payments',
+          action: 'Seña coordinada por WhatsApp marcada como paga', module: 'payments', appointmentId: legs[0].id,
           detail: `Combo — ${fullName(legs[0].client)}: ${legs.map(l => l.service.name).join(', ')}`,
         })
         await afterCreateGroup(legs.map(l => ({ ...l, paymentStatus: 'partial' })))
@@ -1106,7 +1274,7 @@ export const appointmentService = {
       where: { id }, data: { paymentStatus: 'partial' }, include: APPOINTMENT_INCLUDE,
     })
     await activityService.log({
-      action: 'Seña coordinada por WhatsApp marcada como paga', module: 'payments',
+      action: 'Seña coordinada por WhatsApp marcada como paga', module: 'payments', appointmentId: updated.id,
       detail: `${updated.service.name} — ${fullName(updated.client)} con ${updated.professional.name}`,
     })
     await afterCreate(updated)
@@ -1130,6 +1298,9 @@ export const appointmentService = {
     if (!service || service.status !== 'active' || !service.isSpecial || !service.specialDate) {
       throw new AppError(HTTP.BAD_REQUEST, 'Servicio no disponible', 'SERVICE_NOT_FOUND')
     }
+
+    // Reserva tardía: hasta 15 minutos después de la hora del horario del evento.
+    assertStartTimeNotPassed(service.specialDate, input.time)
 
     const zones    = ((service.zones    as unknown as { id: string; name: string; duration: number; price: number; active: boolean }[]) ?? [])
     const packages = ((service.packages as unknown as { id: string; name: string; zoneIds: string[]; duration: number; price: number; active: boolean }[]) ?? [])
@@ -1303,7 +1474,7 @@ export const appointmentService = {
     const updated = await prisma.appointment.findUniqueOrThrow({ where: { id }, include: APPOINTMENT_INCLUDE })
 
     await activityService.log({
-      action: 'Pago de seña recibido', module: 'payments',
+      action: 'Pago de seña recibido', module: 'payments', appointmentId: id,
       detail: `Turno ${id} — Mercado Pago informó estado "${status}"`,
     })
 
@@ -1323,6 +1494,11 @@ export const appointmentService = {
     if (appointment.status === 'cancelled') {
       throw new AppError(HTTP.BAD_REQUEST, 'El turno ya está cancelado', 'ALREADY_CANCELLED')
     }
+    // La clienta solo cancela turnos pendientes o confirmados: no uno finalizado ni uno marcado como no
+    // asistido (automático o por el personal).
+    if (!['pending', 'confirmed'].includes(appointment.status)) {
+      throw new AppError(HTTP.BAD_REQUEST, 'Este turno ya no se puede cancelar', 'NOT_CANCELLABLE')
+    }
 
     // Combo simultáneo: se cancela SOLO esta pata; las demás quedan igual (mismo
     // día, hora y profesional). NO se reembolsa nada, salvo que esta sea la
@@ -1330,7 +1506,7 @@ export const appointmentService = {
     // de reembolso normal sobre la seña del grupo.
     if (appointment.comboGroupId) {
       const activeSiblings = await prisma.appointment.count({
-        where: { comboGroupId: appointment.comboGroupId, status: { not: 'cancelled' }, id: { not: id } },
+        where: { comboGroupId: appointment.comboGroupId, status: { in: ['pending', 'confirmed'] }, id: { not: id } },
       })
       const isLastLeg = activeSiblings === 0
 
@@ -1349,6 +1525,8 @@ export const appointmentService = {
           cancelledAt:   new Date(),
           cancelReason:  'user_cancelled',
           paymentStatus: refunded ? 'refunded' : appointment.paymentStatus,
+          // Cancelada ya empezada: el horario ORIGINAL queda bloqueado.
+          slotLocked:    hasStarted(appointment),
         },
         include: APPOINTMENT_INCLUDE,
       })
@@ -1405,6 +1583,12 @@ export const appointmentService = {
       throw new AppError(HTTP.BAD_REQUEST, 'Profesional no disponible', 'PROFESSIONAL_NOT_FOUND')
     }
     await assertWithinAvailability(input.professionalId, input.date, input.time)
+    // Reserva tardía (hasta 15 minutos después de la hora de inicio) y horario reabierto.
+    const now        = new Date()
+    const startCheck = await checkClientStart(prisma, {
+      professionalId: input.professionalId, date: input.date, time: input.time,
+      duration: service.duration, now, excludeAppointmentId: id,
+    })
 
     const paymentSettings = await settingsService.getPaymentSettings()
     const price   = Number(service.price)
@@ -1415,7 +1599,7 @@ export const appointmentService = {
 
     let updated: AppointmentRow
     try {
-      updated = await prisma.appointment.update({
+      const updateRow = (db: Prisma.TransactionClient) => db.appointment.update({
         where: { id },
         data: {
           serviceId:      input.serviceId,
@@ -1434,7 +1618,15 @@ export const appointmentService = {
         },
         include: APPOINTMENT_INCLUDE,
       })
+      updated = startCheck.reopened
+        ? await prisma.$transaction(async (tx) => {
+            await lockProfessionalDay(tx, input.professionalId, input.date)
+            await assertServiceFits(tx, { professionalId: input.professionalId, date: input.date, time: input.time, duration: service.duration, excludeAppointmentId: id })
+            return updateRow(tx)
+          })
+        : await updateRow(prisma)
     } catch (err: any) {
+      if (err instanceof AppError) throw err
       if (isSlotConflict(err)) {
         throw new AppError(HTTP.CONFLICT, 'Ese horario ya no está disponible para este profesional. Elegí otro horario.', 'PROFESSIONAL_SLOT_TAKEN')
       }
@@ -1556,6 +1748,8 @@ export const appointmentService = {
       (data.time !== undefined && data.time !== appointment.time)
     )
 
+    assertNoShowStateAllowsChange(appointment, { cancelling, rescheduling })
+
     if (cancelling) {
       if (data.internalNotes !== undefined) {
         await prisma.appointment.update({ where: { id }, data: { internalNotes: data.internalNotes } })
@@ -1566,23 +1760,24 @@ export const appointmentService = {
       return toProfessionalView(target, peers)
     }
 
-    const updated = await prisma.appointment.update({
-      where: { id },
-      data: {
-        ...(data.status        !== undefined ? { status: data.status } : {}),
-        ...(data.internalNotes !== undefined ? { internalNotes: data.internalNotes } : {}),
-        ...(data.date           !== undefined ? { date: data.date }                   : {}),
-        ...(data.time           !== undefined ? { time: data.time }                   : {}),
-        ...(rescheduling ? {
-          rescheduleNoticePending: true,
-          previousDate: appointment.date,
-          previousTime: appointment.time,
-        } : {}),
-      },
-      include: APPOINTMENT_INCLUDE,
+    // Marcar o corregir una inasistencia tiene reglas propias (ver changeStatusByStaff).
+    const statusChanging = data.status !== undefined && data.status !== appointment.status
+    const viaNoShowRules = statusChanging && isNoShowTransition(appointment.status, data.status!)
+    if (viaNoShowRules) await changeStatusByStaff(appointment, data.status!, appointment.professional.name)
+
+    const updated = await updateAppointmentRow(id, {
+      ...(statusChanging && !viaNoShowRules ? { status: data.status, slotLocked: false } : {}),
+      ...(data.internalNotes !== undefined ? { internalNotes: data.internalNotes } : {}),
+      ...(data.date           !== undefined ? { date: data.date }                   : {}),
+      ...(data.time           !== undefined ? { time: data.time }                   : {}),
+      ...(rescheduling ? {
+        rescheduleNoticePending: true,
+        previousDate: appointment.date,
+        previousTime: appointment.time,
+      } : {}),
     })
-    if (data.status !== undefined && data.status !== appointment.status) {
-      await logStatusChange(updated, appointment.status, data.status, appointment.professional.name)
+    if (statusChanging && !viaNoShowRules) {
+      await logStatusChange(updated, appointment.status, data.status!, appointment.professional.name)
     }
     if (rescheduling) await afterStaffReschedule(updated, appointment.date, appointment.time)
     const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
@@ -1716,9 +1911,11 @@ export const appointmentService = {
       } : {}),
     }
 
+    assertNoShowStateAllowsChange(appointment, { cancelling, rescheduling })
+
     if (cancelling) {
       if (Object.keys(otherFields).length > 0) {
-        await prisma.appointment.update({ where: { id }, data: otherFields })
+        await updateAppointmentRow(id, otherFields)
       }
       const updatedList = await cancelWithGroup(appointment, true)
       const target = updatedList.find(a => a.id === id)!
@@ -1726,16 +1923,17 @@ export const appointmentService = {
       return toAdminView(target, peers)
     }
 
-    const updated = await prisma.appointment.update({
-      where: { id },
-      data: {
-        ...(data.status !== undefined ? { status: data.status } : {}),
-        ...otherFields,
-      },
-      include: APPOINTMENT_INCLUDE,
+    // Marcar o corregir una inasistencia tiene reglas propias (ver changeStatusByStaff).
+    const statusChanging = data.status !== undefined && data.status !== appointment.status
+    const viaNoShowRules = statusChanging && isNoShowTransition(appointment.status, data.status!)
+    if (viaNoShowRules) await changeStatusByStaff(appointment, data.status!, actorName)
+
+    const updated = await updateAppointmentRow(id, {
+      ...(statusChanging && !viaNoShowRules ? { status: data.status, slotLocked: false } : {}),
+      ...otherFields,
     })
-    if (data.status !== undefined && data.status !== appointment.status) {
-      await logStatusChange(updated, appointment.status, data.status, actorName)
+    if (statusChanging && !viaNoShowRules) {
+      await logStatusChange(updated, appointment.status, data.status!, actorName)
     }
     if (rescheduling) await afterStaffReschedule(updated, appointment.date, appointment.time)
     const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
@@ -1809,7 +2007,7 @@ export const appointmentService = {
       include: APPOINTMENT_INCLUDE,
     })
     await activityService.log({
-      action: 'Retiro de esmalte registrado', module: 'appointments',
+      action: 'Retiro de esmalte registrado', module: 'appointments', appointmentId: updated.id,
       detail: `${updated.service.name} — ${fullName(updated.client)}: ${data.label} ($${data.price}, solo a modo de control)`,
     })
     const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null

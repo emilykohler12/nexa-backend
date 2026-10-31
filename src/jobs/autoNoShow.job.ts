@@ -1,47 +1,53 @@
 // src/jobs/autoNoShow.job.ts
 //
-// Corre cada pocos minutos (ver scheduler.ts). Si pasaron más de 20 minutos
-// desde la hora pactada de un turno 'confirmed' y nadie registró la llegada
-// de la clienta (ni ella desde la app, ni el profesional/admin por ella —
-// ver markArrivalFor* en appointment.service.ts), se marca el turno como
-// 'cancelled_no_show'.
+// Corre cada 5 minutos (ver scheduler.ts). Si pasaron MÁS de 30 minutos desde la hora de inicio de un turno
+// 'confirmed' y nadie registró la llegada de la clienta (ni ella desde la app, ni el profesional/admin por
+// ella — ver markArrivalFor* en appointment.service.ts), el turno pasa a 'no_show_auto'
+// («No asistió (automático)»). Con 30 minutos exactos todavía no se marca.
 //
-// El índice único parcial que impide doble reserva por profesional/fecha/hora
-// solo excluye 'cancelled' y 'cancelled_no_show' (ver releaseUnpaidAppointments.job.ts),
-// así que este cambio de estado ya libera el horario para reasignar — no hace
-// falta ningún paso extra.
+// 'no_show_auto' NO libera el horario: el índice único parcial de R-01 solo excluye 'cancelled' y
+// 'cancelled_no_show', así que nadie puede reservar ni reprogramar hacia ese horario. Tampoco suma a la
+// carga semanal de R-04. La seña no se toca (paymentStatus queda como estaba) y la clienta no puede
+// cancelarlo desde la app. El personal lo resuelve después (marcar "No asistió", finalizar o confirmar).
+//
+// Una entrada de actividad por turno marcado.
 import { prisma }          from '../app/database/prisma'
 import { activityService } from '../modules/activity/activity.service'
 import { fullName } from '../app/utils/fullName'
-import { todayArgentinaStr, appointmentInstant } from '../app/utils/argentinaTime'
+import { todayArgentinaStr } from '../app/utils/argentinaTime'
+import { NO_SHOW_AUTO_AFTER_MINUTES, startInstant } from '../modules/appointments/reopenedSlots'
 
-const GRACE_MINUTES = 20
-
-export async function runAutoNoShowJob(): Promise<{ marked: number }> {
+export async function runAutoNoShowJob(now: Date = new Date()): Promise<{ marked: number }> {
   // Solo turnos de hoy o de días anteriores (por si el job estuvo caído) —
-  // uno de fecha futura nunca puede cumplir la condición de los 20 minutos.
+  // uno de fecha futura nunca puede cumplir la condición de los 30 minutos.
   const candidates = await prisma.appointment.findMany({
     where: {
       status:    'confirmed',
       arrivedAt: null,
-      date:      { lte: todayArgentinaStr() },
+      date:      { lte: todayArgentinaStr(now) },
     },
     include: { client: true, professional: true, service: true },
   })
 
-  const now = Date.now()
   let marked = 0
 
   for (const a of candidates) {
-    const scheduled    = appointmentInstant(a.date, a.time)
-    const minutesLate  = (now - scheduled.getTime()) / (60 * 1000)
-    if (minutesLate < GRACE_MINUTES) continue
+    const minutesLate = (now.getTime() - startInstant(a).getTime()) / (60 * 1000)
+    if (minutesLate <= NO_SHOW_AUTO_AFTER_MINUTES) continue
 
-    await prisma.appointment.update({ where: { id: a.id }, data: { status: 'cancelled_no_show' } })
+    // Escritura condicional: si el personal o la clienta tocaron el turno mientras corría el job
+    // (llegada registrada, otro estado), no se pisa.
+    const claimed = await prisma.appointment.updateMany({
+      where: { id: a.id, status: 'confirmed', arrivedAt: null },
+      data:  { status: 'no_show_auto' },
+    })
+    if (claimed.count === 0) continue
+
     await activityService.log({
-      action: 'Turno cancelado por inasistencia (automático)',
+      action: 'Turno marcado como no asistido (automático)',
       module: 'appointments',
-      detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}: sin registro de llegada tras ${GRACE_MINUTES} minutos de la hora pactada.`,
+      appointmentId: a.id,
+      detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}: "confirmed" → "no_show_auto"; sin registro de llegada tras más de ${NO_SHOW_AUTO_AFTER_MINUTES} minutos de la hora de inicio. El horario sigue ocupado y la seña no cambia.`,
     })
     marked += 1
   }

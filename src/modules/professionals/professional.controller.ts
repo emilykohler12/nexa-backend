@@ -7,6 +7,8 @@ import { notificationService } from './notification.service'
 import { AppError }            from '../../app/middlewares/errorHandler'
 import { HTTP }                from '../../app/constants/http'
 import type { AuthUser }       from '../auth/types/auth.types'
+import { z }                from 'zod'
+import { dateSchema }       from '../../app/validators/datetime'
 
 function getParam(req: Request, name: string): string {
   const value = req.params[name]
@@ -32,8 +34,15 @@ export const professionalsController = {
         throw new AppError(HTTP.BAD_REQUEST, 'ID requerido', 'MISSING_ID')
       }
       const date = typeof req.query.date === 'string' ? req.query.date : undefined
-      const { availability, bookedTimes } = await professionalService.getPublicAvailability(id, date)
-      res.json({ availability, bookedTimes })
+      if (date !== undefined && !dateSchema.safeParse(date).success) {
+        throw new AppError(HTTP.BAD_REQUEST, 'Fecha inválida (formato esperado: YYYY-MM-DD)', 'VALIDATION_ERROR')
+      }
+      const serviceId = typeof req.query.serviceId === 'string' ? req.query.serviceId : undefined
+      if (serviceId !== undefined && !z.string().uuid().safeParse(serviceId).success) {
+        throw new AppError(HTTP.BAD_REQUEST, 'ID de servicio inválido', 'VALIDATION_ERROR')
+      }
+      const result = await professionalService.getPublicAvailability(id, date, serviceId)
+      res.json(result)
     } catch (err) { next(err) }
   },
 
