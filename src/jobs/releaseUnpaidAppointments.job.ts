@@ -25,7 +25,7 @@
 //    pagas a mano — no hay "tiempo límite" que valga acá.
 import { prisma }          from '../app/database/prisma'
 import { activityService } from '../modules/activity/activity.service'
-import { argentinaParts } from '../app/utils/argentinaTime'
+import { hasStarted, openReopenedSlot } from '../modules/appointments/reopenedSlots'
 
 // 15 min es la ventana que ve el cliente en PaymentStep (HOLD_MINUTES). Le
 // sumamos unos minutos de gracia para no cancelar un turno justo mientras el
@@ -53,23 +53,29 @@ export async function runReleaseUnpaidAppointmentsJob(): Promise<{ released: num
     ],
   }
 
-  // Un turno impago que ya empezó al liberarse deja su horario ORIGINAL bloqueado (slot_locked): el índice
-  // único parcial lo sigue reteniendo y nadie lo reserva. Los que todavía no empezaron liberan el horario.
-  const { date: today, time: nowTime } = argentinaParts()
-  const started    = { OR: [{ date: { lt: today } }, { date: today, time: { lte: nowTime } }] }
-  const notStarted = { NOT: started }
-  const cancelData = { status: 'cancelled', cancelledAt: new Date(), cancelReason: 'unpaid_expired' }
+  // Cada turno se libera en su propia transacción. Uno impago que ya empezó al liberarse deja su horario ORIGINAL
+  // bloqueado (slot_locked) y, si pasaron hasta 40 minutos desde su inicio, abre un horario reabierto (igual que
+  // cualquier otra cancelación). Los que todavía no empezaron liberan el horario enseguida.
+  const now = new Date()
+  async function release(row: { id: string; professionalId: string; date: string; time: string }, extraWhere: object): Promise<number> {
+    const started = hasStarted(row, now)
+    return prisma.$transaction(async (tx) => {
+      const res = await tx.appointment.updateMany({
+        where: { id: row.id, ...extraWhere },
+        data:  { status: 'cancelled', cancelledAt: now, cancelReason: 'unpaid_expired', cancelledBy: 'system', slotLocked: started },
+      })
+      if (res.count === 1 && started) await openReopenedSlot(tx, row, now)
+      return res.count
+    })
+  }
 
   // Turnos sueltos.
-  const singleStarted = await prisma.appointment.updateMany({
-    where: { ...staleFilter, comboGroupId: null, ...started },
-    data:  { ...cancelData, slotLocked: true },
+  const singles = await prisma.appointment.findMany({
+    where:  { ...staleFilter, comboGroupId: null },
+    select: { id: true, professionalId: true, date: true, time: true },
   })
-  const singleNotStarted = await prisma.appointment.updateMany({
-    where: { ...staleFilter, comboGroupId: null, ...notStarted },
-    data:  cancelData,
-  })
-  const single = { count: singleStarted.count + singleNotStarted.count }
+  let single = 0
+  for (const row of singles) single += await release(row, { ...staleFilter, comboGroupId: null })
 
   // Combos: la pata que lleva la seña (depositAmount > 0) quedó impaga → se
   // cancela el grupo entero.
@@ -81,18 +87,14 @@ export async function runReleaseUnpaidAppointmentsJob(): Promise<{ released: num
   const groupIds = staleGroups.map(g => g.comboGroupId!).filter(Boolean)
   let comboLegs = 0
   if (groupIds.length > 0) {
-    const legsStarted = await prisma.appointment.updateMany({
-      where: { comboGroupId: { in: groupIds }, status: { in: ['pending', 'confirmed'] }, ...started },
-      data:  { ...cancelData, slotLocked: true },
+    const legs = await prisma.appointment.findMany({
+      where:  { comboGroupId: { in: groupIds }, status: { in: ['pending', 'confirmed'] } },
+      select: { id: true, professionalId: true, date: true, time: true },
     })
-    const legsNotStarted = await prisma.appointment.updateMany({
-      where: { comboGroupId: { in: groupIds }, status: { in: ['pending', 'confirmed'] }, ...notStarted },
-      data:  cancelData,
-    })
-    comboLegs = legsStarted.count + legsNotStarted.count
+    for (const leg of legs) comboLegs += await release(leg, { status: { in: ['pending', 'confirmed'] } })
   }
 
-  const released = single.count + comboLegs
+  const released = single + comboLegs
   if (released > 0) {
     await activityService.log({
       action: `Turnos liberados por falta de pago: ${released}`,

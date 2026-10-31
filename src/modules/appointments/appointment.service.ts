@@ -22,8 +22,12 @@ import { isPaymentAcceptable, type PaidInfo } from '../payments/paidAmount'
 import {
   NOT_COUNTED_IN_LOAD_STATUSES, NO_SHOW_STATUSES, OCCUPYING_SLOT_FILTER,
   assertServiceFits, assertStartTimeNotPassed, checkClientStart, closeReopenedSlots, hasOverlap,
-  hasStarted, lockProfessionalDay, openReopenedSlot, STAFF_NO_SHOW_REOPEN_LIMIT_MINUTES,
+  hasStarted, lockProfessionalDay, openReopenedSlot, startInstant, STAFF_NO_SHOW_REOPEN_LIMIT_MINUTES,
 } from './reopenedSlots'
+import {
+  decideRefund, describeCancellation, isDepositPaid, noticeHoursBetween, buildStaffCancellation,
+  type CancelledBy, type CancellationNotice, type NoticeChannel,
+} from './cancellationRules'
 
 function loadTemplate(name: string, replacements: Record<string, string>): string {
   const candidates = [
@@ -86,6 +90,7 @@ const APPOINTMENT_INCLUDE = {
   professional:      true,
   service:           true,
   balanceCollectedBy: true,
+  noticeLoadedBy:     true,
 } satisfies Prisma.AppointmentInclude
 
 type AppointmentRow = Prisma.AppointmentGetPayload<{ include: typeof APPOINTMENT_INCLUDE }>
@@ -158,6 +163,23 @@ function balancePaymentOf(a: AppointmentRow) {
   }
 }
 
+// Detalle de la cancelación para el personal: quién canceló, si la seña se marcó devuelta y, si fue la clienta
+// avisando, cuándo avisó, por qué medio, la nota y quién lo cargó y cuándo.
+function cancellationOf(a: AppointmentRow) {
+  if (a.status !== 'cancelled') return null
+  return {
+    cancelledBy:     a.cancelledBy,
+    cancelledAt:     a.cancelledAt ? a.cancelledAt.toISOString() : null,
+    refunded:        a.paymentStatus === 'refunded',
+    noticeAt:        a.clientNoticeAt ? a.clientNoticeAt.toISOString() : null,
+    noticeHours:     a.clientNoticeAt ? Math.round(noticeHoursBetween(startInstant(a), a.clientNoticeAt) * 100) / 100 : null,
+    noticeChannel:   a.noticeChannel,
+    noticeNote:      a.noticeNote,
+    noticeLoadedBy:  a.noticeLoadedBy ? { id: a.noticeLoadedBy.id, name: a.noticeLoadedBy.name } : null,
+    noticeLoadedAt:  a.noticeLoadedAt ? a.noticeLoadedAt.toISOString() : null,
+  }
+}
+
 function polishRemovalOf(a: AppointmentRow) {
   if (a.polishRemovalPrice == null) return null
   return { label: a.polishRemovalLabel, price: Number(a.polishRemovalPrice) }
@@ -187,6 +209,7 @@ function toProfessionalView(a: AppointmentRow, peers: ComboPeer[] | null = null)
     cancelReason:   a.cancelReason,
     paymentStatus:  a.paymentStatus,
     arrivedAt:      a.arrivedAt ? a.arrivedAt.toISOString() : null,
+    cancellation:   cancellationOf(a),
     internalNotes:  a.internalNotes ?? '',
     selectedZones:     (a.selectedZones ?? []) as unknown as { name: string; price: number; duration: number }[],
     selectedPackages:  (a.selectedPackages ?? []) as unknown as { name: string; price: number; duration: number }[],
@@ -224,6 +247,7 @@ function toAdminView(a: AppointmentRow, peers: ComboPeer[] | null = null) {
     paymentStatus:     a.paymentStatus,
     depositMethod:     a.depositMethod,
     arrivedAt:         a.arrivedAt ? a.arrivedAt.toISOString() : null,
+    cancellation:      cancellationOf(a),
     balancePayment:    balancePaymentOf(a),
     polishRemoval:     polishRemovalOf(a),
     depositAmount:     Number(a.depositAmount),
@@ -298,10 +322,10 @@ async function afterCreateGroup(legs: AppointmentRow[]) {
   for (const leg of legs) await notifyProfessionalOfNewAppointment(leg)
 }
 
-async function afterCancel(a: AppointmentRow, emailClient: boolean) {
+async function afterCancel(a: AppointmentRow, emailClient: boolean, extraDetail = '') {
   await activityService.log({
     action: 'Turno cancelado', module: 'appointments', level: 'warning', appointmentId: a.id,
-    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}`,
+    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}${extraDetail}`,
   })
   await notificationService.notify(a.professionalId, {
     type:  'cancelled_appointment',
@@ -403,6 +427,14 @@ async function changeStatusByStaff(appointment: AppointmentRow, to: string, acto
   return updated
 }
 
+// Datos de la cancelación que manda el personal en el PATCH (ver cancellationRules.ts).
+type StaffCancellationInput = {
+  cancelledBy?:    CancelledBy
+  clientNoticeAt?: string
+  noticeChannel?:  NoticeChannel
+  noticeNote?:     string
+}
+
 // ¿El cambio de estado toca la inasistencia (marcarla, o salir de ella)? Esos cambios van por changeStatusByStaff.
 function isNoShowTransition(from: string, to: string): boolean {
   return to === 'cancelled_no_show' || to === 'no_show_auto' || (NO_SHOW_STATUSES as readonly string[]).includes(from)
@@ -410,6 +442,9 @@ function isNoShowTransition(from: string, to: string): boolean {
 
 // Un turno marcado como no asistido no se cancela ni se reprograma: primero se corrige su estado (2.7).
 function assertNoShowStateAllowsChange(a: { status: string }, change: { cancelling: boolean; rescheduling: boolean }): void {
+  if (change.cancelling && a.status === 'finished') {
+    throw new AppError(HTTP.BAD_REQUEST, 'Un turno finalizado no se puede cancelar', 'INVALID_STATUS_TRANSITION')
+  }
   if (!(NO_SHOW_STATUSES as readonly string[]).includes(a.status)) return
   if (change.cancelling || change.rescheduling) {
     throw new AppError(
@@ -549,13 +584,26 @@ async function registerBalancePayment(
   return updated
 }
 
-// Cancelar un turno que forma parte de un combo cancela todo el grupo (comboGroupId):
-// las patas de un combo se reservan y viven juntas, así que dejar una activa mientras el
-// resto se cancela dejaría al cliente con una experiencia incompleta. Cada pata calcula su
-// propio reembolso de forma independiente (según su propia fecha/hora vs. la política de
-// cancelación), ya que un combo secuencial puede tener patas en fechas distintas.
-async function cancelWithGroup(appointment: AppointmentRow, emailClient: boolean, reason: string = 'user_cancelled'): Promise<AppointmentRow[]> {
-  const paymentSettings = await settingsService.getPaymentSettings()
+// Cancelar un turno que forma parte de un combo cancela todo el grupo (comboGroupId): las patas de un combo se
+// reservan y viven juntas, así que dejar una activa mientras el resto se cancela dejaría a la clienta con una
+// experiencia incompleta. La devolución de la seña se decide UNA sola vez para todo el grupo (ver
+// cancellationRules.ts) con la hora del primer turno del grupo, y se aplica a las patas que tengan seña paga.
+//
+// Una cancelación hecha cuando el turno ya empezó deja bloqueado el horario ORIGINAL (slot_locked) y, si pasaron
+// hasta 40 minutos desde el inicio, abre un horario reabierto. Cada pata se escribe en su propia transacción.
+type CancelOptions = {
+  cancelledBy: CancelledBy
+  emailClient: boolean
+  reason?:     string
+  // Aviso de la clienta cargado por el personal (solo cancelledBy 'client'). Sin aviso, las horas se cuentan
+  // desde ahora (cancelación de la clienta desde la app).
+  notice?:     CancellationNotice
+  now?:        Date
+}
+
+async function cancelWithGroup(appointment: AppointmentRow, opts: CancelOptions): Promise<AppointmentRow[]> {
+  const now      = opts.now ?? new Date()
+  const settings = await settingsService.getPaymentSettings()
 
   // Solo las patas que todavía se pueden cancelar: una pata finalizada o ya marcada como no asistida
   // conserva su estado.
@@ -566,26 +614,43 @@ async function cancelWithGroup(appointment: AppointmentRow, emailClient: boolean
       })
     : [appointment]
 
+  const paid        = group.some(isDepositPaid)
+  const firstStart  = new Date(Math.min(...group.map(a => startInstant(a).getTime())))
+  const noticeHours = opts.cancelledBy === 'client' ? noticeHoursBetween(firstStart, opts.notice?.at ?? now) : undefined
+  const refunded    = decideRefund({ settings, cancelledBy: opts.cancelledBy, paid, noticeHours })
+  const extra       = describeCancellation({
+    cancelledBy: opts.cancelledBy, hadPaidDeposit: paid, refunded, notice: opts.notice, noticeHours,
+  })
+
   const updatedList: AppointmentRow[] = []
   for (const a of group) {
-    const apptDateTime = appointmentInstant(a.date, a.time)
-    const hoursUntil    = (apptDateTime.getTime() - Date.now()) / (1000 * 60 * 60)
-    const eligible      = hoursUntil >= paymentSettings.cancellationHours
-    const refunded      = eligible && paymentSettings.refundPolicy !== 'none'
-
-    const updated = await prisma.appointment.update({
-      where: { id: a.id },
-      data: {
-        status:        'cancelled',
-        cancelledAt:   new Date(),
-        cancelReason:  reason,
-        paymentStatus: refunded ? 'refunded' : a.paymentStatus,
-        // Cancelada ya empezada: el horario ORIGINAL queda bloqueado (no se vuelve a reservar).
-        slotLocked:    hasStarted(a),
-      },
-      include: APPOINTMENT_INCLUDE,
+    const started = hasStarted(a, now)
+    const updated = await prisma.$transaction(async (tx) => {
+      const row = await tx.appointment.update({
+        where: { id: a.id },
+        data: {
+          status:        'cancelled',
+          cancelledAt:   now,
+          cancelReason:  opts.reason ?? 'user_cancelled',
+          cancelledBy:   opts.cancelledBy,
+          paymentStatus: refunded && isDepositPaid(a) ? 'refunded' : a.paymentStatus,
+          // Cancelada ya empezada: el horario ORIGINAL queda bloqueado (no se vuelve a reservar).
+          slotLocked:    started,
+          ...(opts.notice ? {
+            clientNoticeAt:   opts.notice.at,
+            noticeChannel:    opts.notice.channel,
+            noticeNote:       opts.notice.note,
+            noticeLoadedById: opts.notice.loadedById,
+            noticeLoadedAt:   opts.notice.loadedAt,
+          } : {}),
+        },
+        include: APPOINTMENT_INCLUDE,
+      })
+      // Ya empezado y hasta 40 minutos después del inicio: se abre un horario reabierto.
+      if (started) await openReopenedSlot(tx, row, now)
+      return row
     })
-    await afterCancel(updated, emailClient)
+    await afterCancel(updated, opts.emailClient, extra)
     updatedList.push(updated)
   }
   return updatedList
@@ -1500,51 +1565,58 @@ export const appointmentService = {
       throw new AppError(HTTP.BAD_REQUEST, 'Este turno ya no se puede cancelar', 'NOT_CANCELLABLE')
     }
 
-    // Combo simultáneo: se cancela SOLO esta pata; las demás quedan igual (mismo
-    // día, hora y profesional). NO se reembolsa nada, salvo que esta sea la
-    // última pata activa — ahí se canceló el combo entero y aplica la política
-    // de reembolso normal sobre la seña del grupo.
+    // Combo simultáneo: se cancela SOLO esta pata; las demás quedan igual (mismo día, hora y profesional). NO se
+    // devuelve nada, salvo que esta sea la última pata activa: ahí se canceló el combo entero y la devolución de
+    // la seña del grupo se evalúa UNA sola vez, con las horas entre ahora y el inicio del combo.
     if (appointment.comboGroupId) {
-      const activeSiblings = await prisma.appointment.count({
-        where: { comboGroupId: appointment.comboGroupId, status: { in: ['pending', 'confirmed'] }, id: { not: id } },
-      })
-      const isLastLeg = activeSiblings === 0
+      const now = new Date()
+      const legs = await prisma.appointment.findMany({ where: { comboGroupId: appointment.comboGroupId } })
+      const isLastLeg = !legs.some(l => l.id !== id && ['pending', 'confirmed'].includes(l.status))
 
       let refunded = false
+      let extra    = ' — cancela la clienta; la seña del combo no se evalúa hasta que se cancele la última pata'
       if (isLastLeg) {
-        const settings   = await settingsService.getPaymentSettings()
-        const dt         = appointmentInstant(appointment.date, appointment.time)
-        const hoursUntil  = (dt.getTime() - Date.now()) / (1000 * 60 * 60)
-        refunded = hoursUntil >= settings.cancellationHours && settings.refundPolicy !== 'none'
+        const settings    = await settingsService.getPaymentSettings()
+        const paid        = legs.some(isDepositPaid)
+        const firstStart  = new Date(Math.min(...legs.map(l => startInstant(l).getTime())))
+        const noticeHours = noticeHoursBetween(firstStart, now)
+        refunded = decideRefund({ settings, cancelledBy: 'client', paid, noticeHours })
+        extra    = describeCancellation({ cancelledBy: 'client', hadPaidDeposit: paid, refunded, noticeHours })
       }
 
-      const updated = await prisma.appointment.update({
-        where: { id },
-        data: {
-          status:        'cancelled',
-          cancelledAt:   new Date(),
-          cancelReason:  'user_cancelled',
-          paymentStatus: refunded ? 'refunded' : appointment.paymentStatus,
-          // Cancelada ya empezada: el horario ORIGINAL queda bloqueado.
-          slotLocked:    hasStarted(appointment),
-        },
-        include: APPOINTMENT_INCLUDE,
+      const started = hasStarted(appointment, now)
+      const updated = await prisma.$transaction(async (tx) => {
+        const row = await tx.appointment.update({
+          where: { id },
+          data: {
+            status:        'cancelled',
+            cancelledAt:   now,
+            cancelReason:  'user_cancelled',
+            cancelledBy:   'client',
+            paymentStatus: refunded && isDepositPaid(appointment) ? 'refunded' : appointment.paymentStatus,
+            // Cancelada ya empezada: el horario ORIGINAL queda bloqueado y, hasta 40 minutos después, se reabre.
+            slotLocked:    started,
+          },
+          include: APPOINTMENT_INCLUDE,
+        })
+        if (started) await openReopenedSlot(tx, row, now)
+        return row
       })
-      // Si se reembolsa (última pata), marcamos todo el grupo como reembolsado
-      // para que el admin lo vea claro.
+      // Si se devuelve (última pata), se marca todo el grupo con seña paga como devuelto para que el
+      // administrador lo vea claro.
       if (refunded) {
         await prisma.appointment.updateMany({
-          where: { comboGroupId: appointment.comboGroupId },
+          where: { comboGroupId: appointment.comboGroupId, paymentStatus: { in: ['partial', 'paid'] } },
           data:  { paymentStatus: 'refunded' },
         })
       }
-      await afterCancel(updated, false)
+      await afterCancel(updated, false, extra)
 
       return { appointment: toClientView(updated), refunded, partialCombo: !isLastLeg }
     }
 
     // Turno suelto — cancelación normal.
-    const updatedList = await cancelWithGroup(appointment, false)
+    const updatedList = await cancelWithGroup(appointment, { cancelledBy: 'client', emailClient: false })
     const target       = updatedList.find(a => a.id === id)!
     const refunded      = target.paymentStatus === 'refunded'
 
@@ -1734,7 +1806,7 @@ export const appointmentService = {
   updateForProfessional: async (
     professionalId: string,
     id: string,
-    data: { status?: string; internalNotes?: string; date?: string; time?: string },
+    data: { status?: string; internalNotes?: string; date?: string; time?: string } & StaffCancellationInput,
   ) => {
     const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
     if (!appointment || appointment.professionalId !== professionalId) {
@@ -1751,10 +1823,14 @@ export const appointmentService = {
     assertNoShowStateAllowsChange(appointment, { cancelling, rescheduling })
 
     if (cancelling) {
+      // Quién cancela y el aviso de la clienta se validan ANTES de tocar nada (hora de aviso futura o de más de
+      // 48 horas para la profesional, cancelledBy faltante).
+      const now = new Date()
+      const cancellation = buildStaffCancellation(data, { id: professionalId, name: appointment.professional.name, role: 'professional' }, now)
       if (data.internalNotes !== undefined) {
         await prisma.appointment.update({ where: { id }, data: { internalNotes: data.internalNotes } })
       }
-      const updatedList = await cancelWithGroup(appointment, true)
+      const updatedList = await cancelWithGroup(appointment, { ...cancellation, emailClient: true, now })
       const target = updatedList.find(a => a.id === id)!
       const peers = target.comboGroupId ? (await comboGroupPeers([target.comboGroupId])).get(target.comboGroupId) ?? null : null
       return toProfessionalView(target, peers)
@@ -1862,7 +1938,7 @@ export const appointmentService = {
     duration?: number; servicePrice?: number
     internalNotes?: string; clientNotes?: string
     clientName?: string; clientPhone?: string; clientEmail?: string
-  }, actorName: string = 'Admin') => {
+  } & StaffCancellationInput, actorName: string = 'Admin', actorId: string | null = null) => {
     const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
     if (!appointment) throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
 
@@ -1914,10 +1990,14 @@ export const appointmentService = {
     assertNoShowStateAllowsChange(appointment, { cancelling, rescheduling })
 
     if (cancelling) {
+      // Quién cancela y el aviso de la clienta se validan ANTES de tocar nada. El administrador puede cargar
+      // un aviso de cualquier antigüedad.
+      const now = new Date()
+      const cancellation = buildStaffCancellation(data, { id: actorId, name: actorName, role: 'admin' }, now)
       if (Object.keys(otherFields).length > 0) {
         await updateAppointmentRow(id, otherFields)
       }
-      const updatedList = await cancelWithGroup(appointment, true)
+      const updatedList = await cancelWithGroup(appointment, { ...cancellation, emailClient: true, now })
       const target = updatedList.find(a => a.id === id)!
       const peers = target.comboGroupId ? (await comboGroupPeers([target.comboGroupId])).get(target.comboGroupId) ?? null : null
       return toAdminView(target, peers)
