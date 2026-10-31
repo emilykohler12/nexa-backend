@@ -231,7 +231,7 @@ npm run dev
 ```
 ✅ Conectado a PostgreSQL
 👤 Admin inicial creado: admin@nexa.local
-[jobs] scheduler iniciado — ...
+[jobs] scheduler iniciado (hora de Argentina) — release-unpaid (cada 5 min) + auto-no-show (cada 5 min)
 🚀 Servidor en http://localhost:4000 (development)
 ```
 
@@ -314,8 +314,8 @@ npm test
 **Esperado:**
 
 ```
-Test Files  32 passed (32)
-     Tests  310 passed (310)
+Test Files  34 passed (34)
+     Tests  318 passed (318)
 ```
 
 Los tests del caso de uso vertical están en `tests/integration/appointments.booking.test.ts`, entre ellos:

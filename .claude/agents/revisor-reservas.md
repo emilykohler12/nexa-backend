@@ -1,6 +1,6 @@
 ---
 name: revisor-reservas
-description: Revisor de solo lectura para cambios en turnos. Usalo después de modificar o antes de dar por terminado un cambio en src/modules/appointments, professionals, services, specialEvents o src/jobs (autoNoShow, autoPromotions, inactivityReminder, releaseUnpaidAppointments, scheduler). Busca violaciones de R-01, condiciones de carrera, falta de transacciones, errores de zona horaria (ART), estados inconsistentes y turnos impagos que no se liberan. No lo uses para seguridad/autorización (eso es revisor-seguridad-api) ni para escribir código.
+description: Revisor de solo lectura para cambios en turnos. Usalo después de modificar o antes de dar por terminado un cambio en src/modules/appointments, professionals, services, specialEvents o src/jobs (autoNoShow, releaseUnpaidAppointments, scheduler). Busca violaciones de R-01, condiciones de carrera, falta de transacciones, errores de zona horaria (ART), estados inconsistentes y turnos impagos que no se liberan. No lo uses para seguridad/autorización (eso es revisor-seguridad-api) ni para escribir código.
 tools: Read, Grep, Glob
 model: sonnet
 ---
