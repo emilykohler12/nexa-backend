@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import request from 'supertest'
 import { app } from '../../src/app/app'
 import { prisma } from '../../src/app/database/prisma'
@@ -10,13 +10,34 @@ import {
 import { cookieFor } from '../helpers/auth'
 
 describe('registro de llegada', () => {
+  afterEach(() => { vi.useRealTimers() })
+
   it('la clienta registra su propia llegada en un turno confirmado de hoy', async () => {
     const client = await createClientUser()
     const pro    = await createProfessionalUser()
     const svc    = await createService()
-    const soon   = minutesAgo(-10) // dentro de 10 min, sigue siendo "hoy"
+    // Turno de hoy a una hora fija: "ahora + 10 minutos" cruzaba la medianoche de Argentina si el
+    // test corría entre las 23:50 y las 00:00 (en CI, 02:50 a 03:00 UTC) y daba NOT_TODAY.
     const appt   = await createAppointmentDirect({
-      clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: soon.date, time: soon.time,
+      clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: todayStr(), time: '12:00',
+    })
+
+    const res = await request(app)
+      .patch(`/api/client/appointments/${appt.id}/arrival`)
+      .set('Cookie', cookieFor(client))
+
+    expect(res.status).toBe(200)
+    expect(res.body.appointment.arrivedAt).not.toBeNull()
+  })
+
+  it('anda también a las 23:57 de Argentina, cuando el servidor (UTC) ya está en el día siguiente', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-31T02:57:00Z')) // 23:57 del 30/10 en Argentina
+    const client = await createClientUser()
+    const pro    = await createProfessionalUser()
+    const svc    = await createService()
+    const appt   = await createAppointmentDirect({
+      clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: '2026-10-30', time: '23:59',
     })
 
     const res = await request(app)
