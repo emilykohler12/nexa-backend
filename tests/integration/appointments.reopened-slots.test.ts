@@ -594,7 +594,7 @@ describe('corrección del estado por el personal (regla 2.7)', () => {
   it('un turno marcado como no asistido no se puede pasar a cancelado ni a pendiente, ni reprogramar', async () => {
     const { pro, appt } = await noShow('cancelled_no_show')
 
-    const cancel     = await patchAs('professional', pro, appt.id, { status: 'cancelled' })
+    const cancel     = await patchAs('professional', pro, appt.id, { status: 'cancelled', cancelledBy: 'studio' })
     const pending    = await patchAs('professional', pro, appt.id, { status: 'pending' })
     const reschedule = await patchAs('professional', pro, appt.id, { time: '18:00' })
 
