@@ -7,13 +7,14 @@ import { bcryptProvider } from '../auth/providers/bcrypt.provider'
 import { activityService } from '../activity/activity.service'
 import { fullName } from '../../app/utils/fullName'
 
-async function computeLoyalty(userId: string) {
-  const appointments = await prisma.appointment.findMany({ where: { clientId: userId } })
-  const counted = appointments.filter(a => a.status !== 'cancelled')
-  const totalVisits = counted.length
-  const totalSpent  = counted.reduce((sum, a) => sum + Number(a.servicePrice), 0)
-  const lastVisit   = counted.length
-    ? counted.reduce((latest, a) => (a.date > latest ? a.date : latest), counted[0].date)
+// Resumen de visitas de la clienta: solo cuentan los turnos finalizados. No hay puntos ni
+// beneficios (se eliminaron con la fidelización): es un dato informativo para el panel.
+async function computeVisits(userId: string) {
+  const finished = await prisma.appointment.findMany({ where: { clientId: userId, status: 'finished' } })
+  const totalVisits = finished.length
+  const totalSpent  = finished.reduce((sum, a) => sum + Number(a.servicePrice), 0)
+  const lastVisit   = finished.length
+    ? finished.reduce((latest, a) => (a.date > latest ? a.date : latest), finished[0].date)
     : null
   return { totalVisits, totalSpent, lastVisit }
 }
@@ -21,12 +22,10 @@ async function computeLoyalty(userId: string) {
 function mapAdminClient(
   user: { id: string; name: string; lastName?: string | null; email: string; phone: string | null; gender: string | null; createdAt: Date },
   client: {
-    birthDate: Date | null
     allergies: string | null; preferences: string | null; observations: string | null
-    loyaltyPoints: number
     blocked: boolean
   } | null,
-  loyalty: { totalVisits: number; totalSpent: number; lastVisit: string | null },
+  visits: { totalVisits: number; totalSpent: number; lastVisit: string | null },
 ) {
   return {
     id:        user.id,
@@ -34,19 +33,16 @@ function mapAdminClient(
     photo:     null as string | null,
     phone:     user.phone ?? '',
     email:     user.email,
-    birthDate: client?.birthDate ? client.birthDate.toISOString().slice(0, 10) : null,
     gender:    user.gender ?? null,
     clinical: {
       allergies:    client?.allergies    ?? '',
       preferences:  client?.preferences  ?? '',
       observations: client?.observations ?? '',
     },
-    loyalty: {
-      totalVisits:     loyalty.totalVisits,
-      totalSpent:      loyalty.totalSpent,
-      lastVisit:       loyalty.lastVisit,
-      points:          client?.loyaltyPoints ?? 0,
-      availablePromos: [] as string[],
+    visits: {
+      totalVisits: visits.totalVisits,
+      totalSpent:  visits.totalSpent,
+      lastVisit:   visits.lastVisit,
     },
     blocked:   client?.blocked ?? false,
     createdAt: user.createdAt.toISOString(),
@@ -74,8 +70,8 @@ function assertAllergiesUnchanged(data: any, current: string | null | undefined)
 async function getByIdInternal(id: string) {
   const user = await prisma.user.findUnique({ where: { id }, include: { client: true } })
   if (!user || user.role !== 'client') throw new AppError(HTTP.NOT_FOUND, 'Cliente no encontrado', 'NOT_FOUND')
-  const loyalty = await computeLoyalty(id)
-  return mapAdminClient(user, user.client, loyalty)
+  const visits = await computeVisits(id)
+  return mapAdminClient(user, user.client, visits)
 }
 
 export const adminService = {
@@ -86,7 +82,7 @@ export const adminService = {
       include: { client: true },
       orderBy: { createdAt: 'desc' },
     })
-    return Promise.all(users.map(async u => mapAdminClient(u, u.client, await computeLoyalty(u.id))))
+    return Promise.all(users.map(async u => mapAdminClient(u, u.client, await computeVisits(u.id))))
   },
 
   getClientById: (id: string) => getByIdInternal(id),
@@ -145,7 +141,6 @@ export const adminService = {
     await prisma.client.create({
       data: {
         userId:       user.id,
-        birthDate:    data.birthDate ? new Date(data.birthDate) : null,
         preferences:  data.clinical?.preferences  ?? null,
         observations: data.clinical?.observations ?? null,
       },
@@ -180,16 +175,12 @@ export const adminService = {
       where:  { userId: id },
       create: {
         userId:       id,
-        birthDate:    data.birthDate ? new Date(data.birthDate) : null,
         preferences:  data.clinical?.preferences  ?? null,
         observations: data.clinical?.observations ?? null,
-        loyaltyPoints: data.loyalty?.points ?? 0,
       },
       update: {
-        ...(data.birthDate !== undefined ? { birthDate: data.birthDate ? new Date(data.birthDate) : null } : {}),
         ...(data.clinical?.preferences  !== undefined ? { preferences: data.clinical.preferences }   : {}),
         ...(data.clinical?.observations !== undefined ? { observations: data.clinical.observations } : {}),
-        ...(data.loyalty?.points !== undefined ? { loyaltyPoints: data.loyalty.points } : {}),
       },
     })
 
