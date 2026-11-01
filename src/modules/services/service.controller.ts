@@ -85,6 +85,23 @@ function assertServiceRules(data: {
   }
 }
 
+// RF-11: el estudio ofrece servicios de uñas, cabello, cuerpo y rostro. Los servicios simultáneos (combos) pueden,
+// además, ir en su propia categoría 'combo' (la que ofrece el formulario del administrador). Los ids son los que
+// usa el frontend en SERVICE_CATEGORIES ('unas' sin eñe).
+export const SERVICE_CATEGORY_IDS = ['unas', 'cabello', 'cuerpo', 'rostro'] as const
+const COMBO_CATEGORY_ID = 'combo'
+
+function assertCategory(categoryId: string, isCombo: boolean) {
+  const allowed: readonly string[] = isCombo ? [...SERVICE_CATEGORY_IDS, COMBO_CATEGORY_ID] : SERVICE_CATEGORY_IDS
+  if (!allowed.includes(categoryId)) {
+    throw new AppError(
+      HTTP.BAD_REQUEST,
+      `Categoría inválida: elegí ${isCombo ? 'una de uñas, cabello, cuerpo, rostro o servicios simultáneos' : 'una de uñas, cabello, cuerpo o rostro'}`,
+      'VALIDATION_ERROR',
+    )
+  }
+}
+
 // Los horarios nuevos llegan sin id (el form del admin no los genera) — se les
 // asigna uno acá para que tengan una identidad estable una vez guardados.
 function withSlotIds<T extends { id?: string }>(items: T[]): (T & { id: string })[] {
@@ -138,6 +155,7 @@ export const serviceController = {
         throw new AppError(HTTP.BAD_REQUEST, parsed.error.issues[0].message, 'VALIDATION_ERROR')
       }
       assertServiceRules(parsed.data)
+      assertCategory(parsed.data.categoryId, parsed.data.isCombo)
 
       const service = await serviceModel.create({
         ...parsed.data,
@@ -178,6 +196,12 @@ export const serviceController = {
         throw new AppError(HTTP.BAD_REQUEST, parsed.error.issues[0].message, 'VALIDATION_ERROR')
       }
       assertServiceRules(parsed.data)
+      // Solo se revisa si el pedido trae la categoría o el tipo de servicio (se mira el cuerpo crudo: zod completa
+      // isCombo con su valor por defecto aunque no venga): guardar otro campo de un servicio viejo con una categoría
+      // anterior a esta regla no se traba.
+      if (req.body?.categoryId !== undefined || req.body?.isCombo !== undefined) {
+        assertCategory(parsed.data.categoryId ?? existing?.categoryId ?? '', parsed.data.isCombo ?? existing?.isCombo ?? false)
+      }
 
       const service = await serviceModel.update(id, {
         ...parsed.data,
