@@ -233,6 +233,73 @@ describe('visibilidad de las alergias (RNF-03)', () => {
     expect(JSON.stringify(agenda.body)).not.toContain('látex')
   })
 
+  describe('la alergia del perfil en la lista de clientas de la profesional', () => {
+    async function profileAllergyFor(pro: { id: string; email: string; role: string }): Promise<string | undefined> {
+      const res = await request(app).get('/api/professional/clients').set('Cookie', cookieFor(pro))
+      expect(res.status).toBe(200)
+      expect(res.body.clients).toHaveLength(1)
+      return res.body.clients[0].allergies
+    }
+
+    // Una clienta con alergia en el perfil y un único turno, con el estado indicado, de la profesional.
+    async function oneAppointmentWith(status: string, hours: number) {
+      const client = await createClientUser()
+      const pro    = await createProfessionalUser()
+      const svc    = await createService()
+      const at     = hoursFromNow(hours)
+      await createAppointmentDirect({
+        clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: at.date, time: at.time, status,
+      })
+      await prisma.client.update({ where: { userId: client.id }, data: { allergies: ALERGIA_PERFIL } })
+      return pro
+    }
+
+    it('con un turno finalizado con la clienta, la profesional ve la alergia del perfil', async () => {
+      const pro = await oneAppointmentWith('finished', -48)
+      expect(await profileAllergyFor(pro)).toBe(ALERGIA_PERFIL)
+    })
+
+    it.each(['cancelled', 'cancelled_no_show', 'no_show_auto'])('con un turno %s no la ve', async status => {
+      const pro = await oneAppointmentWith(status, -48)
+      expect(await profileAllergyFor(pro)).toBe('')
+    })
+
+    it('con un turno confirmado a futuro no la ve', async () => {
+      const pro = await oneAppointmentWith('confirmed', 48)
+      expect(await profileAllergyFor(pro)).toBe('')
+    })
+
+    it('con un turno pendiente tampoco la ve', async () => {
+      const pro = await oneAppointmentWith('pending', 48)
+      expect(await profileAllergyFor(pro)).toBe('')
+    })
+
+    it('un turno finalizado con OTRA profesional no alcanza', async () => {
+      const client = await createClientUser()
+      const pro    = await createProfessionalUser()
+      const other  = await createProfessionalUser()
+      const svc    = await createService()
+      const future = hoursFromNow(48)
+      const past   = hoursFromNow(-48)
+      await createAppointmentDirect({ clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: future.date, time: future.time })
+      await createAppointmentDirect({ clientId: client.id, professionalId: other.id, serviceId: svc.id, date: past.date, time: past.time, status: 'finished' })
+      await prisma.client.update({ where: { userId: client.id }, data: { allergies: ALERGIA_PERFIL } })
+
+      expect(await profileAllergyFor(pro)).toBe('')
+      expect(await profileAllergyFor(other)).toBe(ALERGIA_PERFIL)
+    })
+
+    it('la profesional asignada a un turno propio ve la alergia de ese turno, aunque no vea la del perfil', async () => {
+      const pro = await oneAppointmentWith('confirmed', 48)
+      await prisma.appointment.updateMany({ where: { professionalId: pro.id }, data: { allergies: ALERGIA_TURNO } })
+
+      const agenda = await request(app).get('/api/professional/appointments').set('Cookie', cookieFor(pro))
+      expect(agenda.status).toBe(200)
+      expect(agenda.body.appointments[0].details.allergies).toBe(ALERGIA_TURNO)
+      expect(await profileAllergyFor(pro)).toBe('')
+    })
+  })
+
   it('otra profesional tampoco puede abrir el turno ajeno por su id', async () => {
     const { other, appt } = await setupWithAllergies()
 

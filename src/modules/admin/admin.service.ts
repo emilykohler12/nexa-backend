@@ -6,6 +6,7 @@ import { HTTP }           from '../../app/constants/http'
 import { bcryptProvider } from '../auth/providers/bcrypt.provider'
 import { activityService } from '../activity/activity.service'
 import { fullName } from '../../app/utils/fullName'
+import { uploadProvider } from '../uploads/upload.provider'
 
 // Resumen de visitas de la clienta: solo cuentan los turnos finalizados. No hay puntos ni
 // beneficios (se eliminaron con la fidelización): es un dato informativo para el panel.
@@ -204,34 +205,70 @@ export const adminService = {
   // supresión, Ley 25.326). No borra la fila: mantiene los turnos y totales
   // contables intactos, pero anonimiza los datos identificatorios y desactiva
   // la cuenta (no puede volver a loguearse con el email anonimizado, y se
-  // invalida cualquier sesión activa). Deliberadamente NO toca alergias/
-  // preferencias/observaciones — esa decisión queda para cuando se resuelva
-  // si el sistema realmente necesita seguir guardando ese dato clínico o no
-  // (ver dictamen, apartado 10).
+  // invalida cualquier sesión activa). Además borra las fotos de la galería
+  // (filas y archivos), vacía teléfono, dirección y notas de sus pedidos y el
+  // texto de sus reseñas (el puntaje se conserva). Se conservan turnos, pagos,
+  // montos de pedidos, alergias, preferencias, observaciones y notas.
   anonymizeClient: async (id: string, adminName: string) => {
     const user = await prisma.user.findUnique({ where: { id } })
     if (!user || user.role !== 'client') throw new AppError(HTTP.NOT_FOUND, 'Cliente no encontrado', 'NOT_FOUND')
 
-    await prisma.user.update({
-      where: { id },
-      data: {
-        name:         'Cliente eliminado',
-        lastName:     null,
-        email:        `anonimo_${id}@borrado.com`,
-        phone:        null,
-        active:       false,
-      },
-    })
-    // y se cierra la sesión en todos sus dispositivos
-    await prisma.refreshSession.deleteMany({ where: { userId: id } })
+    const photos = await prisma.clientGalleryPhoto.findMany({ where: { clientId: id }, select: { id: true, url: true } })
+
+    // Todo o nada en la base: si algo falla no queda la cuenta a medio anonimizar.
+    const [, sessions, removedPhotos, orders, reviews] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id },
+        data: {
+          name:         'Cliente eliminado',
+          lastName:     null,
+          email:        `anonimo_${id}@borrado.com`,
+          phone:        null,
+          active:       false,
+        },
+      }),
+      // y se cierra la sesión en todos sus dispositivos
+      prisma.refreshSession.deleteMany({ where: { userId: id } }),
+      prisma.clientGalleryPhoto.deleteMany({ where: { id: { in: photos.map(p => p.id) } } }),
+      prisma.order.updateMany({
+        where: { clientId: id, OR: [{ phone: { not: null } }, { deliveryAddress: { not: null } }, { notes: { not: null } }] },
+        data:  { phone: null, deliveryAddress: null, notes: null },
+      }),
+      prisma.review.updateMany({
+        where: { clientId: id, message: { not: null } },
+        data:  { message: null },
+      }),
+    ])
+
+    // Los archivos se borran después de confirmar la base: si fallan, las filas ya no están, así que la
+    // lista de lo que quedó en el almacenamiento va al registro de actividad para borrarlo a mano.
+    const files = await uploadProvider.deleteImages(photos.map(p => p.url))
 
     await activityService.log({
       userName: adminName,
       action:   'Anonimizó los datos de un cliente a pedido suyo',
       module:   'clients',
       level:    'warning',
-      detail:   `Cliente ${id}`,
+      detail:   [
+        `Cliente ${id}. Ejecutó: ${adminName}.`,
+        'Campos anonimizados: nombre, apellido, correo y teléfono; cuenta desactivada.',
+        `Sesiones cerradas: ${sessions.count}.`,
+        `Fotos de la galería eliminadas: ${removedPhotos.count} (archivos borrados del almacenamiento: ${files.deleted.length}).`,
+        `Pedidos con teléfono, dirección y notas vaciados: ${orders.count}.`,
+        `Reseñas con el texto vaciado (se conserva el puntaje): ${reviews.count}.`,
+        'Se conservan turnos, pagos, montos de pedidos, alergias, preferencias, observaciones y notas.',
+      ].join('\n'),
     })
+
+    if (files.failed.length > 0) {
+      await activityService.log({
+        userName: adminName,
+        action:   'No se pudieron borrar del almacenamiento algunas fotos de un cliente anonimizado',
+        module:   'clients',
+        level:    'error',
+        detail:   `Cliente ${id}. Archivos sin borrar (${files.failed.length} de ${photos.length}), hay que quitarlos a mano:\n${files.failed.join('\n')}`,
+      })
+    }
 
     return getByIdInternal(id)
   },

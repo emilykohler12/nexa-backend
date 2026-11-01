@@ -1882,13 +1882,16 @@ export const appointmentService = {
     return Array.from(byClient.values()).map(list => {
       const first = list[0]
       const next = list.find(a => a.date >= today && ['pending', 'confirmed'].includes(a.status))
+      // RNF-03 — la alergia del perfil es un dato de salud: solo la ve una profesional que ya atendió a la
+      // clienta (al menos un turno finalizado con ella). Cancelados, inasistencias y turnos futuros no alcanzan.
+      const attended = list.some(a => a.status === 'finished')
       return {
         id:            first.client.id,
         name:          fullName(first.client),
         email:         first.client.email,
         phone:         first.client.phone ?? '',
         photo:         null as string | null,
-        allergies:     first.client.client?.allergies ?? '',
+        allergies:     attended ? first.client.client?.allergies ?? '' : '',
         preferences:   first.client.client?.preferences ?? '',
         observations:  first.client.client?.observations ?? '',
         visits: list.map(a => ({

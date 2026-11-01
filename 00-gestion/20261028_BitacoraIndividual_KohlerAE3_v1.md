@@ -1065,3 +1065,17 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily eligió sumar el texto de la política a esa rama, y después pidió pushear y abrir el pull request cuando la suite pasara. |
 | 5 | Desacuerdo y resolución | Ninguno. El conteo de tests del README se dejó en 462, el de la corrida limpia. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con `git` y la CLI `gh`. Revisión de Emily pendiente. |
+
+
+## Entrada 81: AE4, fase 5, anonimización completa y alergias (RNF-03)
+
+**Fecha:** 2026-11-01, de 04:00 a 04:25 (hora de la máquina, UTC-3)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code**, a pedido de Emily, en la rama `fix/anonimizacion-y-alergias`. (1) `anonymizeClient` conserva lo que hacía y suma: borrar las fotos de la galería (filas y archivos, con el nuevo `uploadProvider.deleteImages`, que nunca lanza), vaciar teléfono, dirección y notas de los pedidos y el texto de las reseñas (se conserva el puntaje). Los cambios en la base van en una transacción y los archivos se borran después; si alguno falla, entrada de actividad de nivel `error` con la lista. (2) La entrada de actividad enumera los campos tocados con cantidades (sesiones, fotos, pedidos, reseñas) y quién la ejecutó. (3) `listClientsForProfessional` devuelve la alergia del perfil solo si la profesional tiene un turno `finished` con esa clienta. (4) Informe sin tocar código: ningún endpoint escribe `Client.allergies`. `toProfessionalView` devuelve `client.allergies` sin pedir turno finalizado; `getHistoryForProfessional` no devuelve alergias. Esos dos puntos se informaron a Emily y no se modificaron. |
+| 2 | Alternativas y criterio de descarte | Borrar los archivos antes que las filas: descartado, un fallo de la base dejaría fotos borradas de un cliente que sigue con su galería. Cortar la anonimización si falla un archivo: descartado, lo pidió Emily. Pasar `status` de las reseñas con texto vaciado a `approved`: no se hizo, no estaba pedido. Contar en el aviso todos los pedidos de la clienta: se cuentan solo los que tenían algún dato por vaciar. |
+| 3 | Evidencia que la sostiene | Supabase `remove` devuelve en `data` solo lo que borró (consulta a Context7 sobre supabase-js), así que un bucket sin permiso de borrado no da error: se cuenta como fallido lo que no vuelve en `data`. Pruebas nuevas: `admin.anonymize-personal-data.test.ts` (9), `uploads.delete-images.test.ts` (5) y 8 casos en `allergies.consent-visibility.test.ts` (finalizado sí; cancelado, no asistió, no asistió automático, confirmado futuro y pendiente no; finalizado con otra profesional no; alergia del turno propio sí; sin `RefreshSession` tras anonimizar). `npm run typecheck:all` sin errores. `npm test`: 40 archivos y 484 pruebas en verde. |
+| 4 | Aporte personal | Emily definió qué se borra, qué se conserva y la regla de visibilidad de la alergia, y pidió informar antes de tocar `toProfessionalView`. |
+| 5 | Desacuerdo y resolución | La rama se cortó del tip de `fix/recordatorio-reprogramacion-politica-privacidad` (pull request 19 todavía abierto) y no de `integracion-ae4`, para no pisar las entradas 77 a 80 de esta bitácora; sin push ni pull request hasta que Emily confirme. Pendiente de Emily: que el bucket `images` permita borrar con la clave anónima. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) y Context7 (supabase-js, `storage.remove`). Revisión de Emily pendiente. |
