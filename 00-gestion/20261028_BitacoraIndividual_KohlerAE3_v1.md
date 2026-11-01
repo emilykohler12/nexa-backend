@@ -1051,3 +1051,17 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily eligió agregar la línea a la política y subir la versión, y pidió sumar el texto a la rama que ya tenía la subida de versión. |
 | 5 | Desacuerdo y resolución | Ninguno. Aclaración de la entrada 75, punto 5 (6): subir la versión no vuelve a pedir la aceptación; `termsVersion` y `termsAcceptedAt` solo se regraban al registrarse y al confirmar una reserva. El documento no menciona la sección 5 de WhatsApp: se dejó como estaba. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Sin librerías nuevas, no hizo falta Context7. Revisión de Emily pendiente. |
+
+
+## Entrada 80: AE4, push de las correcciones de la fase 3b (reprogramación y política de privacidad) y pull request
+
+**Fecha:** 2026-11-01, de 03:55 a 04:10 (hora de la máquina, UTC-3)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code**, a pedido de Emily. Push de `fix/recordatorio-reprogramacion-politica-privacidad` y pull request con base `integracion-ae4`; el merge lo hace Emily. La rama junta el commit de la entrada 77 (limpiar `reminder_sent_at` al reprogramar y subir `PRIVACY_POLICY_VERSION` a `2026-11`), el de la entrada 79 (texto de la política en `00-gestion`) y un merge de `integracion-ae4` (fase 4) para que el pull request no tenga conflictos. Esas correcciones de la entrada 77 estaban hechas por otra sesión de Claude Code y sin pushear; el pull request 17 ya se había mergeado antes, por eso van en un pull request nuevo. Se esperó a que la suite pasara limpia antes de pushear, como pidió Emily. |
+| 2 | Alternativas y criterio de descarte | Pushear sin la suite en verde: descartado, la primera corrida dio 125 fallas por una causa ajena al código (ver elemento 3) y Emily pidió esperar. Rehacer las entradas 77 y 79 en una rama nueva desde `integracion-ae4`: descartado, habría duplicado el trabajo de la otra sesión. Resolver el conflicto de la bitácora con el orden 77, 78, 79 (por número) en vez de dejar la de la fase 4 antes de la 77. |
+| 3 | Evidencia que la sostiene | `npm run typecheck:all` sin errores. `npm test` (corrida limpia, sin otra sesión usando la base de pruebas): 38 archivos y 462 pruebas en verde (antes 37 y 443 en la rama, 38 y 457 en `integracion-ae4`). La corrida anterior dio 125 fallas en 24 archivos con `findUniqueOrThrow` sin filas y un deadlock `40P01`, porque otra sesión corría `vitest` al mismo tiempo contra la misma base de pruebas, que se trunca antes de cada caso; no tenía relación con los cambios. Lección: no correr `npm test` mientras otra sesión lo corre. |
+| 4 | Aporte personal | Emily eligió sumar el texto de la política a esa rama, y después pidió pushear y abrir el pull request cuando la suite pasara. |
+| 5 | Desacuerdo y resolución | Ninguno. El conteo de tests del README se dejó en 462, el de la corrida limpia. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con `git` y la CLI `gh`. Revisión de Emily pendiente. |
