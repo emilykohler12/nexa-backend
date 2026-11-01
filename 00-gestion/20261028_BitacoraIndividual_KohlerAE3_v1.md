@@ -1200,3 +1200,16 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Opus 5.5) con un script descartable de Node para agrupar las sesiones (no queda en el repositorio). Context7 no se usó: no se escribió código que dependa de una librería del proyecto. Commits sin la línea de coautoría, como pidió Emily. Revisión de Emily pendiente. |
 
 **Impacto en el frontend:** ninguno.
+
+## Entrada 90: AE4, push de la fase 9.3 y pull request
+
+**Fecha:** 2026-11-01, 15:36 (hora de la máquina, UTC-3)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Opus 5.5)**: `git push -u origin docs/informes-v8` y pull request 26 con base `integracion-ae4` (https://github.com/emilykohler12/nexa-backend/pull/26). Sin merge. Antes se borró la rama `docs/informes-v8` anterior (local y remota), ya mergeada por el pull request 24. |
+| 2 | Alternativas y criterio de descarte | Merge directo o push a `main`: descartados, el flujo de la AE4 es que Emily revise y mergee cada fase, y `main` redespliega a la clienta real. |
+| 3 | Evidencia que la sostiene | Commits `5cffa20` (estimación) y `fe8198f` (documentación, entrada 89); `npm test` con 638 pruebas en verde antes del push. |
+| 4 | Aporte personal | Emily definió el flujo (push y pull request por fase, ella mergea). |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Opus 5.5) y `gh`. |
