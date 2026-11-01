@@ -17,8 +17,18 @@ export interface ProductData {
 
 export const productModel = {
 
+  // Todos los productos, con stock y stock mínimo: solo para el administrador.
   findAll: () =>
     prisma.product.findMany({ orderBy: { createdAt: 'desc' } }),
+
+  // Lo que ve el público: solo activos con stock. Se arma con `select` para que
+  // `stock` y `minStock` (datos internos) no salgan nunca por esta ruta.
+  findAvailable: () =>
+    prisma.product.findMany({
+      where:   { status: 'active', stock: { gt: 0 } },
+      select:  { id: true, name: true, brand: true, category: true, description: true, imageUrl: true, price: true },
+      orderBy: { createdAt: 'desc' },
+    }),
 
   findById: (id: string) =>
     prisma.product.findUnique({ where: { id } }),

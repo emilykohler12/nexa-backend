@@ -28,7 +28,17 @@ function getId(req: Request): string {
 
 export const productController = {
 
+  // Pública: solo productos activos con stock. Sin `stock` ni `minStock`; en su lugar
+  // `available: true` (el carrito no necesita la cantidad: el pedido valida el stock real).
   getAll: async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const products = await productModel.findAvailable()
+      res.json({ products: products.map(p => ({ ...p, available: true })) })
+    } catch (err) { next(err) }
+  },
+
+  // Administrador: todos los productos (inactivos y sin stock incluidos), con stock y stock mínimo.
+  getAllForAdmin: async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const products = await productModel.findAll()
       res.json({ products })
