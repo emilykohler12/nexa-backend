@@ -11,10 +11,14 @@ vi.mock('../../src/jobs/releaseUnpaidAppointments.job', () => ({
 vi.mock('../../src/jobs/autoNoShow.job', () => ({
   runAutoNoShowJob: vi.fn().mockResolvedValue({ marked: 0 }),
 }))
+vi.mock('../../src/jobs/appointmentReminder.job', () => ({
+  runAppointmentReminderJob: vi.fn().mockResolvedValue({ sent: 0, failed: 0 }),
+}))
 
 import { startScheduledJobs } from '../../src/jobs/scheduler'
 import { runReleaseUnpaidAppointmentsJob } from '../../src/jobs/releaseUnpaidAppointments.job'
 import { runAutoNoShowJob } from '../../src/jobs/autoNoShow.job'
+import { runAppointmentReminderJob } from '../../src/jobs/appointmentReminder.job'
 
 afterEach(() => { vi.restoreAllMocks() })
 
@@ -25,22 +29,30 @@ function registered() {
 }
 
 describe('scheduler', () => {
-  it('registra solo dos trabajos, ambos cada 5 minutos y en hora de Argentina', () => {
+  it('registra solo tres trabajos, todos cada 5 minutos y en hora de Argentina', () => {
     const calls = registered()
 
-    expect(calls).toHaveLength(2)
+    expect(calls).toHaveLength(3)
     for (const [expression, , options] of calls) {
       expect(expression).toBe('*/5 * * * *')
-      expect(options).toEqual({ timezone: 'America/Argentina/Buenos_Aires' })
+      expect(options).toMatchObject({ timezone: 'America/Argentina/Buenos_Aires' })
     }
   })
 
-  it('los dos trabajos son la liberación por falta de pago y la inasistencia', async () => {
+  it('los tres trabajos son la liberación por falta de pago, la inasistencia y el recordatorio del turno', async () => {
     const calls = registered()
     for (const [, callback] of calls) await callback()
 
     expect(runReleaseUnpaidAppointmentsJob).toHaveBeenCalledTimes(1)
     expect(runAutoNoShowJob).toHaveBeenCalledTimes(1)
+    expect(runAppointmentReminderJob).toHaveBeenCalledTimes(1)
+  })
+
+  it('el recordatorio no se superpone consigo mismo si una corrida tarda', () => {
+    const calls = registered()
+
+    const withNoOverlap = calls.filter(([, , options]) => (options as any).noOverlap === true)
+    expect(withNoOverlap).toHaveLength(1)
   })
 
   it('no quedan los archivos de las campañas ni del recordatorio de inactividad', () => {
