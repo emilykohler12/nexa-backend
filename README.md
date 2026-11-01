@@ -317,7 +317,7 @@ npm test
 
 ```
 Test Files  37 passed (37)
-     Tests  438 passed (438)
+     Tests  443 passed (443)
 ```
 
 Los tests del caso de uso vertical están en `tests/integration/appointments.booking.test.ts`, entre ellos:

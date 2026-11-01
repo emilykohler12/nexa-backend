@@ -1687,6 +1687,8 @@ export const appointmentService = {
           rescheduleNoticePending: false,
           previousDate: null,
           previousTime: null,
+          // El nuevo horario vuelve a ser elegible para el recordatorio por mail (reminder.ts).
+          reminderSentAt: null,
         },
         include: APPOINTMENT_INCLUDE,
       })
@@ -1850,6 +1852,7 @@ export const appointmentService = {
         rescheduleNoticePending: true,
         previousDate: appointment.date,
         previousTime: appointment.time,
+        reminderSentAt: null,
       } : {}),
     })
     if (statusChanging && !viaNoShowRules) {
@@ -1984,6 +1987,7 @@ export const appointmentService = {
         rescheduleNoticePending: true,
         previousDate: appointment.date,
         previousTime: appointment.time,
+        reminderSentAt: null,
       } : {}),
     }
 
