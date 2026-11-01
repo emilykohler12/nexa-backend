@@ -6,7 +6,7 @@ import { requireRole }       from '../auth/middleware/guest.middleware'
 
 const router = Router()
 
-// Pública — el admin la usa para gestionar (ve todo) y la home para mostrar la tienda (filtra activos)
+// Pública — solo productos activos con stock (la lista completa del admin es GET /api/admin/store/products)
 router.get('/', productController.getAll)
 
 // Admin — requiere autenticación y rol admin
