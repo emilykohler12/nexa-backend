@@ -6,6 +6,7 @@ import { AppError }           from '../../app/middlewares/errorHandler'
 import { HTTP }               from '../../app/constants/http'
 import { dateSchema, timeSchema } from '../../app/validators/datetime'
 import { COMPANION_RELATIONS } from '../../app/constants/companion'
+import { CANCELLED_BY, NOTICE_CHANNELS, NOTICE_NOTE_MAX_LENGTH } from './cancellationRules'
 
 function getId(req: Request): string {
   const { id } = req.params
@@ -49,7 +50,7 @@ const bookingSchema = z.object({
 // server-side en resolveServicePromotion.
 const promotionIdSchema = z.string().uuid('ID de promoción inválido').nullable().optional()
 
-// RF-06.01 — checkbox obligatorio de Términos de Servicio y Política de Privacidad
+// RF-08 — checkbox obligatorio de Términos de Servicio y Política de Privacidad
 // en la confirmación de la reserva (cubre además cuentas creadas antes de este
 // requisito). Solo en la creación, no en `rescheduleMine` — reprogramar no es
 // "confirmar una reserva nueva" y ya aceptó al reservar la primera vez.
@@ -100,7 +101,7 @@ const detailsSchema = z.object({
   hairLength:              z.string().max(20).nullable().optional(),
   wantsExtensions:         z.boolean().nullable().optional(),
   skinType:                z.string().max(20).nullable().optional(),
-  // RF-06.02 — consentimiento obligatorio para guardar estas observaciones operativas
+  // RF-07 — consentimiento obligatorio para guardar estas observaciones operativas
   // (alergias, tipo de piel, etc.). Solo se pide cuando efectivamente se guarda algo
   // (el botón "Omitir por ahora" del frontend no llega a este endpoint).
   consentAlertas: z.boolean().refine(v => v === true, {
@@ -108,7 +109,22 @@ const detailsSchema = z.object({
   }),
 })
 
+// Cuerpo de la cancelación que manda el personal (status 'cancelled'): quién cancela es obligatorio; si cancela
+// la clienta avisando, se puede cargar cuándo avisó (ISO, por defecto ahora), por qué medio y una nota.
+const cancellationFields = {
+  cancelledBy:    z.enum(CANCELLED_BY).optional(),
+  clientNoticeAt: z.string().datetime({ offset: true, message: 'La hora de aviso tiene que ser una fecha ISO válida' }).optional(),
+  noticeChannel:  z.enum(NOTICE_CHANNELS).optional(),
+  noticeNote:     z.string().trim().max(NOTICE_NOTE_MAX_LENGTH, `La nota no puede superar los ${NOTICE_NOTE_MAX_LENGTH} caracteres`).optional(),
+}
+const requireCancelledBy = {
+  check:   (d: { status?: string; cancelledBy?: string }) => d.status !== 'cancelled' || d.cancelledBy !== undefined,
+  message: 'Indicá quién cancela el turno (cancelledBy: "client" o "studio")',
+  path:    ['cancelledBy'],
+}
+
 const adminUpdateAppointmentSchema = z.object({
+  ...cancellationFields,
   status:         z.enum(APPOINTMENT_STATUSES).optional(),
   professionalId: z.string().uuid('ID de profesional inválido').optional(),
   date:           dateSchema.optional(),
@@ -125,7 +141,17 @@ const adminUpdateAppointmentSchema = z.object({
   clientName:        z.string().trim().min(1).max(150).optional(),
   clientPhone:       z.string().max(30).optional(),
   clientEmail:       z.string().email('Email inválido').optional(),
-})
+}).refine(requireCancelledBy.check, { message: requireCancelledBy.message, path: requireCancelledBy.path })
+
+// PATCH de la profesional: solo estado, notas internas y fecha/hora. Cualquier otra clave se descarta.
+// El estado 'no_show_auto' lo asigna solo el sistema (el servicio lo rechaza con INVALID_STATUS_TRANSITION).
+const professionalUpdateAppointmentSchema = z.object({
+  ...cancellationFields,
+  status:        z.enum(APPOINTMENT_STATUSES).optional(),
+  internalNotes: z.string().max(2000).optional(),
+  date:          dateSchema.optional(),
+  time:          timeSchema.optional(),
+}).refine(requireCancelledBy.check, { message: requireCancelledBy.message, path: requireCancelledBy.path })
 
 const adminCreateAppointmentSchema = z.object({
   clientName:     z.string().trim().min(1, 'El nombre del cliente es obligatorio').max(150),
@@ -175,6 +201,8 @@ function normalizeAdminUpdateInput(input: z.infer<typeof adminUpdateAppointmentS
     duration?: number; servicePrice?: number
     internalNotes?: string; clientNotes?: string
     clientName?: string; clientPhone?: string; clientEmail?: string
+    cancelledBy?: (typeof CANCELLED_BY)[number]; clientNoticeAt?: string
+    noticeChannel?: (typeof NOTICE_CHANNELS)[number]; noticeNote?: string
   }
 }
 
@@ -291,7 +319,8 @@ export const appointmentController = {
 
   updateForProfessional: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const appointment = await appointmentService.updateForProfessional(req.user!.id, getId(req), req.body)
+      const input = parseBody(professionalUpdateAppointmentSchema, req.body)
+      const appointment = await appointmentService.updateForProfessional(req.user!.id, getId(req), input)
       res.json({ appointment })
     } catch (err) { next(err) }
   },
@@ -330,7 +359,7 @@ export const appointmentController = {
     try {
       const parsed = parseBody(adminUpdateAppointmentSchema, req.body)
       const input  = normalizeAdminUpdateInput(parsed)
-      const appointment = await appointmentService.updateForAdmin(getId(req), input, req.user?.email ?? 'Admin')
+      const appointment = await appointmentService.updateForAdmin(getId(req), input, req.user?.email ?? 'Admin', req.user?.id ?? null)
       res.json({ appointment })
     } catch (err) { next(err) }
   },

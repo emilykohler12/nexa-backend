@@ -23,8 +23,15 @@
 //  - Señas coordinadas por WhatsApp (depositMethod 'whatsapp'): no pasan por
 //    Mercado Pago, así que se quedan en 'pending' hasta que el admin las marca
 //    pagas a mano — no hay "tiempo límite" que valga acá.
+import type { Prisma }     from '@prisma/client'
 import { prisma }          from '../app/database/prisma'
 import { activityService } from '../modules/activity/activity.service'
+import { hasStarted, openReopenedSlot } from '../modules/appointments/reopenedSlots'
+import { releaseSpecialSlot } from '../modules/appointments/specialSlots'
+import { fullName }           from '../app/utils/fullName'
+
+// Corta la transacción de un turno que otro proceso ya resolvió (por ejemplo, la clienta pagó justo ahora).
+class SkipRelease extends Error {}
 
 // 15 min es la ventana que ve el cliente en PaymentStep (HOLD_MINUTES). Le
 // sumamos unos minutos de gracia para no cancelar un turno justo mientras el
@@ -52,11 +59,58 @@ export async function runReleaseUnpaidAppointmentsJob(): Promise<{ released: num
     ],
   }
 
+  // Cada turno se libera en su propia transacción. Uno impago que ya empezó al liberarse deja su horario ORIGINAL
+  // bloqueado (slot_locked) y, si pasaron hasta 40 minutos desde su inicio, abre un horario reabierto (igual que
+  // cualquier otra cancelación). Los que todavía no empezaron liberan el horario enseguida. Un servicio especial
+  // además devuelve su horario del día (specialSlots). RF-14 y RNF-05: cada turno liberado deja su propia entrada de
+  // actividad, con el id del turno, para poder reconstruir por qué se canceló.
+  const now = new Date()
+  const STALE_SELECT = {
+    id: true, professionalId: true, serviceId: true, date: true, time: true,
+    service:      { select: { name: true, isSpecial: true } },
+    client:       { select: { name: true, lastName: true } },
+    professional: { select: { name: true } },
+  } as const
+
+  async function release(row: Prisma.AppointmentGetPayload<{ select: typeof STALE_SELECT }>, extraWhere: object): Promise<number> {
+    const started = hasStarted(row, now)
+    let count = 0
+    try {
+      count = await prisma.$transaction(async (tx) => {
+        // El servicio especial se bloquea primero (igual que al reservar y al cancelar) para no cruzarse con otra operación.
+        if (row.service.isSpecial) await releaseSpecialSlot(tx, row)
+        const res = await tx.appointment.updateMany({
+          where: { id: row.id, ...extraWhere },
+          data:  { status: 'cancelled', cancelledAt: now, cancelReason: 'unpaid_expired', cancelledBy: 'system', slotLocked: started },
+        })
+        // Si otro proceso ya lo resolvió (la clienta pagó justo ahora), se deshace también la liberación del horario.
+        if (res.count === 0) throw new SkipRelease()
+        if (started) await openReopenedSlot(tx, row, now)
+        return res.count
+      })
+    } catch (err) {
+      if (!(err instanceof SkipRelease)) throw err
+    }
+    if (count === 1) {
+      await activityService.log({
+        action:        'Turno liberado por falta de pago',
+        module:        'appointments',
+        level:         'warning',
+        appointmentId: row.id,
+        detail:        `${row.service.name} — ${fullName(row.client)} con ${row.professional.name} el ${row.date} ${row.time}: ` +
+                       `la seña no se pagó en ${EXPIRE_AFTER_MINUTES} minutos (turno ${row.id})`,
+      })
+    }
+    return count
+  }
+
   // Turnos sueltos.
-  const single = await prisma.appointment.updateMany({
-    where: { ...staleFilter, comboGroupId: null },
-    data:  { status: 'cancelled', cancelledAt: new Date(), cancelReason: 'unpaid_expired' },
+  const singles = await prisma.appointment.findMany({
+    where:  { ...staleFilter, comboGroupId: null },
+    select: STALE_SELECT,
   })
+  let single = 0
+  for (const row of singles) single += await release(row, { ...staleFilter, comboGroupId: null })
 
   // Combos: la pata que lleva la seña (depositAmount > 0) quedó impaga → se
   // cancela el grupo entero.
@@ -68,21 +122,13 @@ export async function runReleaseUnpaidAppointmentsJob(): Promise<{ released: num
   const groupIds = staleGroups.map(g => g.comboGroupId!).filter(Boolean)
   let comboLegs = 0
   if (groupIds.length > 0) {
-    const res = await prisma.appointment.updateMany({
-      where: { comboGroupId: { in: groupIds }, status: { not: 'cancelled' } },
-      data:  { status: 'cancelled', cancelledAt: new Date(), cancelReason: 'unpaid_expired' },
+    const legs = await prisma.appointment.findMany({
+      where:  { comboGroupId: { in: groupIds }, status: { in: ['pending', 'confirmed'] } },
+      select: STALE_SELECT,
     })
-    comboLegs = res.count
+    for (const leg of legs) comboLegs += await release(leg, { status: { in: ['pending', 'confirmed'] } })
   }
 
-  const released = single.count + comboLegs
-  if (released > 0) {
-    await activityService.log({
-      action: `Turnos liberados por falta de pago: ${released}`,
-      module: 'system',
-      detail: `Se cancelaron ${released} turno${released !== 1 ? 's' : ''} sin seña paga tras ${EXPIRE_AFTER_MINUTES} minutos.`,
-    })
-  }
-
+  const released = single + comboLegs
   return { released }
 }

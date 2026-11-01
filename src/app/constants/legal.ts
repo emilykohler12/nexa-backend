@@ -3,4 +3,5 @@
 // confirmación de reserva). Cambiarla cuando cambie el texto de la política,
 // junto con la misma constante del frontend (src/app/config/legal.ts), que es
 // la que se muestra en la página de la política.
-export const PRIVACY_POLICY_VERSION = '2026-09'
+// 2026-11: la política suma el recordatorio de turno por correo (fase 3b de la AE4).
+export const PRIVACY_POLICY_VERSION = '2026-11'

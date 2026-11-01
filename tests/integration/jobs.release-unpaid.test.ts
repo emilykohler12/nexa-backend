@@ -127,3 +127,53 @@ describe('job de liberación de turnos con seña impaga', () => {
     expect(fresh2?.status).toBe('cancelled')
   })
 })
+
+// RF-14 y RNF-05: cada turno liberado deja su propia entrada de actividad, con el id del turno.
+describe('job de liberación: actividad por turno', () => {
+  it('deja una entrada por cada turno liberado, con su appointmentId', async () => {
+    const client = await createClientUser()
+    const pro1   = await createProfessionalUser()
+    const pro2   = await createProfessionalUser()
+    const svc    = await createService()
+    const a = await createStale({ clientId: client.id, professionalId: pro1.id, serviceId: svc.id, createdMinutesAgo: 30 })
+    const b = await createStale({ clientId: client.id, professionalId: pro2.id, serviceId: svc.id, createdMinutesAgo: 40 })
+
+    const result = await runReleaseUnpaidAppointmentsJob()
+    expect(result.released).toBe(2)
+
+    const logs = await prisma.activityLog.findMany({ where: { action: 'Turno liberado por falta de pago' } })
+    expect(logs).toHaveLength(2)
+    expect(logs.map(l => l.appointmentId).sort()).toEqual([a.id, b.id].sort())
+    for (const l of logs) {
+      expect(l.module).toBe('appointments')
+      expect(l.level).toBe('warning')
+      expect(l.detail).toContain(svc.name)
+      expect(l.detail).toContain('20 minutos')
+    }
+  })
+
+  it('un combo liberado deja una entrada por cada pata', async () => {
+    const client  = await createClientUser()
+    const pro1    = await createProfessionalUser()
+    const pro2    = await createProfessionalUser()
+    const svc     = await createService()
+    const groupId = randomUUID()
+    const leg1 = await createStale({ clientId: client.id, professionalId: pro1.id, serviceId: svc.id, createdMinutesAgo: 30, depositAmount: 5000, comboGroupId: groupId })
+    const leg2 = await createStale({ clientId: client.id, professionalId: pro2.id, serviceId: svc.id, createdMinutesAgo: 30, depositAmount: 0, comboGroupId: groupId })
+
+    await runReleaseUnpaidAppointmentsJob()
+
+    const logs = await prisma.activityLog.findMany({ where: { action: 'Turno liberado por falta de pago' } })
+    expect(logs.map(l => l.appointmentId).sort()).toEqual([leg1.id, leg2.id].sort())
+  })
+
+  it('no deja entradas si no libera nada', async () => {
+    const client = await createClientUser()
+    const pro    = await createProfessionalUser()
+    const svc    = await createService()
+    await createStale({ clientId: client.id, professionalId: pro.id, serviceId: svc.id, createdMinutesAgo: 5 })
+
+    await runReleaseUnpaidAppointmentsJob()
+    expect(await prisma.activityLog.count({ where: { action: 'Turno liberado por falta de pago' } })).toBe(0)
+  })
+})

@@ -2,10 +2,29 @@
 import { prisma }   from '../../app/database/prisma'
 import { AppError } from '../../app/middlewares/errorHandler'
 import { HTTP }     from '../../app/constants/http'
+import { assertValidPhone } from '../../app/validators/phone'
+import { dateSchema } from '../../app/validators/datetime'
+import { argentinaParts, todayArgentinaStr } from '../../app/utils/argentinaTime'
+import { OCCUPYING_SLOT_FILTER, earliestBookableStart, reopenedStartsFor } from '../appointments/reopenedSlots'
 
 const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
 const DAY_MAP: Record<string, number> = {
   monday: 0, tuesday: 1, wednesday: 2, thursday: 3, friday: 4, saturday: 5, sunday: 6,
+}
+
+// RF-06: fecha de ingreso al estudio que carga el administrador. undefined = no se toca; null o '' = volver a la
+// fecha de alta de la cuenta. No puede ser futura (hora de Argentina).
+function parseJoinedAt(value: unknown): Date | null | undefined {
+  if (value === undefined) return undefined
+  if (value === null || value === '') return null
+  const parsed = dateSchema.safeParse(value)
+  if (!parsed.success) {
+    throw new AppError(HTTP.BAD_REQUEST, 'La fecha de ingreso no es válida (formato AAAA-MM-DD)', 'VALIDATION_ERROR')
+  }
+  if (parsed.data > todayArgentinaStr()) {
+    throw new AppError(HTTP.BAD_REQUEST, 'La fecha de ingreso no puede ser futura', 'VALIDATION_ERROR')
+  }
+  return new Date(`${parsed.data}T00:00:00.000Z`)
 }
 
 type DayRange = { start: string; end: string }
@@ -151,7 +170,7 @@ function toAdminProfessional(user: {
     photo: string | null; specialty: string | null
     instagram: string | null; facebook: string | null; tiktok: string | null; twitter: string | null
     commissionType: string; commissionPct: number
-    vacationFrom: Date | null; vacationTo: Date | null
+    vacationFrom: Date | null; vacationTo: Date | null; joinedAt: Date | null
     availability: { dayOfWeek: number; startTime: string; endTime: string }[]
     services: { serviceId: string }[]
   } | null
@@ -180,6 +199,10 @@ function toAdminProfessional(user: {
     vacationFrom: professional?.vacationFrom ? professional.vacationFrom.toISOString().slice(0, 10) : null,
     vacationTo:   professional?.vacationTo   ? professional.vacationTo.toISOString().slice(0, 10)   : null,
     createdAt:    user.createdAt.toISOString(),
+    // RF-06: fecha de ingreso al estudio (YYYY-MM-DD). La cargada por el administrador o, si no cargó ninguna, la
+    // del alta de la cuenta en hora de Argentina; `joinedAtIsDefault` avisa cuál de las dos es.
+    joinedAt:          professional?.joinedAt ? professional.joinedAt.toISOString().slice(0, 10) : argentinaParts(user.createdAt).date,
+    joinedAtIsDefault: !professional?.joinedAt,
     metrics: {
       totalAppointments: metrics?.totalAppointments ?? 0,
       totalClients:      metrics?.totalClients      ?? 0,
@@ -273,7 +296,15 @@ export const professionalService = {
   // date opcional (YYYY-MM-DD): si se pasa, además de la disponibilidad semanal
   // devuelve los horarios ya ocupados ese día, para que el frontend no ofrezca
   // turnos que van a chocar con la constraint de no-doble-reserva.
-  getPublicAvailability: async (id: string, date?: string) => {
+  //
+  // Para el flujo de la clienta también devuelve, cuando se pasa `date`:
+  //  - earliestStart: primer inicio ("HH:mm") que se puede reservar ese día según la reserva tardía (hasta 15
+  //    minutos después de la hora de inicio); null si la fecha ya pasó. El frontend filtra con esto y NO con
+  //    el reloj del navegador.
+  //  - reopenedStarts: inicios (cada 5 minutos) de los horarios reabiertos vigentes, calculados para la
+  //    duración del servicio `serviceId` (vacío si no se pasa). El horario ORIGINAL de un turno marcado como
+  //    no asistido o cancelado ya empezado figura en bookedTimes y nunca se reabre.
+  getPublicAvailability: async (id: string, date?: string, serviceId?: string) => {
     const user = await prisma.user.findUnique({ where: { id }, select: { role: true, active: true } })
     if (!user || !['professional', 'admin'].includes(user.role) || !user.active) {
       throw new AppError(HTTP.NOT_FOUND, 'Profesional no encontrado', 'NOT_FOUND')
@@ -288,15 +319,26 @@ export const professionalService = {
       : []
 
     let bookedTimes: string[] = []
+    let earliestStart: string | null | undefined
+    let reopenedStarts: string[] = []
     if (date) {
+      // Ocupan el inicio los turnos activos (incluida la inasistencia automática) y los que dejaron su
+      // horario original bloqueado: es el mismo criterio que el índice único parcial.
       const booked = await prisma.appointment.findMany({
-        where:  { professionalId: id, date, status: { notIn: ['cancelled', 'cancelled_no_show'] } },
+        where:  { professionalId: id, date, ...OCCUPYING_SLOT_FILTER },
         select: { time: true },
       })
       bookedTimes = booked.map(b => b.time)
+
+      const now = new Date()
+      earliestStart = earliestBookableStart(date, now)
+      if (serviceId) {
+        const service = await prisma.service.findUnique({ where: { id: serviceId }, select: { duration: true } })
+        if (service) reopenedStarts = await reopenedStartsFor(prisma, { professionalId: id, date, duration: service.duration, now })
+      }
     }
 
-    return { availability, bookedTimes }
+    return { availability, bookedTimes, earliestStart, reopenedStarts }
   },
 
   getAll: async () => {
@@ -323,6 +365,8 @@ export const professionalService = {
     const user = await prisma.user.findUnique({ where: { id } })
     if (!user) throw new AppError(HTTP.NOT_FOUND, 'Profesional no encontrado', 'NOT_FOUND')
 
+    assertValidPhone(data.phone)
+    const joinedAt = parseJoinedAt(data.joinedAt)
     const userUpdate: Record<string, unknown> = {}
     if (data.name   !== undefined) userUpdate.name   = data.name
     if (data.phone  !== undefined) userUpdate.phone  = data.phone
@@ -352,8 +396,10 @@ export const professionalService = {
         commissionPct:  data.commissionPct  ?? 0,
         vacationFrom:   data.vacationFrom ? new Date(data.vacationFrom) : null,
         vacationTo:     data.vacationTo   ? new Date(data.vacationTo)   : null,
+        joinedAt:       joinedAt ?? null,
       },
       update: {
+        ...(joinedAt !== undefined ? { joinedAt } : {}),
         ...(data.photo               !== undefined ? { photo: data.photo }         : {}),
         ...(data.specialty           !== undefined ? { specialty: data.specialty } : {}),
         ...(data.socials?.instagram  !== undefined ? { instagram: data.socials.instagram } : {}),
@@ -443,6 +489,7 @@ export const professionalService = {
   },
 
   updateMyProfile: async (userId: string, data: any) => {
+    assertValidPhone(data.phone)
     if (data.name !== undefined || data.phone !== undefined) {
       await prisma.user.update({
         where: { id: userId },
@@ -518,6 +565,7 @@ export const professionalService = {
 
   saveOnboarding: async (userId: string, data: any): Promise<void> => {
     const { personal, work, availability, services, policies } = data
+    assertValidPhone(personal?.phone)
 
     // El paso "Personal" del onboarding manda un único campo `name` (no
     // firstName/lastName/dni) — se persiste en el User igual que en el registro.

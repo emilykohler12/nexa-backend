@@ -18,6 +18,9 @@ export const activityService = {
     // desde Actividad. No se duplica el status acá: getAll() lo lee en vivo
     // de Review.status al listar, así nunca queda desincronizado.
     reviewId?: string
+    // Turno al que se refiere la entrada (columna appointment_id, sin FK). Lo traen todas las entradas
+    // que tocan un turno, para poder reconstruir su historial.
+    appointmentId?: string
   }) => {
     try {
       await prisma.activityLog.create({
@@ -28,6 +31,7 @@ export const activityService = {
           level:    data.level ?? 'info',
           detail:   data.detail ?? null,
           reviewId: data.reviewId ?? null,
+          appointmentId: data.appointmentId ?? null,
         },
       })
     } catch (err) {
@@ -57,6 +61,7 @@ export const activityService = {
       level:     r.level as ActivityLevel,
       detail:    r.detail ?? undefined,
       reviewId:     r.reviewId ?? undefined,
+      appointmentId: r.appointmentId ?? undefined,
       reviewStatus: r.reviewId ? (statusByReviewId.get(r.reviewId) as 'pending' | 'approved' | 'rejected' | undefined) : undefined,
     }))
   },

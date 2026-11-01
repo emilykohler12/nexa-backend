@@ -3,17 +3,20 @@ import crypto from 'node:crypto'
 import { prisma }         from '../../app/database/prisma'
 import { AppError }       from '../../app/middlewares/errorHandler'
 import { HTTP }           from '../../app/constants/http'
+import { assertValidPhone } from '../../app/validators/phone'
 import { bcryptProvider } from '../auth/providers/bcrypt.provider'
 import { activityService } from '../activity/activity.service'
 import { fullName } from '../../app/utils/fullName'
+import { uploadProvider } from '../uploads/upload.provider'
 
-async function computeLoyalty(userId: string) {
-  const appointments = await prisma.appointment.findMany({ where: { clientId: userId } })
-  const counted = appointments.filter(a => a.status !== 'cancelled')
-  const totalVisits = counted.length
-  const totalSpent  = counted.reduce((sum, a) => sum + Number(a.servicePrice), 0)
-  const lastVisit   = counted.length
-    ? counted.reduce((latest, a) => (a.date > latest ? a.date : latest), counted[0].date)
+// Resumen de visitas de la clienta: solo cuentan los turnos finalizados. No hay puntos ni
+// beneficios (se eliminaron con la fidelización): es un dato informativo para el panel.
+async function computeVisits(userId: string) {
+  const finished = await prisma.appointment.findMany({ where: { clientId: userId, status: 'finished' } })
+  const totalVisits = finished.length
+  const totalSpent  = finished.reduce((sum, a) => sum + Number(a.servicePrice), 0)
+  const lastVisit   = finished.length
+    ? finished.reduce((latest, a) => (a.date > latest ? a.date : latest), finished[0].date)
     : null
   return { totalVisits, totalSpent, lastVisit }
 }
@@ -21,12 +24,10 @@ async function computeLoyalty(userId: string) {
 function mapAdminClient(
   user: { id: string; name: string; lastName?: string | null; email: string; phone: string | null; gender: string | null; createdAt: Date },
   client: {
-    birthDate: Date | null
     allergies: string | null; preferences: string | null; observations: string | null
-    loyaltyPoints: number
     blocked: boolean
   } | null,
-  loyalty: { totalVisits: number; totalSpent: number; lastVisit: string | null },
+  visits: { totalVisits: number; totalSpent: number; lastVisit: string | null },
 ) {
   return {
     id:        user.id,
@@ -34,19 +35,16 @@ function mapAdminClient(
     photo:     null as string | null,
     phone:     user.phone ?? '',
     email:     user.email,
-    birthDate: client?.birthDate ? client.birthDate.toISOString().slice(0, 10) : null,
     gender:    user.gender ?? null,
     clinical: {
       allergies:    client?.allergies    ?? '',
       preferences:  client?.preferences  ?? '',
       observations: client?.observations ?? '',
     },
-    loyalty: {
-      totalVisits:     loyalty.totalVisits,
-      totalSpent:      loyalty.totalSpent,
-      lastVisit:       loyalty.lastVisit,
-      points:          client?.loyaltyPoints ?? 0,
-      availablePromos: [] as string[],
+    visits: {
+      totalVisits: visits.totalVisits,
+      totalSpent:  visits.totalSpent,
+      lastVisit:   visits.lastVisit,
     },
     blocked:   client?.blocked ?? false,
     createdAt: user.createdAt.toISOString(),
@@ -74,8 +72,8 @@ function assertAllergiesUnchanged(data: any, current: string | null | undefined)
 async function getByIdInternal(id: string) {
   const user = await prisma.user.findUnique({ where: { id }, include: { client: true } })
   if (!user || user.role !== 'client') throw new AppError(HTTP.NOT_FOUND, 'Cliente no encontrado', 'NOT_FOUND')
-  const loyalty = await computeLoyalty(id)
-  return mapAdminClient(user, user.client, loyalty)
+  const visits = await computeVisits(id)
+  return mapAdminClient(user, user.client, visits)
 }
 
 export const adminService = {
@@ -86,7 +84,7 @@ export const adminService = {
       include: { client: true },
       orderBy: { createdAt: 'desc' },
     })
-    return Promise.all(users.map(async u => mapAdminClient(u, u.client, await computeLoyalty(u.id))))
+    return Promise.all(users.map(async u => mapAdminClient(u, u.client, await computeVisits(u.id))))
   },
 
   getClientById: (id: string) => getByIdInternal(id),
@@ -96,7 +94,7 @@ export const adminService = {
     if (!user || user.role !== 'client') throw new AppError(HTTP.NOT_FOUND, 'Cliente no encontrado', 'NOT_FOUND')
 
     const rows = await prisma.appointment.findMany({
-      where:   { clientId: id, status: { in: ['finished', 'cancelled', 'cancelled_no_show'] } },
+      where:   { clientId: id, status: { in: ['finished', 'cancelled', 'cancelled_no_show', 'no_show_auto'] } },
       include: { professional: true, service: true },
       orderBy: [{ date: 'desc' }, { time: 'desc' }],
     })
@@ -119,6 +117,7 @@ export const adminService = {
       throw new AppError(HTTP.BAD_REQUEST, 'Nombre y email son obligatorios', 'VALIDATION_ERROR')
     }
     assertAllergiesUnchanged(data, null)
+    assertValidPhone(data.phone)
     // El login pasa el email a minúsculas: si se guardara con mayúsculas, la clienta no podría entrar.
     const email = data.email.trim().toLowerCase()
     // Insensible a mayúsculas, para detectar también cuentas viejas guardadas con otras mayúsculas.
@@ -145,7 +144,6 @@ export const adminService = {
     await prisma.client.create({
       data: {
         userId:       user.id,
-        birthDate:    data.birthDate ? new Date(data.birthDate) : null,
         preferences:  data.clinical?.preferences  ?? null,
         observations: data.clinical?.observations ?? null,
       },
@@ -160,6 +158,7 @@ export const adminService = {
 
     const profile = await prisma.client.findUnique({ where: { userId: id } })
     assertAllergiesUnchanged(data, profile?.allergies)
+    assertValidPhone(data.phone)
 
     const userUpdate: Record<string, unknown> = {}
     if (data.name   !== undefined) userUpdate.name   = data.name
@@ -180,16 +179,12 @@ export const adminService = {
       where:  { userId: id },
       create: {
         userId:       id,
-        birthDate:    data.birthDate ? new Date(data.birthDate) : null,
         preferences:  data.clinical?.preferences  ?? null,
         observations: data.clinical?.observations ?? null,
-        loyaltyPoints: data.loyalty?.points ?? 0,
       },
       update: {
-        ...(data.birthDate !== undefined ? { birthDate: data.birthDate ? new Date(data.birthDate) : null } : {}),
         ...(data.clinical?.preferences  !== undefined ? { preferences: data.clinical.preferences }   : {}),
         ...(data.clinical?.observations !== undefined ? { observations: data.clinical.observations } : {}),
-        ...(data.loyalty?.points !== undefined ? { loyaltyPoints: data.loyalty.points } : {}),
       },
     })
 
@@ -209,38 +204,74 @@ export const adminService = {
     return getByIdInternal(id)
   },
 
-  // RF-06.03 — supresión de datos personales a pedido del cliente (derecho de
+  // RF-09 — supresión de datos personales a pedido del cliente (derecho de
   // supresión, Ley 25.326). No borra la fila: mantiene los turnos y totales
   // contables intactos, pero anonimiza los datos identificatorios y desactiva
   // la cuenta (no puede volver a loguearse con el email anonimizado, y se
-  // invalida cualquier sesión activa). Deliberadamente NO toca alergias/
-  // preferencias/observaciones — esa decisión queda para cuando se resuelva
-  // si el sistema realmente necesita seguir guardando ese dato clínico o no
-  // (ver dictamen, apartado 10).
+  // invalida cualquier sesión activa). Además borra las fotos de la galería
+  // (filas y archivos), vacía teléfono, dirección y notas de sus pedidos y el
+  // texto de sus reseñas (el puntaje se conserva). Se conservan turnos, pagos,
+  // montos de pedidos, alergias, preferencias, observaciones y notas.
   anonymizeClient: async (id: string, adminName: string) => {
     const user = await prisma.user.findUnique({ where: { id } })
     if (!user || user.role !== 'client') throw new AppError(HTTP.NOT_FOUND, 'Cliente no encontrado', 'NOT_FOUND')
 
-    await prisma.user.update({
-      where: { id },
-      data: {
-        name:         'Cliente eliminado',
-        lastName:     null,
-        email:        `anonimo_${id}@borrado.com`,
-        phone:        null,
-        active:       false,
-      },
-    })
-    // y se cierra la sesión en todos sus dispositivos
-    await prisma.refreshSession.deleteMany({ where: { userId: id } })
+    const photos = await prisma.clientGalleryPhoto.findMany({ where: { clientId: id }, select: { id: true, url: true } })
+
+    // Todo o nada en la base: si algo falla no queda la cuenta a medio anonimizar.
+    const [, sessions, removedPhotos, orders, reviews] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id },
+        data: {
+          name:         'Cliente eliminado',
+          lastName:     null,
+          email:        `anonimo_${id}@borrado.com`,
+          phone:        null,
+          active:       false,
+        },
+      }),
+      // y se cierra la sesión en todos sus dispositivos
+      prisma.refreshSession.deleteMany({ where: { userId: id } }),
+      prisma.clientGalleryPhoto.deleteMany({ where: { id: { in: photos.map(p => p.id) } } }),
+      prisma.order.updateMany({
+        where: { clientId: id, OR: [{ phone: { not: null } }, { deliveryAddress: { not: null } }, { notes: { not: null } }] },
+        data:  { phone: null, deliveryAddress: null, notes: null },
+      }),
+      prisma.review.updateMany({
+        where: { clientId: id, message: { not: null } },
+        data:  { message: null },
+      }),
+    ])
+
+    // Los archivos se borran después de confirmar la base: si fallan, las filas ya no están, así que la
+    // lista de lo que quedó en el almacenamiento va al registro de actividad para borrarlo a mano.
+    const files = await uploadProvider.deleteImages(photos.map(p => p.url))
 
     await activityService.log({
       userName: adminName,
       action:   'Anonimizó los datos de un cliente a pedido suyo',
       module:   'clients',
       level:    'warning',
-      detail:   `Cliente ${id}`,
+      detail:   [
+        `Cliente ${id}. Ejecutó: ${adminName}.`,
+        'Campos anonimizados: nombre, apellido, correo y teléfono; cuenta desactivada.',
+        `Sesiones cerradas: ${sessions.count}.`,
+        `Fotos de la galería eliminadas: ${removedPhotos.count} (archivos borrados del almacenamiento: ${files.deleted.length}).`,
+        `Pedidos con teléfono, dirección y notas vaciados: ${orders.count}.`,
+        `Reseñas con el texto vaciado (se conserva el puntaje): ${reviews.count}.`,
+        'Se conservan turnos, pagos, montos de pedidos, alergias, preferencias, observaciones y notas.',
+      ].join('\n'),
     })
+
+    if (files.failed.length > 0) {
+      await activityService.log({
+        userName: adminName,
+        action:   'No se pudieron borrar del almacenamiento algunas fotos de un cliente anonimizado',
+        module:   'clients',
+        level:    'error',
+        detail:   `Cliente ${id}. Archivos sin borrar (${files.failed.length} de ${photos.length}), hay que quitarlos a mano:\n${files.failed.join('\n')}`,
+      })
+    }
 
     return getByIdInternal(id)
   },

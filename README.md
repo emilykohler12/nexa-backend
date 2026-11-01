@@ -48,12 +48,14 @@ Una clienta se registra, elige un servicio, una profesional, una fecha y un hora
 La disponibilidad se garantiza en el **backend**, no solo en la interfaz:
 
 - El frontend no ofrece los horarios ya ocupados (`GET /api/professional/:id/availability`).
-- La fuente de verdad es un **índice único parcial** en PostgreSQL sobre `(professional_id, date, time)` que excluye los turnos `cancelled` y `cancelled_no_show`. Es atómico: aunque dos reservas lleguen a la vez o alguien salte la interfaz, solo una se guarda y la otra recibe **HTTP 409** (`PROFESSIONAL_SLOT_TAKEN`). No hay consulta previa.
+- La fuente de verdad es un **índice único parcial** en PostgreSQL sobre `(professional_id, date, time)` que excluye los turnos `cancelled` y `cancelled_no_show`, salvo los que tienen el horario original bloqueado (`slot_locked`: marcados como no asistidos o cancelados ya empezados). Un turno `no_show_auto` sigue ocupando el horario. Es atómico: aunque dos reservas lleguen a la vez o alguien salte la interfaz, solo una se guarda y la otra recibe **HTTP 409** (`PROFESSIONAL_SLOT_TAKEN`). No hay consulta previa.
 - La reserva de la clienta (simple, combo y reprogramación) además exige que la hora caiga dentro de las franjas que definió la profesional: si no, **HTTP 400** (`OUT_OF_HOURS`). Los turnos manuales del admin no se validan contra la franja.
-- Pruebas automatizadas: `tests/integration/appointments.booking.test.ts` y `tests/integration/appointments.out-of-hours.test.ts`.
+- **Inasistencia, horario reabierto y reserva tardía** (reglas confirmadas por la propietaria el 30/10/2026; ver el ADR-002, revisión del 31/10/2026): el job pasa a `no_show_auto` («No asistió (automático)») un turno confirmado sin llegada registrada a los **más de 30 minutos** de su hora de inicio (cada 5 minutos); la seña no cambia. El personal puede marcar «No asistió» desde la hora de inicio: hasta 40 minutos después se reabre el horario en inicios de 5 minutos hasta 60 minutos después de la hora original, siempre que el servicio entre. El horario original nunca se vuelve a reservar. La clienta puede reservar o reprogramar hasta 15 minutos después de la hora de inicio (`START_TIME_PASSED` después). El personal corrige el estado a «Finalizado» siempre o a «Confirmado» si no se superpone.
+- **Cancelación y devolución de la seña** (fase 3): el sistema solo **marca** la seña como devuelta, no hace ninguna devolución en Mercado Pago. Si la clienta cancela con 12 horas o más de anticipación (`cancellationHours`) y la seña estaba paga, queda como devuelta; con menos, retenida. Cuando cancela el personal indica si cancela la clienta (con la hora en que avisó, el medio y una nota) o el estudio (devuelve siempre). La política de devolución admite solo `full` o `none`.
+- Pruebas automatizadas: `tests/integration/appointments.booking.test.ts`, `tests/integration/appointments.out-of-hours.test.ts`, `tests/integration/appointments.arrival-noshow.test.ts`, `tests/integration/appointments.reopened-slots.test.ts`, `tests/integration/appointments.cancellation-refund.test.ts`, `tests/integration/settings.deposit-and-refund.test.ts` (seña en porcentaje y límites de la devolución) y `tests/integration/client-details-job-interest-late-booking.test.ts` (reserva tardía en combos y servicios especiales).
 - Alternativas evaluadas y motivo de la elección: `04-diseno/adr-002-validacion-antes-persistencia.md`.
 
-> **Limitación conocida:** el bloqueo compara la **hora de inicio**. Dos turnos de la misma profesional que empiezan a horas distintas pero se pisan por duración (ej. 16:00 de 90 min y 16:30) todavía no se detectan. Está registrada como una iteración nueva a planificar.
+> **Limitación conocida:** el bloqueo compara la **hora de inicio**. Dos turnos de la misma profesional que empiezan a horas distintas pero se pisan por duración (ej. 16:00 de 90 min y 16:30) todavía no se detectan, salvo en los inicios de un horario reabierto, donde sí se verifica la duración. Está registrada como una iteración nueva a planificar.
 
 ### 1.5 Dónde está la documentación
 
@@ -61,7 +63,10 @@ Vive en el repositorio **nexa-backend**:
 
 | Documento | Ubicación |
 |---|---|
-| Catálogo de requisitos (versión vigente) | `03-requisitos/20261005_CatalogoRequisitos_Kohler_v5.xlsx` |
+| Catálogo de requisitos (versión vigente) | `03-requisitos/20261030_CatalogoRequisitos_Kohler_v7.xlsx` |
+| Cobertura de cada requisito con pruebas automatizadas | `docs/cobertura-por-requisito.md` |
+| Cambios y decisiones de la AE4, por fase | `docs/cambios-y-decisiones.md` |
+| Plan de despliegue de la AE4 | `docs/plan-de-despliegue.md` |
 | ADR-001: estrategia de multi-tenancy | `04-diseno/adr-001-multi-tenancy.md` |
 | ADR-002: integridad de la reserva (índice único parcial y `OUT_OF_HOURS`) | `04-diseno/adr-002-validacion-antes-persistencia.md` |
 | ADR-003: JWT para autenticación | `04-diseno/adr-003-jwt-auth.md` |
@@ -169,7 +174,7 @@ Abrir `.env` y editar **solo** la línea `DATABASE_URL` con tu usuario y contras
 DATABASE_URL="postgresql://USUARIO:CONTRASEÑA@localhost:5432/nexa_dev"
 ```
 
-El resto de los valores ya sirven para desarrollo local. Las variables de Mercado Pago, Sentry y Supabase pueden quedar vacías.
+El resto de los valores ya sirven para desarrollo local. El archivo lista todas las variables que lee el backend (las de `src/app/config/env.ts` más `SENTRY_DSN`); las de Mercado Pago (`MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET`, `BACKEND_PUBLIC_URL`), Sentry, Supabase y Brevo pueden quedar vacías. No definir `TZ`: el backend tiene que correr en UTC.
 
 **Frontend** — copiar el archivo de ejemplo (no hace falta editarlo):
 
@@ -195,7 +200,7 @@ npm run seed:demo
 **Esperado:**
 
 ```
-54 migrations found in prisma/migrations
+62 migrations found in prisma/migrations
 Applying migration `20260720211431_init`
 Applying migration `20260813212326_init`
 ...
@@ -205,11 +210,14 @@ All migrations have been successfully applied.
 ...
 ✅ Datos de demo listos:
    Servicio:    Manicura semipermanente (60 min, $15.000)
-   Profesional: Loren (demo) — lun a sáb 09:00–18:00
+   Profesional: Valeria (demo) — lun a sáb 09:00–18:00
+   Turnos de la clienta: confirmado AAAA-MM-DD 10:00, no asistió (automático) AAAA-MM-DD 10:00, cancelado AAAA-MM-DD 15:00
+   Promoción vigente: Semipermanente con descuento (demo) (AAAA-MM-DD a AAAA-MM-DD)
    Login profesional: profesional@nexa.local / Profesional1234!
+   Login clienta:     clienta@nexa.local / Clienta1234!
 ```
 
-`seed:demo` carga una profesional con horario, un servicio y un WhatsApp de demo del negocio, que es lo mínimo necesario para poder reservar. Se puede correr más de una vez sin duplicar nada.
+`seed:demo` carga un escenario de demostración con datos inventados, coherente con las reglas de la AE4: una profesional con horario de lunes a sábado, un servicio, una clienta de demo con un turno **confirmado** (a 2 días o más, en día hábil, con la seña paga), uno **`no_show_auto`** («No asistió (automático)», del día hábil anterior, con la seña retenida y el horario todavía ocupado) y uno **cancelado** por la clienta con más de 12 horas de aviso (seña marcada como devuelta y horario libre), una **promoción vigente** (desde hoy por 30 días) y un WhatsApp de demo del negocio. Las fechas se calculan en hora de Argentina el día que se corre. Se puede correr más de una vez sin duplicar nada: cada corrida vuelve a crear solo los turnos de la clienta de demo. Lo verifica `tests/integration/seed-demo.test.ts`. Solo para desarrollo: nunca correrlo contra la base de producción.
 
 > Usar `migrate deploy`, **no** `migrate dev`: `migrate dev` puede quedarse esperando que escribas el nombre de una migración nueva.
 
@@ -231,7 +239,7 @@ npm run dev
 ```
 ✅ Conectado a PostgreSQL
 👤 Admin inicial creado: admin@nexa.local
-[jobs] scheduler iniciado — ...
+[jobs] scheduler iniciado (hora de Argentina) — release-unpaid (cada 5 min) + auto-no-show (cada 5 min) + appointment-reminder (cada 5 min)
 🚀 Servidor en http://localhost:4000 (development)
 ```
 
@@ -314,8 +322,8 @@ npm test
 **Esperado:**
 
 ```
-Test Files  32 passed (32)
-     Tests  310 passed (310)
+Test Files  57 passed (57)
+     Tests  638 passed (638)
 ```
 
 Los tests del caso de uso vertical están en `tests/integration/appointments.booking.test.ts`, entre ellos:
@@ -335,8 +343,8 @@ npm test
 **Esperado:**
 
 ```
-Test Files  17 passed (17)
-     Tests  80 passed (80)
+Test Files  36 passed (36)
+     Tests  326 passed (326)
 ```
 
 ---
@@ -394,6 +402,23 @@ Todos los commits que no son merges, ediciones web ni los primeros de agosto los
 | **Total sin la línea** | **64** | **33** |
 
 Los commits `54933ca` y `ec976da` son los del README v1.1; `ce550a9` y `2e7734f`, los de la corrección de ese README, y `9bdc3ee` y `4bf842e`, los de la bitácora de la AE2. La última fila reúne los commits sin la línea (sin contar merges) entre `9bdc3ee..6e7d8c0` en el backend y `4bf842e..3090b89` en el frontend; la bitácora de la AE3 describe el trabajo desde el 23/10.
+
+### 8.3 Cambios de la AE4 hechos con Claude Code (rama `integracion-ae4`)
+
+Las cifras de 8.1 y 8.2 están cortadas en `6e7d8c0`. Desde ahí, cada fase de la AE4 la hace Claude Code (modelo Sonnet 5.5 hasta la fase 6 y Opus 5.5 desde la fase 7) sobre su propia rama, a pedido de la autora, con el nombre de ella como autor y sin la línea de coautoría. Cada commit cita solo los anteriores, nunca el suyo ni el del propio README.
+
+| Fase | Rama | Commits |
+|---|---|---|
+| 1 — eliminaciones | `refactor/quitar-campanas-puntos-recordatorio-nacimiento` | `b30e849`, `8955406`, `308bb0a` (bitácora, entrada 70), `3139d13` (bitácora, entrada 71) |
+| 2 — inasistencia, horario reabierto y reserva tardía | `feat/inasistencia-horario-reabierto` | `1bfdf67`, `76fe8a3`, `3ccdf53` (bitácora, entrada 72), `924564f` (bitácora, entrada 73) |
+| 3 — cancelación y devolución | `feat/cancelacion-devolucion-hora-de-aviso` | `7e8a16e`, `60e56b1`, `d41644e` (bitácora, entrada 74) |
+| 3b — recordatorio de turno por mail | `feat/recordatorio-turno-mail` | `7cd9a6e`, `2125736`, `9553863`, `9102940` (bitácora, entrada 75) |
+| 4 — tienda | `fix/tienda-publica-solo-disponibles` | `ff25797`, `3fc9b79` (bitácora, entrada 78) |
+| 5 — anonimización y alergias | `fix/anonimizacion-y-alergias` | `87a7146`, `08d0945`, `e415b02` (bitácora, entrada 81) |
+| 6 — brechas de requisitos | `fix/brechas-requisitos` | `8a1c006`, `7a16248`, `f437d34`, `e565249`, `4554e2d`, `c9cdc61`, `b87a817` (bitácora, entrada 82) |
+| 7 — pruebas faltantes (Claude Code con el modelo Opus 5.5) | `test/cobertura-completa` | `a34749a`, `f5c2390`, `a4aa471`, `77fd1b8`, `6cc47d7`, `aa86b17`, `718e8e6`, `45d8401` (bitácora, entrada 83), `3cd1199` (bitácora, entrada 84) |
+| 8 — deuda técnica (Claude Code con el modelo Opus 5.5) | `chore/deuda-tecnica` | `a687dfb` (RF-06.0x renombrados), `a4812d7` (seed de demostración), `fc9df24` (`.env.example`), `8443f1f` (bitácora, entrada 85), `bd692e9` (bitácora, entrada 86) |
+| 9 — informes (Claude Code con el modelo Opus 5.5) | `docs/informes-v8` | `8974ed1` (cobertura por requisito), `d484c3e` (cambios y decisiones); la documentación va en el último (bitácora, entrada 87). La estimación de horas va después de integrar todo en `main` |
 
 ---
 

@@ -175,3 +175,64 @@ agregar los casos de R-04 (asignación automática) y de "Pendiente de seña" (R
 ---
 
 **Revisado por:** Emily Kohler
+
+
+---
+
+## Revisión del 2026-10-31 (AE4, fase 2): inasistencia, horario original bloqueado y horario reabierto
+
+Esta revisión **agrega** reglas; el texto de arriba sigue siendo el registro de la decisión original. Las reglas
+fueron confirmadas por escrito por la propietaria el 30/10/2026 (formulario firmado) y se evalúan en hora de
+Argentina. Lo que cambia respecto de las secciones 2 a 4:
+
+1. **El índice único parcial cambia de predicado.** Pasa de `WHERE status NOT IN ('cancelled','cancelled_no_show')` a
+   `WHERE status NOT IN ('cancelled','cancelled_no_show') OR slot_locked`
+   (migración `20261031120000_turno_horario_original_bloqueado`). `appointments.slot_locked` vale `true` cuando el
+   turno ya no está activo pero su horario **original** no se vuelve a ofrecer nunca: un `cancelled_no_show` (marcado
+   por el personal) o un `cancelled` hecho **después** de la hora de inicio. El código lo escribe en la **misma
+   sentencia `UPDATE`** que cambia el estado: la fila no sale del índice en ningún momento y no hay ventana de carrera.
+   Las filas existentes quedan en `false`, así que el índice nuevo tiene el mismo contenido que el viejo y no puede
+   fallar por duplicados al crearse. Alternativa descartada: sacar `cancelled_no_show` de la lista de exclusión; los
+   `cancelled_no_show` viejos podrían chocar con turnos posteriores en el mismo horario.
+2. **Estado nuevo `no_show_auto`** («No asistió (automático)»). Lo asigna solo el job `autoNoShow` (cada 5 minutos) a
+   un turno `confirmed` sin llegada registrada con **más de 30 minutos** de su hora de inicio (con 30 exactos no).
+   No está en la lista de exclusión del índice: **sigue ocupando el horario** sin cambiar nada más. No suma a la
+   carga semanal de la asignación «cualquiera» (R-04), la clienta no puede cancelarlo ni reprogramarlo y
+   `paymentStatus` no cambia. Antes el job pasaba el turno a `cancelled_no_show` a los 20 minutos, lo que liberaba el
+   horario.
+3. **Marca del personal y corrección** (`changeStatusByStaff`). Marcar `cancelled_no_show` vale desde la hora de
+   inicio (antes: `400 NO_SHOW_BEFORE_START`) y solo desde `confirmed` o `no_show_auto`; la seña queda retenida. Desde
+   `no_show_auto` o `cancelled_no_show` el personal puede pasar a `finished` siempre y a `confirmed` solo si no se
+   superpone con otro turno activo de la profesional (`409 APPOINTMENT_OVERLAP`); al confirmar queda registrada la
+   llegada para que el job no lo vuelva a marcar. Cada cambio deja una entrada de actividad con quién, de qué
+   estado a cuál y el id del turno (`activity_logs.appointment_id`, sin clave foránea).
+4. **Horario reabierto** (tabla `reopened_slots`, una fila por turno de origen). Si la marca ocurre hasta 40 minutos
+   después de la hora de inicio, se ofrecen inicios cada 5 minutos desde el siguiente múltiplo de 5 al momento de la
+   marca hasta 60 minutos después de la hora original (inclusive). Un inicio se acepta solo si el servicio termina
+   dentro de una franja de la profesional y **no pisa ningún turno activo, ni antes ni después**. Esa verificación por
+   duración se hace bajo un `pg_advisory_xact_lock` por profesional y día, dentro de la transacción que crea el turno,
+   porque el índice solo compara el inicio exacto y dos reservas simultáneas (16:35 y 16:40) pasarían las dos la
+   verificación. Pasada la hora límite el horario no se ofrece ni se acepta (`409 REOPENED_SLOT_CLOSED`). La vigencia es
+   implícita; `closed_at` solo se completa cuando el personal corrige el estado del turno de origen. La reserva en un
+   horario reabierto es un turno normal (confirmado, con seña, sujeto a la liberación por falta de pago).
+5. **Reserva tardía.** La clienta puede reservar o reprogramar (turno simple, combo, evento especial) hasta 15 minutos
+   después de la hora de inicio, inclusive; después `400 START_TIME_PASSED`. El personal queda exento. La tolerancia se
+   aplica también a los inicios del horario reabierto.
+6. **Qué NO cambia.** El backend sigue aceptando cualquier hora dentro de la franja de la profesional: no impone la
+   grilla de 120 minutos que genera el frontend. Por eso la defensa del horario original es el índice, y la del horario
+   reabierto es la oferta del servidor (`reopenedStarts` y `earliestStart` en
+   `GET /api/professional/:id/availability`) más la validación al reservar dentro del rango de la ventana. Una hora fuera
+   de ese rango y de la grilla sigue siendo aceptable si cae dentro de la franja, como antes.
+
+**Actualización del mismo día (fase 3).** Cancelar un turno que ya empezó (la clienta desde la app, el personal con `cancelledBy`, o la liberación por falta de pago) también deja `slot_locked = true` en la misma sentencia y, si pasaron hasta 40 minutos desde el inicio, abre un horario reabierto, igual que la marca de «No asistió». Una cancelación antes de la hora de inicio libera el horario enseguida (se puede reservar hasta 15 minutos después de su hora, por la reserva tardía). Pruebas: `appointments.cancellation-refund.test.ts`.
+
+**Limitaciones que quedan.** (a) La verificación por duración existe solo para los inicios de un horario reabierto: el
+resto de las reservas sigue comparando solo la hora de inicio (sección 4). (b) Los horarios reabiertos no cruzan la
+medianoche (el último inicio es 23:55). (c) Una profesional con dos ventanas el mismo día las ve unidas.
+
+**Pruebas.** `appointments.reopened-slots.test.ts` (42 casos: marca a los 32, 40 y 41 minutos, original no reservable
+por la clienta, el personal ni un INSERT directo, reservas en el horario reabierto hasta las 17:00, servicio que no
+entra, reservas simultáneas, reserva tardía, correcciones y caso María) y `appointments.arrival-noshow.test.ts`
+(job con 29, 30 y 31 minutos, una entrada de actividad por turno, la clienta no cancela un `no_show_auto`).
+
+**Revisado por:** Emily Kohler (pendiente) — redactado por Claude Code (Sonnet 5.5).

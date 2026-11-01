@@ -82,6 +82,11 @@ export function initSentry() {
   const nodeEnv = process.env.NODE_ENV || "development";
   const sentryDsn = process.env.SENTRY_DSN;
 
+  // Los tests corren contra una base que se trunca en cada caso y provocan errores a propósito: si el
+  // DSN del .env llega a la corrida, cada test fallido se manda a Sentry como si fuera un error real
+  // (así llegaron los avisos del 1/11/2026 con environment "test").
+  if (nodeEnv === "test") return;
+
   if (!sentryDsn) {
     console.warn("Sentry DSN not configured (SENTRY_DSN env var)");
     return;

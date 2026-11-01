@@ -8,7 +8,7 @@ import {
 } from '../helpers/factories'
 import { cookieFor } from '../helpers/auth'
 
-describe('anonimización de datos de una clienta (RF-06.03)', () => {
+describe('anonimización de datos de una clienta (RF-09)', () => {
   it('reemplaza nombre/email/teléfono y desactiva la cuenta, pero conserva los turnos', async () => {
     const admin  = await createAdminUser()
     const client = await createClientUser({ name: 'Clienta Real', email: 'real@test.local', phone: '3764111111' })

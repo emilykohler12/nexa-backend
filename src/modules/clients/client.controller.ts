@@ -5,12 +5,14 @@ import { clientService } from './client.service'
 import { clientNotificationService } from './client-notification.service'
 import { AppError }      from '../../app/middlewares/errorHandler'
 import { HTTP }          from '../../app/constants/http'
+import { phoneSchema }   from '../../app/validators/phone'
 
 // La base guarda el nombre en VarChar(100) y el teléfono en VarChar(20): un valor más largo daba
 // un error 500, y un valor que no era texto se aceptaba o se descartaba sin avisar.
 const updateProfileSchema = z.object({
   name:  z.string('El nombre debe ser texto').trim().min(1, 'El nombre es obligatorio').max(100, 'El nombre es demasiado largo (máximo 100 caracteres)').optional(),
-  phone: z.string('El teléfono debe ser texto').trim().max(20, 'El teléfono es demasiado largo (máximo 20 caracteres)').nullable().optional(),
+  // RF-02: un celular argentino válido; el vacío se acepta para no trabar a quien todavía no cargó uno.
+  phone: phoneSchema.or(z.literal('')).nullable().optional(),
 })
 
 export const clientController = {

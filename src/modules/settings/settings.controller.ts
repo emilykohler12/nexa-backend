@@ -25,6 +25,15 @@ const updateScheduleSchema = z.object({
   holidays: z.array(holidaySchema),
 })
 
+// Seña y cancelaciones. refundPolicy admite solo 'full' o 'none' (el sistema solo marca la seña como devuelta).
+// Si la seña es un porcentaje, no puede superar 100 (el servicio lo verifica contra el valor guardado).
+const updatePaymentSettingsSchema = z.object({
+  depositAmount:     z.coerce.number('El monto de la seña tiene que ser un número').min(0, 'La seña no puede ser negativa').max(999999),
+  depositPercent:    z.boolean('depositPercent tiene que ser verdadero o falso'),
+  cancellationHours: z.coerce.number('Las horas de cancelación tienen que ser un número').int('Las horas de cancelación tienen que ser un número entero').min(0, 'Las horas de cancelación no pueden ser negativas').max(720, 'Las horas de cancelación no pueden superar 720'),
+  refundPolicy:      z.enum(['full', 'none'], { message: 'La política de devolución tiene que ser "full" o "none"' }),
+}).partial()
+
 const polishRemovalRuleSchema = z.object({
   id:    z.string().min(1),
   label: z.string().trim().min(1, 'El nombre es obligatorio').max(100),
@@ -92,7 +101,11 @@ export const settingsController = {
 
   updatePayments: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const settings = await settingsService.updatePaymentSettings(req.body)
+      const parsed = updatePaymentSettingsSchema.safeParse(req.body)
+      if (!parsed.success) {
+        throw new AppError(HTTP.BAD_REQUEST, parsed.error.issues[0].message, 'VALIDATION_ERROR')
+      }
+      const settings = await settingsService.updatePaymentSettings(parsed.data)
       res.json({ settings })
     } catch (err) { next(err) }
   },

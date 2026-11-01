@@ -5,8 +5,6 @@ import { app } from '../../src/app/app'
 import { prisma } from '../../src/app/database/prisma'
 import { runAutoNoShowJob } from '../../src/jobs/autoNoShow.job'
 import { startScheduledJobs } from '../../src/jobs/scheduler'
-import { runAutoPromotionsJob } from '../../src/jobs/autoPromotions.job'
-import { runInactivityReminderJob } from '../../src/jobs/inactivityReminder.job'
 import {
   createClientUser, createProfessionalUser, createAdminUser, createService, createAppointmentDirect,
 } from '../helpers/factories'
@@ -56,14 +54,17 @@ describe('no-show automático en hora de Argentina', () => {
     expect((await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } })).status).toBe('confirmed')
   })
 
-  it('marca ausente pasados los 20 minutos de la hora del turno', async () => {
+  it('marca ausente pasados los 30 minutos de la hora del turno, no antes', async () => {
     const { appt } = await confirmedAppointment('2026-10-24', '10:00')
 
-    setNow('2026-10-24T13:30:00Z') // 10:30 en Argentina
+    setNow('2026-10-24T13:30:00Z') // 10:30 en Argentina: 30 minutos exactos, todavía no
+    expect((await runAutoNoShowJob()).marked).toBe(0)
+
+    setNow('2026-10-24T13:35:00Z') // 10:35 en Argentina
     const result = await runAutoNoShowJob()
 
     expect(result.marked).toBe(1)
-    expect((await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } })).status).toBe('cancelled_no_show')
+    expect((await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } })).status).toBe('no_show_auto')
   })
 
   it('un turno nocturno se evalúa con la fecha de Argentina (22:30 ART ya es el día siguiente en UTC)', async () => {
@@ -72,9 +73,9 @@ describe('no-show automático en hora de Argentina', () => {
     setNow('2026-10-25T01:10:00Z') // 22:10 del 24 en Argentina
     expect((await runAutoNoShowJob()).marked).toBe(0)
 
-    setNow('2026-10-25T01:30:00Z') // 22:30 del 24 en Argentina
+    setNow('2026-10-25T01:35:00Z') // 22:35 del 24 en Argentina (más de 30 minutos)
     expect((await runAutoNoShowJob()).marked).toBe(1)
-    expect((await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } })).status).toBe('cancelled_no_show')
+    expect((await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } })).status).toBe('no_show_auto')
   })
 })
 
@@ -133,9 +134,9 @@ describe('cron en hora de Argentina', () => {
     const schedule = vi.spyOn(cron, 'schedule').mockReturnValue({} as any)
     try {
       startScheduledJobs()
-      expect(schedule).toHaveBeenCalledTimes(4)
+      expect(schedule).toHaveBeenCalledTimes(3)
       for (const call of schedule.mock.calls) {
-        expect(call[2]).toEqual({ timezone: 'America/Argentina/Buenos_Aires' })
+        expect(call[2]).toMatchObject({ timezone: 'America/Argentina/Buenos_Aires' })
       }
     } finally {
       schedule.mockRestore()
@@ -143,7 +144,7 @@ describe('cron en hora de Argentina', () => {
   })
 })
 
-// ── Dashboards y jobs diarios: "hoy" en hora de Argentina ─────────────────────────────────
+// ── Dashboards: "hoy" en hora de Argentina ─────────────────────────────────
 // A las 22:30 de Argentina el servidor (UTC) ya está en el día siguiente.
 
 
@@ -179,52 +180,5 @@ describe('dashboards en hora de Argentina', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.statistics.monthServices).toBe(1)
-  })
-})
-
-describe('jobs diarios en hora de Argentina', () => {
-  it('cumpleaños: a las 22:30 del 24 todavía no es el cumpleaños del 25', async () => {
-    setNow(NIGHT_ART)
-    const client = await createClientUser()
-    await prisma.client.update({ where: { userId: client.id }, data: { birthDate: new Date('1990-10-25T00:00:00Z') } })
-    await prisma.autoPromotion.create({
-      data: { name: 'Cumple', trigger: 'birthday', triggerConfig: { daysBefore: 0 }, discountType: 'percent', discountValue: 10 },
-    })
-
-    const result = await runAutoPromotionsJob()
-
-    expect(result.sent).toBe(0)
-  })
-
-  it('cumpleaños: a las 22:30 del 24 sí corresponde avisar un día antes del cumpleaños del 25', async () => {
-    setNow(NIGHT_ART)
-    const client = await createClientUser()
-    await prisma.client.update({ where: { userId: client.id }, data: { birthDate: new Date('1990-10-25T00:00:00Z') } })
-    await prisma.autoPromotion.create({
-      data: { name: 'Cumple', trigger: 'birthday', triggerConfig: { daysBefore: 1 }, discountType: 'percent', discountValue: 10 },
-    })
-
-    expect((await runAutoPromotionsJob()).sent).toBe(1)
-  })
-
-  it('cumpleaños: el día 25 por la mañana (9:00 de Argentina) sí corresponde', async () => {
-    setNow('2026-10-25T12:00:00Z')
-    const client = await createClientUser()
-    await prisma.client.update({ where: { userId: client.id }, data: { birthDate: new Date('1990-10-25T00:00:00Z') } })
-    await prisma.autoPromotion.create({
-      data: { name: 'Cumple', trigger: 'birthday', triggerConfig: { daysBefore: 0 }, discountType: 'percent', discountValue: 10 },
-    })
-
-    expect((await runAutoPromotionsJob()).sent).toBe(1)
-  })
-
-  it('recordatorio de inactividad: el corte de 60 días se cuenta desde la fecha de Argentina', async () => {
-    setNow(NIGHT_ART) // hoy en Argentina: 24/10 → 60 días atrás: 25/08
-    // Último turno el 25/08: tiene exactamente 60 días, todavía no es "más de 60".
-    await confirmedAppointment('2026-08-25', '10:00', { status: 'finished' })
-
-    const result = await runInactivityReminderJob()
-
-    expect(result.eligible).toBe(0)
   })
 })

@@ -3,9 +3,10 @@ import { prisma }   from '../../app/database/prisma'
 import { AppError } from '../../app/middlewares/errorHandler'
 import { HTTP }     from '../../app/constants/http'
 
+// RF-24: solo los tipos que algún código emite (appointment.service.ts). Los que estaban definidos y
+// nadie emitía (new_message, payment_confirmed, reminder, admin_change, system) se quitaron.
 export type NotificationType =
   | 'new_appointment' | 'cancelled_appointment' | 'rescheduled_appointment'
-  | 'new_message' | 'payment_confirmed' | 'reminder' | 'admin_change' | 'system'
 
 function mapNotification(n: {
   id: string; type: string; title: string; body: string
