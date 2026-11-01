@@ -35,6 +35,15 @@ Para cada migración: aplicar el SQL, registrarla con `node scripts/migration-ch
 
 Los botones del mail llevan a `FRONTEND_URL/mis-turnos?turno=<id>&accion=ver|reprogramar|cancelar`. Mientras el frontend no tenga esa ruta, los enlaces no abren la pantalla correcta. Conviene publicar el frontend antes, o al mismo tiempo, que el backend con el job. Lista de lo que falta en el frontend: ver la entrada 75 de la bitácora.
 
+## Qué cambia en el manual de despliegue con la fase 8
+
+La fase 8 no agrega migraciones ni cambia rutas. Lo que cambia para el manual (`00-gestion/RUNBOOK.md`, que no se edita en esta rama porque es documentación académica):
+
+1. **Lista de variables de Render** (RUNBOOK, «Variables de entorno que tienen que estar en Render»): le faltan `BREVO_API_KEY` (sin ella los mails intentan salir por SMTP, que Render bloquea), `SUPABASE_URL` y `SUPABASE_ANON_KEY` (sin ellas falla la subida de imágenes). `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER` y `MAIL_PASS` solo se usan sin `BREVO_API_KEY`, o sea en desarrollo. Si `JWT_EXPIRES_IN` o `JWT_REFRESH_EXPIRES_IN` están cargadas, no pueden estar vacías (un valor vacío no toma el valor por defecto de 15m y 7d). `BACKEND_PUBLIC_URL` tiene que ser la URL pública del backend: sin ella Mercado Pago no recibe `notification_url` y ningún pago se confirma solo. No definir `TZ`. Si en Render hoy están cargadas o no: **no determinado** (no se puede ver desde el repositorio).
+2. **`.env.example`** ahora tiene todas las variables que lee el backend (las de `src/app/config/env.ts` más `SENTRY_DSN`), así que sirve de lista de control contra Render → Environment.
+3. **`npm run seed:demo`** carga un escenario completo (profesional, clienta de demo con un turno confirmado, uno `no_show_auto` y uno cancelado, y una promoción vigente). Es **solo para desarrollo o una base de demostración**: nunca correrlo contra Supabase de producción, porque crea cuentas de demo (`@nexa.local`) y una promoción visible en el inicio. Cada corrida borra y vuelve a crear los turnos de la clienta de demo.
+4. Las salidas esperadas del README (sección 4.5) cambian: la profesional de demo se llama «Valeria (demo)» y se suman la clienta de demo, los tres turnos y la promoción.
+
 ## Después del despliegue
 
 - Con un turno de prueba confirmado que empiece en menos de 5 horas (creado con más de 5 horas de anticipación, con la cuenta de Emily y el correo verificado), comprobar que llega el mail y que aparece la entrada «Recordatorio de turno enviado» en Actividad.
