@@ -1016,3 +1016,17 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily decidió limpiar la marca al reprogramar (que era la decisión pendiente del límite conocido de la entrada 75), pidió la prueba, y decidió agregar la línea a la política y subir la versión. |
 | 5 | Desacuerdo y resolución | Observación de Claude Code: `createdAt` no cambia al reprogramar, así que la regla de las 5 horas se mide desde la reserva original hasta el nuevo inicio. Un turno reservado hace días y movido para dentro de pocas horas recibe el recordatorio apenas corre el job, aunque la clienta acaba de reprogramar. Se dejó así porque es lo que Emily describió («más de 5 horas desde la reserva»); queda anotado en `docs/cambios-y-decisiones.md`. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): el cambio, las pruebas y esta entrada. Sin librerías nuevas, no hizo falta Context7. Revisión de Emily pendiente. |
+
+
+## Entrada 79: AE4, fase 3b, texto de la política de privacidad en `00-gestion` (versión 2026-11)
+
+**Fecha:** 2026-11-01, de 03:35 a 03:55 (hora de la máquina, UTC-3)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code**, a pedido de Emily. `00-gestion/POLITICA_PRIVACIDAD.md` suma, en la sección 3, el párrafo que ya muestra la web: «Usamos tu correo electrónico para enviarte recordatorios de tus turnos (unas 5 horas antes), avisos cuando tu turno se cancela o se reprograma, y los mensajes de tu cuenta (verificación de correo y recuperación de contraseña). No lo usamos para campañas ni publicidad.» La fecha pasa a «1 de noviembre de 2026 (versión 2026-11)». Así el documento de la entrega coincide con la página del frontend y con `PRIVACY_POLICY_VERSION = '2026-11'` del backend, que ya había subido la entrada 77. El commit va en la rama `fix/recordatorio-reprogramacion-politica-privacidad`, de la entrada 77, que no estaba pusheada. |
+| 2 | Alternativas y criterio de descarte | Una rama aparte desde `integracion-ae4`: descartado, tocaría el mismo tramo de la bitácora y de `docs/` que la entrada 77 y habría conflicto entre los dos pull requests. Cambiar el texto de la web o la versión: no hizo falta, ya estaban en `2026-11`. Copiar la redacción del frontend palabra por palabra en vez de reescribirla: elegido, para que las dos versiones no diverjan. |
+| 3 | Evidencia que la sostiene | El texto agregado coincide con la constante `EMAIL_USE` de `nexa-frontend/src/pages/public/PrivacyPolicyPage.tsx`. La versión del backend (`src/app/constants/legal.ts`) y la del frontend (`src/app/config/legal.ts`) son ambas `2026-11`. Resultados de `typecheck:all` y `npm test` en la entrada 80. |
+| 4 | Aporte personal | Emily eligió agregar la línea a la política y subir la versión, y pidió sumar el texto a la rama que ya tenía la subida de versión. |
+| 5 | Desacuerdo y resolución | Ninguno. Aclaración de la entrada 75, punto 5 (6): subir la versión no vuelve a pedir la aceptación; `termsVersion` y `termsAcceptedAt` solo se regraban al registrarse y al confirmar una reserva. El documento no menciona la sección 5 de WhatsApp: se dejó como estaba. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Sin librerías nuevas, no hizo falta Context7. Revisión de Emily pendiente. |
