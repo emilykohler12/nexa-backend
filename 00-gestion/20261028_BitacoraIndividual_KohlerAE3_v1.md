@@ -1002,3 +1002,24 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily pidió subir los commits a `integracion-ae4` (por pull request), que ella solo haga el merge, que se anote todo cambio en la bitácora de la AE3 y que se confirme el merge del pull request 16. |
 | 5 | Desacuerdo y resolución | Ninguno. Los commits van con el nombre de Emily y sin la línea de coautoría, y el pull request sin el pie de «Generado con Claude Code», como en las fases anteriores. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con `git` y la CLI `gh`. Revisión de Emily pendiente. |
+
+
+## Entrada 78: AE4, fase 4 — tienda: lista pública solo con disponibles, lista del administrador y libro de inventario (rama `fix/tienda-publica-solo-disponibles`)
+
+**Fecha:** 2026-11-01 (hora de la máquina, UTC-3)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code**, a pedido de Emily. (a) `GET /api/store/products` (pública) devuelve solo productos `active` con `stock > 0`, con `select` explícito (`id`, `name`, `brand`, `category`, `description`, `imageUrl`, `price`) y `available: true`; ya no salen `stock`, `minStock` ni `status`. (b) Ruta nueva `GET /api/admin/store/products` (solo administrador) con todos los productos; el alta, la edición y la baja no cambiaron. (c) `createForClient` ya rechazaba producto inexistente, inactivo o «sin stock» (`PRODUCT_NOT_FOUND`) y cantidad mayor al stock sumando líneas (`INSUFFICIENT_STOCK`): no se cambió el código, se agregaron las pruebas que lo fijan. (d) `applyPaymentResult` crea un `InventoryMovement` de salida por producto (nota `Venta — pedido <id>`, fecha de Argentina) en la misma transacción que reclama el pedido y descuenta el stock. Sin migración. (e) Se actualizaron `CLAUDE.md`, `docs/cambios-y-decisiones.md` y el README (457 pruebas en 38 archivos, fila de la fase 4). |
+| 2 | Alternativas y criterio de descarte | **Devolver `stock` en la lista pública:** descartado, el frontend solo lo usa para esconder agotados (`StoreSection`, `PromotionsPage`), no para limitar el carrito. **Reservar el stock al crear el pedido:** descartado, un checkout abandonado dejaría productos bloqueados; queda como límite conocido. **Columna `orderId` en `inventory_movements`:** descartada, exige una migración en Supabase y no la pidió la fase; la relación queda en la nota. **Ruta de administrador con otro nombre o dentro de `/store`:** descartado, `/admin/store/products` aprovecha el `requireRole('admin')` del router de `admin/`. |
+| 3 | Evidencia que la sostiene | `tests/integration/store.availability.test.ts` (19 casos). Sin el cambio en `src`, fallan los 8 casos de lista pública, lista del administrador y libro de inventario; los de rechazo del pedido pasan igual, porque esa regla ya existía. `npm run typecheck:all` limpio y `npm test` con 38 archivos y 457 pruebas verdes. |
+| 4 | Aporte personal | Emily definió el alcance de la fase (qué ve el público, la ruta del administrador, la validación del pedido y la salida de inventario) y la rama. |
+| 5 | Desacuerdo y resolución | Ninguno. Hallazgo: la corrección de la fase 3b (`reminder_sent_at` al reprogramar y versión de la política de privacidad, commit `031e319` en `origin/feat/recordatorio-turno-mail`, entrada 77) se subió después del merge del pull request 17 y **no está en `integracion-ae4`**; esta rama sale de `integracion-ae4` y no la incluye. Hace falta un pull request propio para esa corrección. Por eso esta entrada es la 78 y no la 77. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). La documentación de Prisma consultada con Context7 correspondía a otra versión mayor que la del proyecto (6); se siguió el patrón de `$transaction` ya usado en `applyPaymentResult`. Revisión de Emily pendiente. |
+
+**Impacto en el frontend (no se hizo, lista de archivos de `../nexa-frontend/src`):**
+- `features/home/components/StoreSection.tsx`: quitar el filtro `p.status === 'active' && p.stock > 0` (hoy ocultaría todo, porque ya no llegan `stock` ni `status`); la interfaz `Product` pasa a tener `available: true`.
+- `pages/admin/promotions/PromotionsPage.tsx` (línea ~230): para productos, pedir `/api/admin/store/products` en vez de `/api/store/products` (o quitar el filtro de stock).
+- `pages/admin/store/StorePage.tsx` (línea ~27): pedir `/api/admin/store/products`; si no, el administrador deja de ver inactivos, agotados y el stock mínimo.
+- `pages/admin/store/ProductsTab.tsx` e `InventoryTab.tsx`: sin cambio de código, pero el libro de movimientos ahora incluye salidas por ventas pagadas (nota `Venta — pedido <id>`).
+- Backend y frontend tienen que salir juntos.

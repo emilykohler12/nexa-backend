@@ -316,8 +316,8 @@ npm test
 **Esperado:**
 
 ```
-Test Files  37 passed (37)
-     Tests  438 passed (438)
+Test Files  38 passed (38)
+     Tests  457 passed (457)
 ```
 
 Los tests del caso de uso vertical están en `tests/integration/appointments.booking.test.ts`, entre ellos:
@@ -407,6 +407,7 @@ Las cifras de 8.1 y 8.2 están cortadas en `6e7d8c0`. Desde ahí, cada fase de l
 | 2 — inasistencia, horario reabierto y reserva tardía | `feat/inasistencia-horario-reabierto` | `1bfdf67`, `76fe8a3`, `3ccdf53` (bitácora, entrada 72), `924564f` (bitácora, entrada 73) |
 | 3 — cancelación y devolución | `feat/cancelacion-devolucion-hora-de-aviso` | `7e8a16e`, `60e56b1`, `d41644e` (bitácora, entrada 74) |
 | 3b — recordatorio de turno por mail | `feat/recordatorio-turno-mail` | `7cd9a6e`, `2125736`, `9553863`, `9102940` (bitácora, entrada 75) |
+| 4 — tienda | `fix/tienda-publica-solo-disponibles` | `ff25797`, `3fc9b79` (bitácora, entrada 78) |
 
 ---
 

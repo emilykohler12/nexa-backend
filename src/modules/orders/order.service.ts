@@ -286,8 +286,13 @@ export const orderService = {
           data:  { paymentStatus, mpPaymentId },
         })
         if (claimed.count === 0) return false
+        const date = todayArgentinaStr()
         for (const [productId, qty] of qtyByProduct) {
-          await tx.product.update({ where: { id: productId }, data: { stock: { decrement: qty } } })
+          const product = await tx.product.update({ where: { id: productId }, data: { stock: { decrement: qty } } })
+          // La salida queda en el libro de inventario en la misma transacción que el descuento.
+          await tx.inventoryMovement.create({
+            data: { productId, productName: product.name, type: 'exit', quantity: qty, note: `Venta — pedido ${id}`, date },
+          })
         }
         return true
       })

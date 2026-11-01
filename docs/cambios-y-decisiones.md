@@ -28,3 +28,12 @@ Consecuencia: las eliminaciones de la fase 1 y las migraciones de las fases 2, 3
 - **Primer intento tardío.** El tope de 1 hora antes del turno vale también para el primer intento: si el servidor estuvo caído hasta menos de 1 hora antes, no se manda.
 - **Combo.** El enlace del mail lleva el id de la primera pata del grupo.
 - **Política de privacidad.** Todavía no menciona este mail (pendiente de decisión de Emily).
+
+## Fase 4, tienda (31/10/2026)
+
+- La lista pública de la tienda (`GET /api/store/products`) ya no devuelve productos inactivos, sin stock ni los datos internos `stock`, `minStock` y `status`: devuelve `available: true`. El frontend solo usaba `stock` para esconder productos agotados, no para limitar el carrito (el pedido valida el stock real), así que no hace falta exponer la cantidad.
+- La lista completa para el administrador pasó a `GET /api/admin/store/products`.
+- Cada pago aprobado de un pedido deja una salida en el libro de inventario, en la misma transacción que descuenta el stock.
+- **Límite conocido:** el stock se valida al crear el pedido pero se descuenta recién al pagar, así que entre una cosa y otra otra clienta puede comprar lo mismo; si el pago deja el stock en negativo se registra un aviso de error en la actividad (ya existía). No se reserva stock al crear el pedido para que un checkout abandonado no deje productos bloqueados.
+- **Límite conocido:** el movimiento de la venta no está ligado al pedido por una columna (sería una migración nueva); la relación es la nota `Venta — pedido <id>`.
+- **Despliegue:** sin migración. Backend y frontend tienen que salir juntos (lista de archivos del frontend en la bitácora, entrada 78).

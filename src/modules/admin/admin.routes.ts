@@ -6,6 +6,7 @@ import { promotionController }   from '../promotions/promotion.controller'
 import { specialEventController } from '../specialEvents/specialEvent.controller'
 import { reviewController }      from '../reviews/review.controller'
 import { orderController }       from '../orders/order.controller'
+import { productController }     from '../products/product.controller'
 import { authMiddleware } from '../auth/middleware/auth.middleware'
 import { requireRole }    from '../auth/middleware/guest.middleware'
 
@@ -52,6 +53,8 @@ router.delete('/special-events/:id', specialEventController.delete)
 
 router.patch('/reviews/:id/approve', reviewController.approve)
 router.patch('/reviews/:id/reject',  reviewController.reject)
+
+router.get  ('/store/products', productController.getAllForAdmin)
 
 router.get  ('/orders',      orderController.listForAdmin)
 router.patch('/orders/:id',  orderController.updateForAdmin)
