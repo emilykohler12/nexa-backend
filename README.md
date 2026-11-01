@@ -52,7 +52,7 @@ La disponibilidad se garantiza en el **backend**, no solo en la interfaz:
 - La reserva de la clienta (simple, combo y reprogramación) además exige que la hora caiga dentro de las franjas que definió la profesional: si no, **HTTP 400** (`OUT_OF_HOURS`). Los turnos manuales del admin no se validan contra la franja.
 - **Inasistencia, horario reabierto y reserva tardía** (reglas confirmadas por la propietaria el 30/10/2026; ver el ADR-002, revisión del 31/10/2026): el job pasa a `no_show_auto` («No asistió (automático)») un turno confirmado sin llegada registrada a los **más de 30 minutos** de su hora de inicio (cada 5 minutos); la seña no cambia. El personal puede marcar «No asistió» desde la hora de inicio: hasta 40 minutos después se reabre el horario en inicios de 5 minutos hasta 60 minutos después de la hora original, siempre que el servicio entre. El horario original nunca se vuelve a reservar. La clienta puede reservar o reprogramar hasta 15 minutos después de la hora de inicio (`START_TIME_PASSED` después). El personal corrige el estado a «Finalizado» siempre o a «Confirmado» si no se superpone.
 - **Cancelación y devolución de la seña** (fase 3): el sistema solo **marca** la seña como devuelta, no hace ninguna devolución en Mercado Pago. Si la clienta cancela con 12 horas o más de anticipación (`cancellationHours`) y la seña estaba paga, queda como devuelta; con menos, retenida. Cuando cancela el personal indica si cancela la clienta (con la hora en que avisó, el medio y una nota) o el estudio (devuelve siempre). La política de devolución admite solo `full` o `none`.
-- Pruebas automatizadas: `tests/integration/appointments.booking.test.ts`, `tests/integration/appointments.out-of-hours.test.ts`, `tests/integration/appointments.arrival-noshow.test.ts`, `tests/integration/appointments.reopened-slots.test.ts` y `tests/integration/appointments.cancellation-refund.test.ts`.
+- Pruebas automatizadas: `tests/integration/appointments.booking.test.ts`, `tests/integration/appointments.out-of-hours.test.ts`, `tests/integration/appointments.arrival-noshow.test.ts`, `tests/integration/appointments.reopened-slots.test.ts`, `tests/integration/appointments.cancellation-refund.test.ts`, `tests/integration/settings.deposit-and-refund.test.ts` (seña en porcentaje y límites de la devolución) y `tests/integration/client-details-job-interest-late-booking.test.ts` (reserva tardía en combos y servicios especiales).
 - Alternativas evaluadas y motivo de la elección: `04-diseno/adr-002-validacion-antes-persistencia.md`.
 
 > **Limitación conocida:** el bloqueo compara la **hora de inicio**. Dos turnos de la misma profesional que empiezan a horas distintas pero se pisan por duración (ej. 16:00 de 90 min y 16:30) todavía no se detectan, salvo en los inicios de un horario reabierto, donde sí se verifica la duración. Está registrada como una iteración nueva a planificar.
@@ -316,8 +316,8 @@ npm test
 **Esperado:**
 
 ```
-Test Files  46 passed (46)
-     Tests  546 passed (546)
+Test Files  56 passed (56)
+     Tests  631 passed (631)
 ```
 
 Los tests del caso de uso vertical están en `tests/integration/appointments.booking.test.ts`, entre ellos:
@@ -399,7 +399,7 @@ Los commits `54933ca` y `ec976da` son los del README v1.1; `ce550a9` y `2e7734f`
 
 ### 8.3 Cambios de la AE4 hechos con Claude Code (rama `integracion-ae4`)
 
-Las cifras de 8.1 y 8.2 están cortadas en `6e7d8c0`. Desde ahí, cada fase de la AE4 la hace Claude Code (modelo Sonnet 5.5) sobre su propia rama, a pedido de la autora, con el nombre de ella como autor y sin la línea de coautoría. Cada commit cita solo los anteriores, nunca el suyo ni el del propio README.
+Las cifras de 8.1 y 8.2 están cortadas en `6e7d8c0`. Desde ahí, cada fase de la AE4 la hace Claude Code (modelo Sonnet 5.5 hasta la fase 6 y Opus 5.5 en la fase 7) sobre su propia rama, a pedido de la autora, con el nombre de ella como autor y sin la línea de coautoría. Cada commit cita solo los anteriores, nunca el suyo ni el del propio README.
 
 | Fase | Rama | Commits |
 |---|---|---|
@@ -409,7 +409,8 @@ Las cifras de 8.1 y 8.2 están cortadas en `6e7d8c0`. Desde ahí, cada fase de l
 | 3b — recordatorio de turno por mail | `feat/recordatorio-turno-mail` | `7cd9a6e`, `2125736`, `9553863`, `9102940` (bitácora, entrada 75) |
 | 4 — tienda | `fix/tienda-publica-solo-disponibles` | `ff25797`, `3fc9b79` (bitácora, entrada 78) |
 | 5 — anonimización y alergias | `fix/anonimizacion-y-alergias` | `87a7146`, `08d0945`, `e415b02` (bitácora, entrada 81) |
-| 6 — brechas de requisitos | `fix/brechas-requisitos` | `8a1c006`, `7a16248`, `f437d34`, `e565249`, `4554e2d`, `c9cdc61` (bitácora, entrada 82, en el commit siguiente) |
+| 6 — brechas de requisitos | `fix/brechas-requisitos` | `8a1c006`, `7a16248`, `f437d34`, `e565249`, `4554e2d`, `c9cdc61`, `b87a817` (bitácora, entrada 82) |
+| 7 — pruebas faltantes (Claude Code con el modelo Opus 5.5) | `test/cobertura-completa` | los commits de las pruebas se citan en la bitácora, entrada 83 (este README va en el último) |
 
 ---
 
