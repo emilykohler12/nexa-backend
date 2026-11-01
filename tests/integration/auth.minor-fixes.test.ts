@@ -360,7 +360,8 @@ describe('PATCH /api/client/profile', () => {
   it('acepta el largo máximo (nombre de 100 y teléfono de 20)', async () => {
     const client = await createClientUser()
 
-    const res = await patch(cookieFor(client), { name: 'a'.repeat(100), phone: '1'.repeat(20) })
+    // 20 caracteres y un celular argentino válido (RF-02): '+54 9 11 2345 - 6789'.
+    const res = await patch(cookieFor(client), { name: 'a'.repeat(100), phone: '+54 9 11 2345 - 6789' })
 
     expect(res.status).toBe(200)
     const after = await snapshot(client.id)

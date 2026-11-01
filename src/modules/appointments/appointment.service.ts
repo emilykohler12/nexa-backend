@@ -5,6 +5,8 @@ import fs   from 'fs'
 import path from 'path'
 import { prisma }        from '../../app/database/prisma'
 import { AppError }      from '../../app/middlewares/errorHandler'
+import { assertValidPhone } from '../../app/validators/phone'
+import { releaseSpecialSlot } from './specialSlots'
 import { HTTP }          from '../../app/constants/http'
 import { fullName }      from '../../app/utils/fullName'
 import { PRIVACY_POLICY_VERSION } from '../../app/constants/legal'
@@ -635,6 +637,8 @@ async function cancelWithGroup(appointment: AppointmentRow, opts: CancelOptions)
   for (const a of group) {
     const started = hasStarted(a, now)
     const updated = await prisma.$transaction(async (tx) => {
+      // Servicio especial: el horario del día vuelve a quedar libre (lock del servicio primero, como al reservar).
+      if (a.service.isSpecial) await releaseSpecialSlot(tx, a)
       const row = await tx.appointment.update({
         where: { id: a.id },
         data: {
@@ -715,6 +719,7 @@ async function comboGroupPeers(comboGroupIds: (string | null)[]): Promise<Map<st
 // o crea uno nuevo. Sin email (frecuente en un walk-in) se genera uno placeholder único,
 // así cada turno manual sin datos de contacto completos igual queda con un cliente propio.
 async function findOrCreateManualClient(name: string, phone: string, email: string): Promise<string> {
+  assertValidPhone(phone)
   // Minúsculas, como hace el login: si no, la clienta creada a mano no podría entrar después.
   const trimmedEmail = email.trim().toLowerCase()
   if (trimmedEmail) {
@@ -816,7 +821,7 @@ async function resolveProfessionalId(
       id: true,
       professional: {
         select: {
-          createdAt: true, vacationFrom: true, vacationTo: true,
+          createdAt: true, joinedAt: true, vacationFrom: true, vacationTo: true,
           availability: { where: { active: true, dayOfWeek: backendDayOf(slot.date) }, select: { startTime: true, endTime: true } },
         },
       },
@@ -870,9 +875,12 @@ async function resolveProfessionalId(
     _count: { id: true },
   })
   const load = new Map(counts.map(c => [c.professionalId, c._count.id]))
+  // Menos carga semanal primero; a igual carga gana la más antigua en el estudio (fecha de ingreso que carga el
+  // administrador, o la de alta de la cuenta si no la cargó); a igual antigüedad, el id para que sea estable.
+  const seniority = (u: (typeof candidates)[number]) => (u.professional!.joinedAt ?? u.professional!.createdAt).getTime()
   candidates.sort((a, b) =>
     (load.get(a.id) ?? 0) - (load.get(b.id) ?? 0)
-    || a.professional!.createdAt.getTime() - b.professional!.createdAt.getTime()
+    || seniority(a) - seniority(b)
     || a.id.localeCompare(b.id),
   )
   return candidates[0].id
@@ -1434,7 +1442,9 @@ export const appointmentService = {
             servicePrice:   price,
             depositAmount:  deposit,
             status:         'confirmed',
-            paymentStatus:  'partial',
+            // RF-03 y RF-17: nace sin la seña paga, igual que un turno común. Pasa a 'partial' recién cuando
+            // Mercado Pago confirma el pago; si no se paga, el job de liberación lo cancela y libera el horario.
+            paymentStatus:  'pending',
             selectedZones:    zonesSnapshot    as unknown as Prisma.InputJsonValue,
             selectedPackages: packagesSnapshot as unknown as Prisma.InputJsonValue,
           },
@@ -1968,6 +1978,7 @@ export const appointmentService = {
     }
 
     // Los datos de contacto pertenecen al cliente (User), no al turno — se actualizan aparte.
+    assertValidPhone(data.clientPhone)
     const clientUpdate: Record<string, unknown> = {}
     if (data.clientName  !== undefined) clientUpdate.name  = data.clientName
     if (data.clientPhone !== undefined) clientUpdate.phone = data.clientPhone

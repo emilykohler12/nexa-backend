@@ -3,6 +3,7 @@ import crypto from 'node:crypto'
 import { prisma }         from '../../app/database/prisma'
 import { AppError }       from '../../app/middlewares/errorHandler'
 import { HTTP }           from '../../app/constants/http'
+import { assertValidPhone } from '../../app/validators/phone'
 import { bcryptProvider } from '../auth/providers/bcrypt.provider'
 import { activityService } from '../activity/activity.service'
 import { fullName } from '../../app/utils/fullName'
@@ -116,6 +117,7 @@ export const adminService = {
       throw new AppError(HTTP.BAD_REQUEST, 'Nombre y email son obligatorios', 'VALIDATION_ERROR')
     }
     assertAllergiesUnchanged(data, null)
+    assertValidPhone(data.phone)
     // El login pasa el email a minúsculas: si se guardara con mayúsculas, la clienta no podría entrar.
     const email = data.email.trim().toLowerCase()
     // Insensible a mayúsculas, para detectar también cuentas viejas guardadas con otras mayúsculas.
@@ -156,6 +158,7 @@ export const adminService = {
 
     const profile = await prisma.client.findUnique({ where: { userId: id } })
     assertAllergiesUnchanged(data, profile?.allergies)
+    assertValidPhone(data.phone)
 
     const userUpdate: Record<string, unknown> = {}
     if (data.name   !== undefined) userUpdate.name   = data.name

@@ -83,3 +83,16 @@ SELECT count(*) FILTER (WHERE phone IS NOT NULL AND phone <> '')                
        count(*) FILTER (WHERE notes IS NOT NULL AND notes <> '')                       AS pedidos_con_notas,
        count(*)                                                                        AS pedidos_totales
 FROM orders;
+
+-- ── 8. Turnos de servicio especial con la seña marcada como paga sin pago (Fase 6, RF-03/RF-17) ──
+-- Hasta la fase 6 el servicio especial nacía con payment_status = 'partial' sin cobrar nada.
+-- Cada fila es un turno viejo cuya seña figura paga pero no tiene pago de Mercado Pago ni cobro
+-- registrado: hay que revisarlo a mano con la clienta (el backend nuevo no los toca).
+SELECT a.id, a.date, a.time, a.payment_status, a.deposit_amount, a.mp_payment_id, a.deposit_method
+FROM appointments a
+JOIN services s ON s.id = a.service_id
+WHERE s.is_special
+  AND a.payment_status = 'partial'
+  AND a.mp_payment_id IS NULL
+  AND a.status NOT IN ('cancelled', 'cancelled_no_show')
+ORDER BY a.date, a.time;

@@ -316,8 +316,8 @@ npm test
 **Esperado:**
 
 ```
-Test Files  40 passed (40)
-     Tests  486 passed (486)
+Test Files  46 passed (46)
+     Tests  546 passed (546)
 ```
 
 Los tests del caso de uso vertical están en `tests/integration/appointments.booking.test.ts`, entre ellos:
@@ -337,8 +337,8 @@ npm test
 **Esperado:**
 
 ```
-Test Files  17 passed (17)
-     Tests  80 passed (80)
+Test Files  36 passed (36)
+     Tests  326 passed (326)
 ```
 
 ---
@@ -408,6 +408,8 @@ Las cifras de 8.1 y 8.2 están cortadas en `6e7d8c0`. Desde ahí, cada fase de l
 | 3 — cancelación y devolución | `feat/cancelacion-devolucion-hora-de-aviso` | `7e8a16e`, `60e56b1`, `d41644e` (bitácora, entrada 74) |
 | 3b — recordatorio de turno por mail | `feat/recordatorio-turno-mail` | `7cd9a6e`, `2125736`, `9553863`, `9102940` (bitácora, entrada 75) |
 | 4 — tienda | `fix/tienda-publica-solo-disponibles` | `ff25797`, `3fc9b79` (bitácora, entrada 78) |
+| 5 — anonimización y alergias | `fix/anonimizacion-y-alergias` | `87a7146`, `08d0945`, `e415b02` (bitácora, entrada 81) |
+| 6 — brechas de requisitos | `fix/brechas-requisitos` | `8a1c006`, `7a16248`, `f437d34`, `e565249`, `4554e2d`, `c9cdc61` (bitácora, entrada 82, en el commit siguiente) |
 
 ---
 
