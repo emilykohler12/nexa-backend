@@ -1185,3 +1185,31 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily definió el flujo (push y pull request por fase, ella mergea). |
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Opus 5.5) y `gh`. |
+
+## Entrada 89: AE4, fase 9.3, estimación de horas a partir de los commits (rama `docs/informes-v8`)
+
+**Fecha:** 2026-11-01, 15:24 (Emily confirmó el merge del pull request 24 y de `integracion-ae4` en `main`, pull request 25), 15:25 a 15:26 (consulta del alcance a Emily) y de 15:26 a 15:35 (cálculo, documentos, verificación y commits). Hora de la máquina, UTC-3.
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (modelo Opus 5.5)**, a pedido de Emily, solo con lectura de `git log` (sin tocar el historial). `docs/estimacion-horas.md` y `docs/estimacion-horas.csv` (`5cffa20`): 266 commits sin merges en una sola línea de tiempo, 163 del backend (`main` en `4aa87d1`) y 103 del frontend (`main` en `7650a65` más `integracion-ae4` en `67a4c38`), con la fecha de autor en hora de Argentina. Sesiones con umbrales de 60, 90 y 120 minutos; duración = último menos primero más 30 minutos; una sesión de un commit vale 30 minutos. Resultado: **43,3 horas (45 sesiones), 45,5 (42) y 45,5 (42)**; ninguna sesión de más de 10 horas. Horas por semana, por sprint (cierres 03/09, 01/10 y 29/10, más el período desde el 30/10), por mes y total; 93 de 266 commits (35,0 %) con la línea `Co-Authored-By: Claude`, desglosados por período; límites del método; cinco sesiones de ejemplo elegidas con una regla fija; comparación con las 200 horas asignadas a iteraciones (libro v7, hoja «Iteraciones») sin conclusiones. Se volvió a cortar la rama `docs/informes-v8` desde `integracion-ae4` (la anterior se borró, local y remota, porque ya estaba mergeada). README (sección 1.5 y fila de la fase 9) y `docs/cambios-y-decisiones.md` actualizados. |
+| 2 | Alternativas y criterio de descarte | **Solo el backend, o solo lo que está en el `main` del frontend:** descartados por Emily, que pidió los dos repositorios con todos los commits de la AE4. **Sumar los dos repositorios por separado:** descartado, una sesión en la que se trabajó en los dos a la vez se contaría dos veces. **Contar los commits locales sin publicar** (`ac0ba11` y `41cd6c0` de `feat/fase-4-tienda`, y `031e319` de `feat/recordatorio-turno-mail`): descartado, su contenido ya entró a `main` por otros commits. **Corregir a mano sesiones con pausas:** descartado, no hubo ninguna de más de 10 horas y el método no distingue pausas. |
+| 3 | Evidencia que la sostiene | Los commits salen de `git log --no-merges` en cada rama; la marca de Claude Code, de `git log -i --grep='^Co-Authored-By: Claude'` (36 en el backend, igual que la sección 8.1 del README, y 57 en el frontend). Todos los autores son Emily Kohler; los dos commits registrados por GitHub son ediciones web del README. El desglose de la marca muestra que en la AE4 la tienen 0 de 56 commits del backend y 21 de 28 del frontend. `npm run typecheck:all` sin errores y `npm test` con 57 archivos y 638 pruebas en verde (15:34). |
+| 4 | Aporte personal | Emily definió el método (umbrales, 30 minutos de trabajo previo, cierres de sprint, marca para revisar), integró todo en `main` antes del cálculo y decidió el alcance (backend y frontend, con toda la AE4). |
+| 5 | Desacuerdo y resolución | El prompt pedía «las ramas fusionadas en `main`»; Emily amplió el alcance a la AE4 del frontend, que no está en el `main` del frontend: queda declarado en los datos y en los límites. El porcentaje según la marca subestima el uso de Claude Code (en la AE4 del backend ningún commit la tiene). **Recordatorio para Emily:** el merge a `main` del backend redespliega Render; según `docs/plan-de-despliegue.md`, las migraciones de la AE4 tenían que estar aplicadas en Supabase antes. Si se aplicaron o no: **no determinado** desde el repositorio. |
+| 6 | Herramienta auxiliar | Claude Code (Opus 5.5) con un script descartable de Node para agrupar las sesiones (no queda en el repositorio). Context7 no se usó: no se escribió código que dependa de una librería del proyecto. Commits sin la línea de coautoría, como pidió Emily. Revisión de Emily pendiente. |
+
+**Impacto en el frontend:** ninguno.
+
+## Entrada 90: AE4, push de la fase 9.3 y pull request
+
+**Fecha:** 2026-11-01, 15:36 (hora de la máquina, UTC-3)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Opus 5.5)**: `git push -u origin docs/informes-v8` y pull request 26 con base `integracion-ae4` (https://github.com/emilykohler12/nexa-backend/pull/26). Sin merge. Antes se borró la rama `docs/informes-v8` anterior (local y remota), ya mergeada por el pull request 24. |
+| 2 | Alternativas y criterio de descarte | Merge directo o push a `main`: descartados, el flujo de la AE4 es que Emily revise y mergee cada fase, y `main` redespliega a la clienta real. |
+| 3 | Evidencia que la sostiene | Commits `5cffa20` (estimación) y `fe8198f` (documentación, entrada 89); `npm test` con 638 pruebas en verde antes del push. |
+| 4 | Aporte personal | Emily definió el flujo (push y pull request por fase, ella mergea). |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Opus 5.5) y `gh`. |

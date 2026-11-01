@@ -67,6 +67,7 @@ Vive en el repositorio **nexa-backend**:
 | Cobertura de cada requisito con pruebas automatizadas | `docs/cobertura-por-requisito.md` |
 | Cambios y decisiones de la AE4, por fase | `docs/cambios-y-decisiones.md` |
 | Plan de despliegue de la AE4 | `docs/plan-de-despliegue.md` |
+| Estimación de horas de desarrollo a partir de los commits | `docs/estimacion-horas.md` y `docs/estimacion-horas.csv` |
 | ADR-001: estrategia de multi-tenancy | `04-diseno/adr-001-multi-tenancy.md` |
 | ADR-002: integridad de la reserva (índice único parcial y `OUT_OF_HOURS`) | `04-diseno/adr-002-validacion-antes-persistencia.md` |
 | ADR-003: JWT para autenticación | `04-diseno/adr-003-jwt-auth.md` |
@@ -418,7 +419,7 @@ Las cifras de 8.1 y 8.2 están cortadas en `6e7d8c0`. Desde ahí, cada fase de l
 | 6 — brechas de requisitos | `fix/brechas-requisitos` | `8a1c006`, `7a16248`, `f437d34`, `e565249`, `4554e2d`, `c9cdc61`, `b87a817` (bitácora, entrada 82) |
 | 7 — pruebas faltantes (Claude Code con el modelo Opus 5.5) | `test/cobertura-completa` | `a34749a`, `f5c2390`, `a4aa471`, `77fd1b8`, `6cc47d7`, `aa86b17`, `718e8e6`, `45d8401` (bitácora, entrada 83), `3cd1199` (bitácora, entrada 84) |
 | 8 — deuda técnica (Claude Code con el modelo Opus 5.5) | `chore/deuda-tecnica` | `a687dfb` (RF-06.0x renombrados), `a4812d7` (seed de demostración), `fc9df24` (`.env.example`), `8443f1f` (bitácora, entrada 85), `bd692e9` (bitácora, entrada 86) |
-| 9 — informes (Claude Code con el modelo Opus 5.5) | `docs/informes-v8` | `8974ed1` (cobertura por requisito), `d484c3e` (cambios y decisiones); la documentación va en el último (bitácora, entrada 87). La estimación de horas va después de integrar todo en `main` |
+| 9 — informes (Claude Code con el modelo Opus 5.5) | `docs/informes-v8` | `8974ed1` (cobertura por requisito), `d484c3e` (cambios y decisiones), `4051bba` (bitácora, entrada 87), `55d8e68` (bitácora, entrada 88) y, después de integrar todo en `main`, `5cffa20` (estimación de horas); la documentación va en el último (bitácora, entrada 89) |
 
 ---
 
