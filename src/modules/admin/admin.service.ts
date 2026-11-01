@@ -204,7 +204,7 @@ export const adminService = {
     return getByIdInternal(id)
   },
 
-  // RF-06.03 — supresión de datos personales a pedido del cliente (derecho de
+  // RF-09 — supresión de datos personales a pedido del cliente (derecho de
   // supresión, Ley 25.326). No borra la fila: mantiene los turnos y totales
   // contables intactos, pero anonimiza los datos identificatorios y desactiva
   // la cuenta (no puede volver a loguearse con el email anonimizado, y se

@@ -50,7 +50,7 @@ const bookingSchema = z.object({
 // server-side en resolveServicePromotion.
 const promotionIdSchema = z.string().uuid('ID de promoción inválido').nullable().optional()
 
-// RF-06.01 — checkbox obligatorio de Términos de Servicio y Política de Privacidad
+// RF-08 — checkbox obligatorio de Términos de Servicio y Política de Privacidad
 // en la confirmación de la reserva (cubre además cuentas creadas antes de este
 // requisito). Solo en la creación, no en `rescheduleMine` — reprogramar no es
 // "confirmar una reserva nueva" y ya aceptó al reservar la primera vez.
@@ -101,7 +101,7 @@ const detailsSchema = z.object({
   hairLength:              z.string().max(20).nullable().optional(),
   wantsExtensions:         z.boolean().nullable().optional(),
   skinType:                z.string().max(20).nullable().optional(),
-  // RF-06.02 — consentimiento obligatorio para guardar estas observaciones operativas
+  // RF-07 — consentimiento obligatorio para guardar estas observaciones operativas
   // (alergias, tipo de piel, etc.). Solo se pide cuando efectivamente se guarda algo
   // (el botón "Omitir por ahora" del frontend no llega a este endpoint).
   consentAlertas: z.boolean().refine(v => v === true, {
