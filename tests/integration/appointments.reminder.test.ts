@@ -1,11 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import request from 'supertest'
+import { app } from '../../src/app/app'
 import { prisma } from '../../src/app/database/prisma'
 import { env } from '../../src/app/config/env'
+import { appointmentInstant } from '../../src/app/utils/argentinaTime'
 import { mailProvider } from '../../src/modules/auth/providers/mail.provider'
 import { runAppointmentReminderJob } from '../../src/jobs/appointmentReminder.job'
 import {
-  createClientUser, createProfessionalUser, createService, createAppointmentDirect,
+  createClientUser, createProfessionalUser, createAdminUser, createService, createAppointmentDirect, hoursFromNow,
 } from '../helpers/factories'
+import { cookieFor } from '../helpers/auth'
 
 // Reloj inyectable: el job recibe "ahora" por parámetro. Turno de referencia: 10/11/2026 a las 15:00 de
 // Argentina (18:00 UTC).
@@ -399,5 +403,102 @@ describe('recordatorio de turno por mail: contenido', () => {
 
     expect(html).not.toContain('<script>')
     expect(html).toContain('&lt;script&gt;')
+  })
+})
+
+describe('recordatorio de turno por mail: reprogramación', () => {
+  type Slot = { date: string; time: string }
+  const hoursBefore = (slot: Slot, hours: number) => new Date(appointmentInstant(slot.date, slot.time).getTime() - hours * 3_600_000)
+
+  // Turno a 3 días que ya recibió su recordatorio; después se lo pasa a otro día y a otra hora (10:30).
+  async function remindedAppointment() {
+    const first: Slot = { date: hoursFromNow(72).date, time: '16:00' }
+    const moved: Slot = { date: hoursFromNow(96).date, time: '10:30' }
+    const ctx = await makeAppointment({ ...first, createdAt: new Date(Date.now() - 10 * 86_400_000) })
+    expect((await runAppointmentReminderJob(hoursBefore(first, 5))).sent).toBe(1)
+    expect(await reminderSentAt(ctx.appt.id)).not.toBeNull()
+    return { ...ctx, first, moved }
+  }
+
+  // Tras reprogramar, la marca quedó limpia y el nuevo horario recibe su propio recordatorio.
+  async function expectReminderForNewSlot(id: string, moved: Slot) {
+    expect(await reminderSentAt(id)).toBeNull()
+    sendMock().mockClear()   // descarta el aviso de reprogramación que sale hacia la clienta
+
+    const result = await runAppointmentReminderJob(hoursBefore(moved, 5))
+
+    expect(result).toEqual({ sent: 1, failed: 0 })
+    const mails = sentMails()
+    expect(mails).toHaveLength(1)
+    expect(mails[0].subject).toContain('Recordatorio')
+    expect(mails[0].html).toContain('10:30 hs')
+    expect(mails[0].html).not.toContain('16:00 hs')
+    expect(await reminderSentAt(id)).not.toBeNull()
+  }
+
+  it('cuando la clienta reprograma un turno ya recordado, el nuevo horario recibe su recordatorio', async () => {
+    const { client, pro, service, appt, moved } = await remindedAppointment()
+
+    const res = await request(app)
+      .patch(`/api/client/appointments/${appt.id}/reschedule`)
+      .set('Cookie', cookieFor(client))
+      .send({ serviceId: service.id, professionalId: pro.id, date: moved.date, time: moved.time })
+
+    expect(res.status).toBe(200)
+    await expectReminderForNewSlot(appt.id, moved)
+  })
+
+  it('cuando la profesional reprograma un turno ya recordado, el nuevo horario recibe su recordatorio', async () => {
+    const { pro, appt, moved } = await remindedAppointment()
+
+    const res = await request(app)
+      .patch(`/api/professional/appointments/${appt.id}`)
+      .set('Cookie', cookieFor(pro))
+      .send({ date: moved.date, time: moved.time })
+
+    expect(res.status).toBe(200)
+    await expectReminderForNewSlot(appt.id, moved)
+  })
+
+  it('cuando el administrador reprograma un turno ya recordado, el nuevo horario recibe su recordatorio', async () => {
+    const { appt, moved } = await remindedAppointment()
+    const admin = await createAdminUser()
+
+    const res = await request(app)
+      .patch(`/api/admin/appointments/${appt.id}`)
+      .set('Cookie', cookieFor(admin))
+      .send({ date: moved.date, time: moved.time })
+
+    expect(res.status).toBe(200)
+    await expectReminderForNewSlot(appt.id, moved)
+  })
+
+  it('un cambio del personal que no mueve el horario (notas internas) no limpia la marca ni reenvía el recordatorio', async () => {
+    const { pro, appt, first } = await remindedAppointment()
+    const marked = await reminderSentAt(appt.id)
+    sendMock().mockClear()
+
+    const res = await request(app)
+      .patch(`/api/professional/appointments/${appt.id}`)
+      .set('Cookie', cookieFor(pro))
+      .send({ internalNotes: 'Trae su propio esmalte', date: first.date, time: first.time })
+
+    expect(res.status).toBe(200)
+    expect((await reminderSentAt(appt.id))?.getTime()).toBe(marked?.getTime())
+    expect((await runAppointmentReminderJob(hoursBefore(first, 4))).sent).toBe(0)
+    expect(sendMock()).not.toHaveBeenCalled()
+  })
+
+  it('el nuevo horario sigue sujeto a las reglas: si ya pasó la ventana de 5 horas no se manda hasta que entre', async () => {
+    const { client, pro, service, appt, moved } = await remindedAppointment()
+
+    await request(app)
+      .patch(`/api/client/appointments/${appt.id}/reschedule`)
+      .set('Cookie', cookieFor(client))
+      .send({ serviceId: service.id, professionalId: pro.id, date: moved.date, time: moved.time })
+    sendMock().mockClear()
+
+    expect((await runAppointmentReminderJob(hoursBefore(moved, 6))).sent).toBe(0)
+    expect((await runAppointmentReminderJob(hoursBefore(moved, 5))).sent).toBe(1)
   })
 })

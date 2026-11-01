@@ -22,7 +22,8 @@ Consecuencia: las eliminaciones de la fase 1 y las migraciones de las fases 2, 3
 
 ## Límites conocidos de la fase 3b
 
-- **Reprogramación después del envío.** `reminder_sent_at` no se limpia al reprogramar: si un turno ya recordado se pasa a otro día, la clienta no recibe un segundo recordatorio. Decisión pendiente de Emily (limpiar la marca al reprogramar sería la alternativa).
+- **Reprogramación después del envío (decidido por Emily el 31/10/2026).** Reprogramar un turno (la clienta o el personal, cambiando fecha u hora) limpia `reminder_sent_at`, así el nuevo horario recibe su recordatorio si cumple las reglas. Como `createdAt` no cambia, la regla de las 5 horas de anticipación se mide desde la reserva original hasta el nuevo inicio: un turno reservado hace días y movido para dentro de pocas horas recibe el recordatorio en la corrida siguiente.
+- **Política de privacidad (decidido por Emily el 31/10/2026).** Se agrega la línea «Te enviamos por correo un recordatorio de tus turnos» y `PRIVACY_POLICY_VERSION` pasa de `2026-09` a `2026-11`. Hay 0 clientas en producción. El sistema no exige volver a aceptar: la versión solo se graba en `users.terms_version` al registrarse y al confirmar una reserva. El texto de la política está en el frontend, que tiene que cambiar su propia constante y la página (ver la entrada 77 de la bitácora).
 - **Reprogramación a un horario cercano.** El criterio «reserva hecha con menos de 5 horas de anticipación» mira la fecha de creación del turno, no la de la última reprogramación.
 - **Caída del proceso entre la marca y el envío.** Ese recordatorio se pierde (no se reenvía). Se prefirió eso a mandar dos mails.
 - **Primer intento tardío.** El tope de 1 hora antes del turno vale también para el primer intento: si el servidor estuvo caído hasta menos de 1 hora antes, no se manda.

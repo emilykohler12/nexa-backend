@@ -1,6 +1,6 @@
 # Política de Privacidad — Nexa
 
-Última actualización: 2 de septiembre de 2026.
+Última actualización: 1 de noviembre de 2026 (versión 2026-11).
 
 ## 1. Quién trata tus datos
 
@@ -30,6 +30,8 @@ Esta relación está regulada por un acuerdo escrito entre ambas partes, conform
 ## 3. Para qué se usan
 
 Únicamente para gestionar tu turno o compra: confirmarlo, que el profesional se prepare para atenderte, cobrar la seña, avisarte cambios, y —si diste tu autorización— que las observaciones operativas (alergias, tipo de piel, etc.) le sirvan al profesional el día de tu turno.
+
+Usamos tu correo electrónico para enviarte recordatorios de tus turnos (unas 5 horas antes), avisos cuando tu turno se cancela o se reprograma, y los mensajes de tu cuenta (verificación de correo y recuperación de contraseña). No lo usamos para campañas ni publicidad.
 
 No se usan para publicidad de terceros ni se venden a nadie.
 

@@ -1004,6 +1004,20 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con `git` y la CLI `gh`. Revisión de Emily pendiente. |
 
 
+## Entrada 77: AE4, fase 3b, correcciones pedidas por Emily (reprogramación y política de privacidad)
+
+**Fecha:** 2026-10-31, de 23:10 a 23:40 (hora de la máquina, UTC-3)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code**, a pedido de Emily al aprobar la fase 3b. (a) Reprogramar un turno vuelve `appointments.reminder_sent_at` a `null` en los tres caminos: `rescheduleForClient` (la clienta) y `updateForProfessional`/`updateForAdmin` (solo cuando cambia la fecha o la hora, la misma condición `rescheduling` que ya activa el aviso de reprogramación). (b) Cuatro pruebas nuevas en `tests/integration/appointments.reminder.test.ts` (clienta, profesional, administrador, y una que verifica que un cambio de notas sin mover el horario NO limpia la marca) más una que verifica que el nuevo horario sigue sujeto a la ventana de 5 horas. (c) `PRIVACY_POLICY_VERSION` pasa de `2026-09` a `2026-11` en el backend. (d) `CLAUDE.md` y `docs/cambios-y-decisiones.md` actualizados. (e) Va en el mismo pull request 17, en la rama `feat/recordatorio-turno-mail`: es la misma fase y ya estaba abierto. **Frontend (no se tocó, queda para Emily):** `nexa-frontend/src/app/config/legal.ts` (`PRIVACY_POLICY_VERSION = '2026-09'` a `'2026-11'`) y `nexa-frontend/src/pages/public/PrivacyPolicyPage.tsx` (agregar «Te enviamos por correo un recordatorio de tus turnos», por ejemplo en la sección 2 «Propósitos»). La prueba `PrivacyPolicyPage.test.tsx` lee la constante, no hace falta cambiarla. El frontend no pide volver a aceptar: nadie lee `termsVersion` ni `termsAcceptedAt` para bloquear nada, solo se graban al registrarse y al confirmar una reserva. |
+| 2 | Alternativas y criterio de descarte | Limpiar la marca solo en el camino de la clienta: descartado, Emily pidió ambos. Limpiarla ante cualquier PATCH del personal: descartado, reenviaría el mail por cambiar una nota. Un commit aparte en la rama de la fase 4: descartado, esa rama no existe todavía y mezclaría la fase 4 con una corrección de la 3b. Exigir volver a aceptar la política: no hace falta, hay 0 clientas y la aceptación se regraba en cada reserva. |
+| 3 | Evidencia que la sostiene | Sin el cambio en el servicio, las cuatro pruebas de reprogramación fallan; con el cambio pasan (se probó quitando y devolviendo el cambio). `terms-version.test.ts` compara con la constante, sigue verde. `npm run typecheck:all` sin errores. |
+| 4 | Aporte personal | Emily decidió limpiar la marca al reprogramar (que era la decisión pendiente del límite conocido de la entrada 75), pidió la prueba, y decidió agregar la línea a la política y subir la versión. |
+| 5 | Desacuerdo y resolución | Observación de Claude Code: `createdAt` no cambia al reprogramar, así que la regla de las 5 horas se mide desde la reserva original hasta el nuevo inicio. Un turno reservado hace días y movido para dentro de pocas horas recibe el recordatorio apenas corre el job, aunque la clienta acaba de reprogramar. Se dejó así porque es lo que Emily describió («más de 5 horas desde la reserva»); queda anotado en `docs/cambios-y-decisiones.md`. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): el cambio, las pruebas y esta entrada. Sin librerías nuevas, no hizo falta Context7. Revisión de Emily pendiente. |
+
+
 ## Entrada 78: AE4, fase 4 — tienda: lista pública solo con disponibles, lista del administrador y libro de inventario (rama `fix/tienda-publica-solo-disponibles`)
 
 **Fecha:** 2026-11-01 (hora de la máquina, UTC-3)
@@ -1023,3 +1037,31 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 - `pages/admin/store/StorePage.tsx` (línea ~27): pedir `/api/admin/store/products`; si no, el administrador deja de ver inactivos, agotados y el stock mínimo.
 - `pages/admin/store/ProductsTab.tsx` e `InventoryTab.tsx`: sin cambio de código, pero el libro de movimientos ahora incluye salidas por ventas pagadas (nota `Venta — pedido <id>`).
 - Backend y frontend tienen que salir juntos.
+
+
+## Entrada 79: AE4, fase 3b, texto de la política de privacidad en `00-gestion` (versión 2026-11)
+
+**Fecha:** 2026-11-01, de 03:35 a 03:55 (hora de la máquina, UTC-3)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code**, a pedido de Emily. `00-gestion/POLITICA_PRIVACIDAD.md` suma, en la sección 3, el párrafo que ya muestra la web: «Usamos tu correo electrónico para enviarte recordatorios de tus turnos (unas 5 horas antes), avisos cuando tu turno se cancela o se reprograma, y los mensajes de tu cuenta (verificación de correo y recuperación de contraseña). No lo usamos para campañas ni publicidad.» La fecha pasa a «1 de noviembre de 2026 (versión 2026-11)». Así el documento de la entrega coincide con la página del frontend y con `PRIVACY_POLICY_VERSION = '2026-11'` del backend, que ya había subido la entrada 77. El commit va en la rama `fix/recordatorio-reprogramacion-politica-privacidad`, de la entrada 77, que no estaba pusheada. |
+| 2 | Alternativas y criterio de descarte | Una rama aparte desde `integracion-ae4`: descartado, tocaría el mismo tramo de la bitácora y de `docs/` que la entrada 77 y habría conflicto entre los dos pull requests. Cambiar el texto de la web o la versión: no hizo falta, ya estaban en `2026-11`. Copiar la redacción del frontend palabra por palabra en vez de reescribirla: elegido, para que las dos versiones no diverjan. |
+| 3 | Evidencia que la sostiene | El texto agregado coincide con la constante `EMAIL_USE` de `nexa-frontend/src/pages/public/PrivacyPolicyPage.tsx`. La versión del backend (`src/app/constants/legal.ts`) y la del frontend (`src/app/config/legal.ts`) son ambas `2026-11`. Resultados de `typecheck:all` y `npm test` en la entrada 80. |
+| 4 | Aporte personal | Emily eligió agregar la línea a la política y subir la versión, y pidió sumar el texto a la rama que ya tenía la subida de versión. |
+| 5 | Desacuerdo y resolución | Ninguno. Aclaración de la entrada 75, punto 5 (6): subir la versión no vuelve a pedir la aceptación; `termsVersion` y `termsAcceptedAt` solo se regraban al registrarse y al confirmar una reserva. El documento no menciona la sección 5 de WhatsApp: se dejó como estaba. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Sin librerías nuevas, no hizo falta Context7. Revisión de Emily pendiente. |
+
+
+## Entrada 80: AE4, push de las correcciones de la fase 3b (reprogramación y política de privacidad) y pull request
+
+**Fecha:** 2026-11-01, de 03:55 a 04:10 (hora de la máquina, UTC-3)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code**, a pedido de Emily. Push de `fix/recordatorio-reprogramacion-politica-privacidad` y pull request con base `integracion-ae4`; el merge lo hace Emily. La rama junta el commit de la entrada 77 (limpiar `reminder_sent_at` al reprogramar y subir `PRIVACY_POLICY_VERSION` a `2026-11`), el de la entrada 79 (texto de la política en `00-gestion`) y un merge de `integracion-ae4` (fase 4) para que el pull request no tenga conflictos. Esas correcciones de la entrada 77 estaban hechas por otra sesión de Claude Code y sin pushear; el pull request 17 ya se había mergeado antes, por eso van en un pull request nuevo. Se esperó a que la suite pasara limpia antes de pushear, como pidió Emily. |
+| 2 | Alternativas y criterio de descarte | Pushear sin la suite en verde: descartado, la primera corrida dio 125 fallas por una causa ajena al código (ver elemento 3) y Emily pidió esperar. Rehacer las entradas 77 y 79 en una rama nueva desde `integracion-ae4`: descartado, habría duplicado el trabajo de la otra sesión. Resolver el conflicto de la bitácora con el orden 77, 78, 79 (por número) en vez de dejar la de la fase 4 antes de la 77. |
+| 3 | Evidencia que la sostiene | `npm run typecheck:all` sin errores. `npm test` (corrida limpia, sin otra sesión usando la base de pruebas): 38 archivos y 462 pruebas en verde (antes 37 y 443 en la rama, 38 y 457 en `integracion-ae4`). La corrida anterior dio 125 fallas en 24 archivos con `findUniqueOrThrow` sin filas y un deadlock `40P01`, porque otra sesión corría `vitest` al mismo tiempo contra la misma base de pruebas, que se trunca antes de cada caso; no tenía relación con los cambios. Lección: no correr `npm test` mientras otra sesión lo corre. |
+| 4 | Aporte personal | Emily eligió sumar el texto de la política a esa rama, y después pidió pushear y abrir el pull request cuando la suite pasara. |
+| 5 | Desacuerdo y resolución | Ninguno. El conteo de tests del README se dejó en 462, el de la corrida limpia. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con `git` y la CLI `gh`. Revisión de Emily pendiente. |
