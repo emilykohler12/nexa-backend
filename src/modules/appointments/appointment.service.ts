@@ -6,6 +6,7 @@ import path from 'path'
 import { prisma }        from '../../app/database/prisma'
 import { AppError }      from '../../app/middlewares/errorHandler'
 import { assertValidPhone } from '../../app/validators/phone'
+import { releaseSpecialSlot } from './specialSlots'
 import { HTTP }          from '../../app/constants/http'
 import { fullName }      from '../../app/utils/fullName'
 import { PRIVACY_POLICY_VERSION } from '../../app/constants/legal'
@@ -636,6 +637,8 @@ async function cancelWithGroup(appointment: AppointmentRow, opts: CancelOptions)
   for (const a of group) {
     const started = hasStarted(a, now)
     const updated = await prisma.$transaction(async (tx) => {
+      // Servicio especial: el horario del día vuelve a quedar libre (lock del servicio primero, como al reservar).
+      if (a.service.isSpecial) await releaseSpecialSlot(tx, a)
       const row = await tx.appointment.update({
         where: { id: a.id },
         data: {
@@ -1436,7 +1439,9 @@ export const appointmentService = {
             servicePrice:   price,
             depositAmount:  deposit,
             status:         'confirmed',
-            paymentStatus:  'partial',
+            // RF-03 y RF-17: nace sin la seña paga, igual que un turno común. Pasa a 'partial' recién cuando
+            // Mercado Pago confirma el pago; si no se paga, el job de liberación lo cancela y libera el horario.
+            paymentStatus:  'pending',
             selectedZones:    zonesSnapshot    as unknown as Prisma.InputJsonValue,
             selectedPackages: packagesSnapshot as unknown as Prisma.InputJsonValue,
           },
