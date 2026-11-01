@@ -1144,3 +1144,16 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Opus 5.5) y Context7 para la documentación de Vitest. Commits sin la línea de coautoría, como pidió Emily. Revisión de Emily pendiente. |
 
 **Impacto en el frontend:** ninguno. No cambió ninguna ruta, método, código de error ni forma de respuesta.
+
+## Entrada 86: AE4, push de la fase 8 y pull request
+
+**Fecha:** 2026-11-01, 14:58 (hora de la máquina, UTC-3)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Opus 5.5)**: `git push -u origin chore/deuda-tecnica` y pull request 23 con base `integracion-ae4` (https://github.com/emilykohler12/nexa-backend/pull/23). Sin merge. Antes se borró la rama `test/cobertura-completa`, local y remota, verificada como mergeada con `git merge-base --is-ancestor`. Las ramas locales `feat/fase-4-tienda` y `feat/recordatorio-turno-mail` no se borraron: tienen commits que no están en `integracion-ae4` con el mismo contenido (`ac0ba11`, y `41cd6c0`/`031e319` con un equivalente ya integrado según `git cherry`); decide Emily. |
+| 2 | Alternativas y criterio de descarte | Merge directo o push a `main`: descartados, el flujo de la AE4 es que Emily revise y mergee cada fase en `integracion-ae4`, y `main` redespliega a la clienta real. |
+| 3 | Evidencia que la sostiene | Commits `a687dfb`, `a4812d7`, `fc9df24` y `8443f1f` (documentación, entrada 85); `npm run typecheck:all` limpio y `npm test` con 638 pruebas en verde antes del push. |
+| 4 | Aporte personal | Emily definió el flujo (push y pull request por fase, ella mergea). |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Opus 5.5) y `gh`. |
