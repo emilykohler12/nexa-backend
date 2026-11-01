@@ -821,7 +821,7 @@ async function resolveProfessionalId(
       id: true,
       professional: {
         select: {
-          createdAt: true, vacationFrom: true, vacationTo: true,
+          createdAt: true, joinedAt: true, vacationFrom: true, vacationTo: true,
           availability: { where: { active: true, dayOfWeek: backendDayOf(slot.date) }, select: { startTime: true, endTime: true } },
         },
       },
@@ -875,9 +875,12 @@ async function resolveProfessionalId(
     _count: { id: true },
   })
   const load = new Map(counts.map(c => [c.professionalId, c._count.id]))
+  // Menos carga semanal primero; a igual carga gana la más antigua en el estudio (fecha de ingreso que carga el
+  // administrador, o la de alta de la cuenta si no la cargó); a igual antigüedad, el id para que sea estable.
+  const seniority = (u: (typeof candidates)[number]) => (u.professional!.joinedAt ?? u.professional!.createdAt).getTime()
   candidates.sort((a, b) =>
     (load.get(a.id) ?? 0) - (load.get(b.id) ?? 0)
-    || a.professional!.createdAt.getTime() - b.professional!.createdAt.getTime()
+    || seniority(a) - seniority(b)
     || a.id.localeCompare(b.id),
   )
   return candidates[0].id

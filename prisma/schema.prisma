@@ -94,6 +94,9 @@ model Professional {
   commissionPct   Int      @default(0) @map("commission_pct")
   vacationFrom    DateTime? @map("vacation_from") @db.Date
   vacationTo      DateTime? @map("vacation_to") @db.Date
+  // RF-06: fecha de ingreso al estudio (la carga el administrador). Sin valor se usa createdAt. Es el criterio de
+  // desempate por antigüedad cuando varias profesionales tienen la misma carga semanal.
+  joinedAt        DateTime? @map("joined_at") @db.Date
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
