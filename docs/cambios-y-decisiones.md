@@ -1,6 +1,30 @@
 # Cambios y decisiones de la AE4
 
-Registro corto de lo que se decidió durante la AE4 y de lo que se verificó en producción. El detalle de cada cambio, con sus alternativas y su evidencia, está en la bitácora (`00-gestion/20261028_BitacoraIndividual_KohlerAE3_v1.md`).
+Registro corto de lo que se decidió durante la AE4 y de lo que se verificó en producción. El detalle de cada cambio, con sus alternativas y su evidencia, está en la bitácora (`00-gestion/20261028_BitacoraIndividual_KohlerAE3_v1.md`). La cobertura de cada requisito del libro v7 está en `docs/cobertura-por-requisito.md`.
+
+## Resumen por fase
+
+Cada fase se hizo en su rama, cortada de `integracion-ae4`, y entró por un pull request que mergeó Emily. Las pruebas son de `tests/integration/`. Todas pasaron en la última corrida (01/11/2026, 57 archivos y 638 pruebas).
+
+| Fase (rama, PR) | Qué cambió | Por qué | Pruebas que lo verifican |
+|---|---|---|---|
+| 0, preguntas previas | Sin cambios de código. Emily respondió las preguntas sobre la grilla de horarios, el caso María, la liberación por falta de pago, la marca antes de la hora, la verificación por duración y el bloqueo del original (bitácora, entrada 72), y se corrieron en producción las consultas de solo lectura (abajo). | Definir las reglas antes de tocar código y confirmar que las eliminaciones no tocaban datos reales. | No aplica. |
+| 1, eliminaciones (`refactor/quitar-campanas-puntos-recordatorio-nacimiento`, PR 14) | Se quitaron las campañas automáticas, los puntos de fidelización, el recordatorio de inactividad y la fecha de nacimiento (migración `20261030150000_…`). El scheduler quedó con dos trabajos. Las visitas de la ficha cuentan solo turnos `finished`. | Decisión A confirmada por escrito por la propietaria el 30/10/2026 (RF-22, RF-30 y la fidelización de RF-28 salen del alcance). | `admin.clients.visits`, `scheduler` |
+| 2, inasistencia y horario reabierto (`feat/inasistencia-horario-reabierto`, PR 15) | Estado `no_show_auto` (más de 30 minutos sin llegada), `slot_locked` en el índice de R-01, tabla `reopened_slots` con inicios cada 5 minutos, reserva tardía hasta 15 minutos y corrección del estado por el personal. | Reglas confirmadas por escrito por la propietaria el 30/10/2026. | `appointments.arrival-noshow`, `appointments.reopened-slots`, `timezone-art` |
+| 3, cancelación y devolución (`feat/cancelacion-devolucion-hora-de-aviso`, PR 16) | Una sola regla de devolución (`cancellationRules.ts`), cancelación del personal con `cancelledBy` y hora de aviso, `refundPolicy` solo `full` o `none`. | Reglas confirmadas por escrito por la propietaria el 30/10/2026; antes había reglas distintas para la clienta, el personal y los combos. | `appointments.cancellation-refund`, `appointments.cancel-reschedule`, `settings.deposit-and-refund` |
+| 3b, recordatorio por mail (`feat/recordatorio-turno-mail`, PR 17; correcciones en PR 19) | Job nuevo cada 5 minutos que manda un mail por turno entre 5 horas y 1 hora antes; `reminder_sent_at`; reprogramar limpia la marca; política de privacidad `2026-11`. | Regla de la propietaria, implementada por decisión de Emily el 31/10/2026 (sin constancia escrita nueva). | `appointments.reminder`, `scheduler`, `notifications.inbox-and-client-mail` |
+| 4, tienda (`fix/tienda-publica-solo-disponibles`, PR 18) | La lista pública devuelve solo productos activos con stock y sin datos internos; lista nueva del administrador; cada venta pagada deja una salida en el libro de inventario. | La lista pública mostraba productos inactivos o agotados y exponía `stock`, `minStock` y `status`. | `store.availability`, `payments.webhook-idempotency` |
+| 5, anonimización y alergias (`fix/anonimizacion-y-alergias`, PR 20) | La anonimización borra también fotos de la galería, datos de contacto de los pedidos y el texto de las reseñas; la alergia del perfil solo la ve la profesional que ya atendió a la clienta (RNF-03). | La anonimización dejaba datos personales y la alergia del perfil la veía cualquier profesional. | `admin.anonymize-personal-data`, `admin.clients`, `allergies.consent-visibility`, `uploads.delete-images` |
+| 6, brechas de requisitos (`fix/brechas-requisitos`, PR 21) | Teléfono celular argentino (RF-02), servicio especial con la seña pendiente y horario liberado en toda cancelación (RF-03, RF-17), fecha de ingreso para el desempate (RF-06), categorías (RF-11), una entrada de actividad por turno liberado (RF-14, RNF-05), tipos de aviso sin uso quitados (RF-24), restos de Google borrados (RNF-07), Sentry apagado en los tests. | Diferencias entre el libro de requisitos y el código. | `phone.validation`, `special-service.payment`, `professional.joined-at`, `services.category`, `jobs.release-unpaid`, `google-remnants`, `sentry.init` |
+| 7, pruebas faltantes (`test/cobertura-completa`, PR 22) | Diez archivos de prueba nuevos, sin tocar `src/`; definición escrita de los indicadores del panel; siete hallazgos reportados sin corregir (abajo). | Requisitos sin prueba automatizada. | `payments.webhook-signature`, `settings.deposit-and-refund`, `services.catalog`, `promotions-and-special-events`, `store.blocking-and-movements`, `notifications.inbox-and-client-mail`, `reviews`, `history-activity-dashboard`, `gallery-and-professional-profile`, `client-details-job-interest-late-booking` |
+| 8, deuda técnica (`chore/deuda-tecnica`, PR 23) | RF-06.01, RF-06.02 y RF-06.03 renombrados a RF-08, RF-07 y RF-09; seed de demostración con un turno de cada estado y una promoción vigente; `.env.example` completo; cambios del manual de despliegue en `docs/plan-de-despliegue.md`. El comentario del schema ya estaba corregido desde la fase 2. | Identificadores del libro v7, poder mostrar el sistema en una base limpia y tener una lista de variables completa. | `seed-demo` |
+| 9, informes (`docs/informes-v8`) | Este documento, `docs/cobertura-por-requisito.md` y, después de integrar todo en `main`, la estimación de horas. Sin cambios de código. | Entrega de la AE4. | No aplica (la cobertura cita la corrida completa). |
+
+## Límites conocidos (todas las fases)
+
+- **Hora fuera del horario reabierto (fase 2).** Una solicitud directa a la API con una hora que no es un inicio del horario reabierto pero cae dentro de la franja de la profesional se acepta como un turno normal: el backend no impone la grilla de 120 minutos del frontend, solo la franja y el índice de R-01. Lo prueba «fuera del rango del horario reabierto la reserva sigue siendo normal (18:00)» en `appointments.reopened-slots`.
+- **Solapamiento por duración (R-01).** El índice compara la hora de inicio; dos turnos de la misma profesional que se pisan por duración no se detectan, salvo en los inicios de un horario reabierto.
+- Los demás límites y hallazgos están en la sección de cada fase, más abajo.
 
 ## Consultas previas en producción (31/10/2026)
 
@@ -28,7 +52,6 @@ Consecuencia: las eliminaciones de la fase 1 y las migraciones de las fases 2, 3
 - **Caída del proceso entre la marca y el envío.** Ese recordatorio se pierde (no se reenvía). Se prefirió eso a mandar dos mails.
 - **Primer intento tardío.** El tope de 1 hora antes del turno vale también para el primer intento: si el servidor estuvo caído hasta menos de 1 hora antes, no se manda.
 - **Combo.** El enlace del mail lleva el id de la primera pata del grupo.
-- **Política de privacidad.** Todavía no menciona este mail (pendiente de decisión de Emily).
 
 ## Fase 4, tienda (31/10/2026)
 
@@ -100,3 +123,16 @@ La prueba de `history-activity-dashboard.test.ts` arma un día con un turno de c
 - **Ediciones parciales:** `PUT /api/services/:id`, `PUT /api/admin/promotions/:id` y `PUT /api/admin/special-events/:id` validan con `schema.partial()`, y zod completa los campos con valor por defecto que no vienen: un `PUT` con solo `{ title }` vuelve a activar una promoción, un evento o un servicio inactivo y borra la descripción (y en una promoción pasa `kind` a `discount`). **Hoy no pasa desde la interfaz**: el frontend siempre manda el formulario completo y el interruptor de los eventos manda `active` explícito. Además, `active: "false"` como texto se lee como `true` (`z.coerce.boolean`).
 - **Id inexistente:** `PUT /api/services/:id`, `DELETE /api/admin/promotions/:id` y `PUT /api/admin/special-events/:id` con un id que no existe responden `500` en vez de `404` (el error de Prisma llega al manejador genérico y, en producción, a Sentry).
 - **Validación en el borde (ADR-002):** `PATCH /api/professional/profile`, `PATCH /api/professional/schedule` y `POST /api/professional/onboarding` no tienen esquema zod: no se validan las horas de las franjas (se guardan `20:00` a `08:00` y hasta `"nada"` a `"x"`), y `PATCH /profile` pone en `null` los campos que no vienen (un `PATCH` con solo `specialty` borra la `bio`). `PATCH /api/admin/clients/:id/gallery/:photoId` no valida la categoría (el alta sí), y borrar una foto de la galería no borra el archivo del bucket (la anonimización sí).
+
+## Fase 8, deuda técnica (01/11/2026)
+
+- **Identificadores.** RF-06.01 → RF-08 (aceptación de la política), RF-06.02 → RF-07 (consentimiento de alergias) y RF-06.03 → RF-09 (anonimización), en comentarios y títulos de pruebas. RF-06 sin punto es la asignación automática y no cambió.
+- **Seed de demostración.** `npm run seed:demo` carga, con datos inventados, un turno `confirmed`, uno `no_show_auto`, uno `cancelled` por la clienta y una promoción vigente, con fechas calculadas en hora de Argentina el día que se corre. Solo para desarrollo o una base de demostración; nunca contra producción.
+- **Variables de entorno.** `.env.example` lista todas las que lee el backend. Lo que cambia en el manual de despliegue está en `docs/plan-de-despliegue.md` (el RUNBOOK no se tocó).
+- **Comentario del schema.** No hizo falta corregirlo: desde la fase 2 cita las migraciones `20260826153839`, `20261028160000` y `20261031120000`, que son las que crean o recrean el índice de R-01.
+- **Sin migración.** Sin cambios de rutas ni respuestas.
+
+## Fase 9, informes (01/11/2026)
+
+- `docs/cobertura-por-requisito.md`: 42 requisitos del libro v7 (sin RF-22, RF-30 ni la fidelización de RF-28): 29 completos, 11 parciales y 2 sin prueba (RNF-01 y RNF-02). Siete criterios del libro v7 no coinciden con el código y hay que corregirlos en el libro (ver el resumen de ese documento).
+- La estimación de horas (`docs/estimacion-horas.md` y `.csv`) se hace después de que Emily integre todas las ramas en `main` (decisión de Emily del 01/11/2026).

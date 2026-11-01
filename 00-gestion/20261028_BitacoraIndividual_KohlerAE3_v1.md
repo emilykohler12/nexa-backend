@@ -1157,3 +1157,31 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily definió el flujo (push y pull request por fase, ella mergea). |
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Opus 5.5) y `gh`. |
+
+## Entrada 87: AE4, fase 9, informes de cobertura y de cambios (rama `docs/informes-v8`)
+
+**Fecha:** 2026-11-01, 15:06 (pull request 23 mergeado, rama `chore/deuda-tecnica` borrada y rama cortada de `integracion-ae4`), de 15:07 a 15:11 (corrida de la suite con el reporte JSON y lectura del libro v7) y de 15:11 a 15:18 (informes, README y commits). Hora de la máquina, UTC-3.
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (modelo Opus 5.5)**, a pedido de Emily, sin tocar `src/` ni `tests/`. (a) `docs/cobertura-por-requisito.md` (`8974ed1`): los 42 requisitos del libro v7 (RF-01 a RF-34 y RNF-01 a RNF-10, sin RF-22, RF-30 ni la fidelización de RF-28), cada uno con su enunciado y criterio, el archivo y el nombre completo de cada prueba, el resultado de la última corrida y la cobertura: **29 completos, 11 parciales y 2 sin prueba** (RNF-01 y RNF-02). (b) `docs/cambios-y-decisiones.md` (`d484c3e`): tabla por fase (0 a 9) con qué cambió, por qué y qué pruebas lo verifican; límites conocidos generales, entre ellos el que pidió Emily (una hora fuera del horario reabierto pero dentro de la franja se acepta como turno normal); secciones de las fases 8 y 9; se quitó una línea vieja de la fase 3b que decía que la política de privacidad todavía no mencionaba el recordatorio. (c) README: catálogo vigente v7 y los tres documentos de `docs/` en la sección 1.5, fila de la fase 9 en 8.3 (cantidad de pruebas, índice parcial y scheduler sin cambios). (d) La estimación de horas (9.3) queda para después de que Emily integre todo en `main`. |
+| 2 | Alternativas y criterio de descarte | **Clasificar con el criterio «en espíritu»:** descartado; se clasificó contra el texto del criterio del v7, y cuando el criterio choca con una regla vigente se marca parcial y se dice por qué (RF-05, RF-20, RF-28). **Corregir esos criterios en el libro:** descartado, el libro es documentación académica de Emily; quedan listados para que ella decida. **Agregar las pruebas que faltan (invitación vencida, `HttpOnly` de `access_token`, turno manual confirmado y sin seña, moneda en pedidos, mail a la profesional):** descartado, la fase 9 es solo de informes; quedan anotadas en cada requisito. **Contar como cubierto lo que prueba el frontend:** descartado, no se revisó `nexa-frontend` (queda como no determinado). |
+| 3 | Evidencia que la sostiene | Corrida de `npm test` con `--reporter=json` el 01/11/2026 a las 15:07 sobre `d04ad34` (igual a `integracion-ae4`): **57 archivos y 638 pruebas, 638 pasaron y 0 fallaron**; el informe toma de ese reporte el resultado de cada prueba. El libro v7 se leyó descomprimiendo el `.xlsx` en el directorio temporal (hojas «Catálogo» y «Cambios v7»), sin modificarlo. Cada clasificación parcial se apoyó en una lectura del código o de la prueba: no hay prueba del monto de la preferencia de Mercado Pago (simulada en `tests/setup.ts`), la única marca `HttpOnly` comprobada es la de `refresh_token` (`auth.minor-fixes`), ninguna prueba de invitación vencida, el mail `Nuevo turno agendado — Nexa` solo aparece en la lista de envíos de `notifications.inbox-and-client-mail`, `rechaza una promoción vencida` en `appointments.booking`, y las visitas cuentan solo `finished` desde la fase 1. Al final, `npm run typecheck:all` y `npm test` otra vez (resultado en la entrada 88). |
+| 4 | Aporte personal | Emily pidió los informes, eligió usar el libro v7 (lo agregó a `03-requisitos/`), dejó la estimación de horas para después de integrar todo en `main` y había pedido declarar el límite del horario reabierto. |
+| 5 | Desacuerdo y resolución | **Error de Claude Code en la fase 8:** el libro v7 entró al repositorio dentro del commit `a687dfb` («renombrar RF-06.01…»), porque ese commit se hizo con `git add -A` cuando Emily ya había puesto el archivo en la carpeta, y la entrada 85 dice que el libro «se va a agregar». El commit ya está mergeado en `integracion-ae4` (pull request 23); no se reescribió la historia. El archivo es el que Emily quería en el repositorio, pero su commit no lo nombra. Desde ahora los commits agregan los archivos por nombre. **Criterios del v7 que no coinciden con el código:** RF-05, RF-20, RF-28 y RNF-10 en el criterio, y RF-01, RF-21 y RNF-08 en el enunciado; RF-17 y RNF-09 figuran sin prueba y ya la tienen. **No determinado:** qué cubren las pruebas del frontend. |
+| 6 | Herramienta auxiliar | Claude Code (Opus 5.5) con un script descartable de Node para leer el `.xlsx` y armar el informe desde el reporte JSON de Vitest (no queda en el repositorio). Context7 no se usó: no se escribió código que dependa de una librería del proyecto. Commits sin la línea de coautoría, como pidió Emily. Revisión de Emily pendiente. |
+
+**Impacto en el frontend:** ninguno.
+
+## Entrada 88: AE4, verificación final de la fase 9, push y pull request
+
+**Fecha:** 2026-11-01, de 15:16 a 15:22 (hora de la máquina, UTC-3)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Opus 5.5)**: `git push -u origin docs/informes-v8` y pull request 24 con base `integracion-ae4` (https://github.com/emilykohler12/nexa-backend/pull/24). Sin merge. |
+| 2 | Alternativas y criterio de descarte | Merge directo o push a `main`: descartados, el flujo de la AE4 es que Emily revise y mergee cada fase en `integracion-ae4`, y `main` redespliega a la clienta real. |
+| 3 | Evidencia que la sostiene | `npm run typecheck:all` sin errores (salida 0) y `npm test` con **57 archivos y 638 pruebas en verde** (15:20), después de los commits `8974ed1`, `d484c3e` y `4051bba` (documentación, entrada 87). |
+| 4 | Aporte personal | Emily definió el flujo (push y pull request por fase, ella mergea). |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Opus 5.5) y `gh`. |
