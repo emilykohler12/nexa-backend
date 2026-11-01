@@ -5,6 +5,7 @@ import fs   from 'fs'
 import path from 'path'
 import { prisma }        from '../../app/database/prisma'
 import { AppError }      from '../../app/middlewares/errorHandler'
+import { assertValidPhone } from '../../app/validators/phone'
 import { HTTP }          from '../../app/constants/http'
 import { fullName }      from '../../app/utils/fullName'
 import { PRIVACY_POLICY_VERSION } from '../../app/constants/legal'
@@ -715,6 +716,7 @@ async function comboGroupPeers(comboGroupIds: (string | null)[]): Promise<Map<st
 // o crea uno nuevo. Sin email (frecuente en un walk-in) se genera uno placeholder único,
 // así cada turno manual sin datos de contacto completos igual queda con un cliente propio.
 async function findOrCreateManualClient(name: string, phone: string, email: string): Promise<string> {
+  assertValidPhone(phone)
   // Minúsculas, como hace el login: si no, la clienta creada a mano no podría entrar después.
   const trimmedEmail = email.trim().toLowerCase()
   if (trimmedEmail) {
@@ -1968,6 +1970,7 @@ export const appointmentService = {
     }
 
     // Los datos de contacto pertenecen al cliente (User), no al turno — se actualizan aparte.
+    assertValidPhone(data.clientPhone)
     const clientUpdate: Record<string, unknown> = {}
     if (data.clientName  !== undefined) clientUpdate.name  = data.clientName
     if (data.clientPhone !== undefined) clientUpdate.phone = data.clientPhone

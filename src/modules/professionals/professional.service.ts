@@ -2,6 +2,7 @@
 import { prisma }   from '../../app/database/prisma'
 import { AppError } from '../../app/middlewares/errorHandler'
 import { HTTP }     from '../../app/constants/http'
+import { assertValidPhone } from '../../app/validators/phone'
 import { OCCUPYING_SLOT_FILTER, earliestBookableStart, reopenedStartsFor } from '../appointments/reopenedSlots'
 
 const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
@@ -343,6 +344,7 @@ export const professionalService = {
     const user = await prisma.user.findUnique({ where: { id } })
     if (!user) throw new AppError(HTTP.NOT_FOUND, 'Profesional no encontrado', 'NOT_FOUND')
 
+    assertValidPhone(data.phone)
     const userUpdate: Record<string, unknown> = {}
     if (data.name   !== undefined) userUpdate.name   = data.name
     if (data.phone  !== undefined) userUpdate.phone  = data.phone
@@ -463,6 +465,7 @@ export const professionalService = {
   },
 
   updateMyProfile: async (userId: string, data: any) => {
+    assertValidPhone(data.phone)
     if (data.name !== undefined || data.phone !== undefined) {
       await prisma.user.update({
         where: { id: userId },
@@ -538,6 +541,7 @@ export const professionalService = {
 
   saveOnboarding: async (userId: string, data: any): Promise<void> => {
     const { personal, work, availability, services, policies } = data
+    assertValidPhone(personal?.phone)
 
     // El paso "Personal" del onboarding manda un único campo `name` (no
     // firstName/lastName/dni) — se persiste en el User igual que en el registro.
