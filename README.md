@@ -316,8 +316,8 @@ npm test
 **Esperado:**
 
 ```
-Test Files  38 passed (38)
-     Tests  462 passed (462)
+Test Files  40 passed (40)
+     Tests  486 passed (486)
 ```
 
 Los tests del caso de uso vertical están en `tests/integration/appointments.booking.test.ts`, entre ellos:

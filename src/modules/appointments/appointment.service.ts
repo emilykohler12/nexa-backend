@@ -185,7 +185,16 @@ function polishRemovalOf(a: AppointmentRow) {
   return { label: a.polishRemovalLabel, price: Number(a.polishRemovalPrice) }
 }
 
-function toProfessionalView(a: AppointmentRow, peers: ComboPeer[] | null = null) {
+// RNF-03 — la alergia del perfil de la clienta solo se muestra a una profesional que ya la atendió: al menos un
+// turno finalizado con ella. La alergia del propio turno (details.allergies) se muestra siempre a su profesional.
+async function hasAttended(professionalId: string, clientId: string): Promise<boolean> {
+  const finished = await prisma.appointment.findFirst({
+    where: { professionalId, clientId, status: 'finished' }, select: { id: true },
+  })
+  return finished !== null
+}
+
+function toProfessionalView(a: AppointmentRow, peers: ComboPeer[] | null, attended: boolean) {
   return {
     id:            a.id,
     comboGroupId:  a.comboGroupId,
@@ -195,7 +204,7 @@ function toProfessionalView(a: AppointmentRow, peers: ComboPeer[] | null = null)
       phone:     a.client.phone ?? '',
       email:     a.client.email,
       photo:     null as string | null,
-      allergies: a.client.client?.allergies ?? '',
+      allergies: attended ? a.client.client?.allergies ?? '' : '',
       notes:     a.client.client?.notes ?? '',
     },
     serviceName:    a.service.name,
@@ -1792,7 +1801,8 @@ export const appointmentService = {
       orderBy: [{ date: 'desc' }, { time: 'desc' }],
     })
     const peersByGroup = await comboGroupPeers(rows.map(r => r.comboGroupId))
-    return rows.map(a => toProfessionalView(a, a.comboGroupId ? peersByGroup.get(a.comboGroupId) ?? null : null))
+    const attendedClients = new Set(rows.filter(r => r.status === 'finished').map(r => r.clientId))
+    return rows.map(a => toProfessionalView(a, a.comboGroupId ? peersByGroup.get(a.comboGroupId) ?? null : null, attendedClients.has(a.clientId)))
   },
 
   // Turno manual cargado por el propio profesional (walk-in, teléfono) — mismo
@@ -1802,7 +1812,7 @@ export const appointmentService = {
     serviceId: string; date: string; time: string
   }) => {
     const appointment = await createManualAppointment(professionalId, data)
-    return toProfessionalView(appointment, null)
+    return toProfessionalView(appointment, null, await hasAttended(professionalId, appointment.clientId))
   },
 
   updateForProfessional: async (
@@ -1835,7 +1845,7 @@ export const appointmentService = {
       const updatedList = await cancelWithGroup(appointment, { ...cancellation, emailClient: true, now })
       const target = updatedList.find(a => a.id === id)!
       const peers = target.comboGroupId ? (await comboGroupPeers([target.comboGroupId])).get(target.comboGroupId) ?? null : null
-      return toProfessionalView(target, peers)
+      return toProfessionalView(target, peers, await hasAttended(professionalId, target.clientId))
     }
 
     // Marcar o corregir una inasistencia tiene reglas propias (ver changeStatusByStaff).
@@ -1860,7 +1870,7 @@ export const appointmentService = {
     }
     if (rescheduling) await afterStaffReschedule(updated, appointment.date, appointment.time)
     const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
-    return toProfessionalView(updated, peers)
+    return toProfessionalView(updated, peers, await hasAttended(professionalId, updated.clientId))
   },
 
   listClientsForProfessional: async (professionalId: string) => {
@@ -1882,13 +1892,16 @@ export const appointmentService = {
     return Array.from(byClient.values()).map(list => {
       const first = list[0]
       const next = list.find(a => a.date >= today && ['pending', 'confirmed'].includes(a.status))
+      // RNF-03 — la alergia del perfil es un dato de salud: solo la ve una profesional que ya atendió a la
+      // clienta (al menos un turno finalizado con ella). Cancelados, inasistencias y turnos futuros no alcanzan.
+      const attended = list.some(a => a.status === 'finished')
       return {
         id:            first.client.id,
         name:          fullName(first.client),
         email:         first.client.email,
         phone:         first.client.phone ?? '',
         photo:         null as string | null,
-        allergies:     first.client.client?.allergies ?? '',
+        allergies:     attended ? first.client.client?.allergies ?? '' : '',
         preferences:   first.client.client?.preferences ?? '',
         observations:  first.client.client?.observations ?? '',
         visits: list.map(a => ({
@@ -2055,7 +2068,7 @@ export const appointmentService = {
     }
     const updated = await registerArrival(appointment)
     const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
-    return toProfessionalView(updated, peers)
+    return toProfessionalView(updated, peers, await hasAttended(professionalId, updated.clientId))
   },
 
   markArrivalForAdmin: async (id: string) => {

@@ -74,4 +74,38 @@ export const uploadProvider = {
     const { data } = client.storage.from(BUCKET).getPublicUrl(path)
     return data.publicUrl
   },
+
+  // Borra del bucket los archivos de las URL públicas que le pasen. Nunca lanza: devuelve las URL que
+  // no se pudieron borrar para que quien llama decida qué hacer (la anonimización las deja en el registro).
+  // Supabase no da error cuando una política del bucket impide borrar: `remove` devuelve en `data` solo los
+  // archivos que de verdad borró, así que lo que falte ahí cuenta como fallido.
+  deleteImages: async (urls: string[]): Promise<{ deleted: string[]; failed: string[] }> => {
+    if (urls.length === 0) return { deleted: [], failed: [] }
+    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return { deleted: [], failed: [...urls] }
+
+    const prefix = `${env.SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/public/${BUCKET}/`
+    const pathByUrl = new Map<string, string>()
+    const failed: string[] = []
+    for (const url of urls) {
+      if (url.startsWith(prefix) && url.length > prefix.length) {
+        try { pathByUrl.set(url, decodeURIComponent(url.slice(prefix.length).split('?')[0])) }
+        catch { failed.push(url) }
+      } else {
+        // No es un archivo de nuestro bucket (por ejemplo una URL externa): no hay nada que borrar acá.
+        failed.push(url)
+      }
+    }
+    if (pathByUrl.size === 0) return { deleted: [], failed }
+
+    try {
+      const client = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY)
+      const { data, error } = await client.storage.from(BUCKET).remove([...new Set(pathByUrl.values())])
+      const removed = new Set(error ? [] : (data ?? []).map(f => f.name))
+      const deleted: string[] = []
+      for (const [url, path] of pathByUrl) (removed.has(path) ? deleted : failed).push(url)
+      return { deleted, failed }
+    } catch {
+      return { deleted: [], failed: [...failed, ...pathByUrl.keys()] }
+    }
+  },
 }
