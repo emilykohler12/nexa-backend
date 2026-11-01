@@ -36,7 +36,7 @@ model User {
   active            Boolean   @default(true)
   profileComplete   Boolean   @default(false) @map("profile_complete")
   verificationToken String?   @map("verification_token") @db.VarChar(255)
-  // RF-06.01 — fecha en que aceptó Términos de Servicio y Política de Privacidad.
+  // RF-08 — fecha en que aceptó Términos de Servicio y Política de Privacidad.
   // Se (re)graba tanto al registrarse como al confirmar una reserva, para cubrir
   // también cuentas creadas antes de que este requisito existiera.
   termsAcceptedAt   DateTime? @map("terms_accepted_at") @db.Timestamptz

@@ -171,7 +171,7 @@ Abrir `.env` y editar **solo** la línea `DATABASE_URL` con tu usuario y contras
 DATABASE_URL="postgresql://USUARIO:CONTRASEÑA@localhost:5432/nexa_dev"
 ```
 
-El resto de los valores ya sirven para desarrollo local. Las variables de Mercado Pago, Sentry y Supabase pueden quedar vacías.
+El resto de los valores ya sirven para desarrollo local. El archivo lista todas las variables que lee el backend (las de `src/app/config/env.ts` más `SENTRY_DSN`); las de Mercado Pago (`MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET`, `BACKEND_PUBLIC_URL`), Sentry, Supabase y Brevo pueden quedar vacías. No definir `TZ`: el backend tiene que correr en UTC.
 
 **Frontend** — copiar el archivo de ejemplo (no hace falta editarlo):
 
@@ -197,7 +197,7 @@ npm run seed:demo
 **Esperado:**
 
 ```
-54 migrations found in prisma/migrations
+62 migrations found in prisma/migrations
 Applying migration `20260720211431_init`
 Applying migration `20260813212326_init`
 ...
@@ -207,11 +207,14 @@ All migrations have been successfully applied.
 ...
 ✅ Datos de demo listos:
    Servicio:    Manicura semipermanente (60 min, $15.000)
-   Profesional: Loren (demo) — lun a sáb 09:00–18:00
+   Profesional: Valeria (demo) — lun a sáb 09:00–18:00
+   Turnos de la clienta: confirmado AAAA-MM-DD 10:00, no asistió (automático) AAAA-MM-DD 10:00, cancelado AAAA-MM-DD 15:00
+   Promoción vigente: Semipermanente con descuento (demo) (AAAA-MM-DD a AAAA-MM-DD)
    Login profesional: profesional@nexa.local / Profesional1234!
+   Login clienta:     clienta@nexa.local / Clienta1234!
 ```
 
-`seed:demo` carga una profesional con horario, un servicio y un WhatsApp de demo del negocio, que es lo mínimo necesario para poder reservar. Se puede correr más de una vez sin duplicar nada.
+`seed:demo` carga un escenario de demostración con datos inventados, coherente con las reglas de la AE4: una profesional con horario de lunes a sábado, un servicio, una clienta de demo con un turno **confirmado** (a 2 días o más, en día hábil, con la seña paga), uno **`no_show_auto`** («No asistió (automático)», del día hábil anterior, con la seña retenida y el horario todavía ocupado) y uno **cancelado** por la clienta con más de 12 horas de aviso (seña marcada como devuelta y horario libre), una **promoción vigente** (desde hoy por 30 días) y un WhatsApp de demo del negocio. Las fechas se calculan en hora de Argentina el día que se corre. Se puede correr más de una vez sin duplicar nada: cada corrida vuelve a crear solo los turnos de la clienta de demo. Lo verifica `tests/integration/seed-demo.test.ts`. Solo para desarrollo: nunca correrlo contra la base de producción.
 
 > Usar `migrate deploy`, **no** `migrate dev`: `migrate dev` puede quedarse esperando que escribas el nombre de una migración nueva.
 
@@ -316,8 +319,8 @@ npm test
 **Esperado:**
 
 ```
-Test Files  56 passed (56)
-     Tests  631 passed (631)
+Test Files  57 passed (57)
+     Tests  638 passed (638)
 ```
 
 Los tests del caso de uso vertical están en `tests/integration/appointments.booking.test.ts`, entre ellos:
@@ -399,7 +402,7 @@ Los commits `54933ca` y `ec976da` son los del README v1.1; `ce550a9` y `2e7734f`
 
 ### 8.3 Cambios de la AE4 hechos con Claude Code (rama `integracion-ae4`)
 
-Las cifras de 8.1 y 8.2 están cortadas en `6e7d8c0`. Desde ahí, cada fase de la AE4 la hace Claude Code (modelo Sonnet 5.5 hasta la fase 6 y Opus 5.5 en la fase 7) sobre su propia rama, a pedido de la autora, con el nombre de ella como autor y sin la línea de coautoría. Cada commit cita solo los anteriores, nunca el suyo ni el del propio README.
+Las cifras de 8.1 y 8.2 están cortadas en `6e7d8c0`. Desde ahí, cada fase de la AE4 la hace Claude Code (modelo Sonnet 5.5 hasta la fase 6 y Opus 5.5 desde la fase 7) sobre su propia rama, a pedido de la autora, con el nombre de ella como autor y sin la línea de coautoría. Cada commit cita solo los anteriores, nunca el suyo ni el del propio README.
 
 | Fase | Rama | Commits |
 |---|---|---|
@@ -410,7 +413,8 @@ Las cifras de 8.1 y 8.2 están cortadas en `6e7d8c0`. Desde ahí, cada fase de l
 | 4 — tienda | `fix/tienda-publica-solo-disponibles` | `ff25797`, `3fc9b79` (bitácora, entrada 78) |
 | 5 — anonimización y alergias | `fix/anonimizacion-y-alergias` | `87a7146`, `08d0945`, `e415b02` (bitácora, entrada 81) |
 | 6 — brechas de requisitos | `fix/brechas-requisitos` | `8a1c006`, `7a16248`, `f437d34`, `e565249`, `4554e2d`, `c9cdc61`, `b87a817` (bitácora, entrada 82) |
-| 7 — pruebas faltantes (Claude Code con el modelo Opus 5.5) | `test/cobertura-completa` | los commits de las pruebas se citan en la bitácora, entrada 83 (este README va en el último) |
+| 7 — pruebas faltantes (Claude Code con el modelo Opus 5.5) | `test/cobertura-completa` | `a34749a`, `f5c2390`, `a4aa471`, `77fd1b8`, `6cc47d7`, `aa86b17`, `718e8e6`, `45d8401` (bitácora, entrada 83), `3cd1199` (bitácora, entrada 84) |
+| 8 — deuda técnica (Claude Code con el modelo Opus 5.5) | `chore/deuda-tecnica` | `a687dfb` (RF-06.0x renombrados), `a4812d7` (seed de demostración), `fc9df24` (`.env.example`); la documentación va en el último (bitácora, entrada 85) |
 
 ---
 

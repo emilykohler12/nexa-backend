@@ -960,7 +960,7 @@ export const appointmentService = {
   ) => {
     await assertClientNotBlocked(clientId)
 
-    // RF-06.01 — (re)graba la aceptación de Términos/Política al confirmar la
+    // RF-08 — (re)graba la aceptación de Términos/Política al confirmar la
     // reserva. Cubre tanto el registro reciente como cuentas viejas sin este dato.
     await prisma.user.update({ where: { id: clientId }, data: { termsAcceptedAt: new Date(), termsVersion: PRIVACY_POLICY_VERSION } })
 
@@ -1752,7 +1752,7 @@ export const appointmentService = {
       throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
     }
 
-    // RF-06.02 — deja registrado el consentimiento expreso para guardar
+    // RF-07 — deja registrado el consentimiento expreso para guardar
     // observaciones operativas (alergias, tipo de piel, etc.), con fecha y a
     // qué turno corresponde. Client puede no existir todavía (se crea recién
     // acá si hace falta) — por eso upsert en vez de update.
