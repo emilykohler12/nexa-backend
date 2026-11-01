@@ -322,6 +322,10 @@ model Appointment {
   // hora de inicio) pero su horario no se vuelve a ofrecer nunca. Es parte del predicado del índice único
   // parcial (ver el comentario de abajo): la fila sigue dentro del índice y nadie puede reservar ese inicio.
   slotLocked     Boolean   @default(false) @map("slot_locked")
+  // Cuándo se mandó el recordatorio por mail (job appointmentReminder.job.ts). Null = todavía no. Se escribe
+  // ANTES de enviar y se vuelve a null si el envío falla; con valor, el recordatorio no se reenvía nunca.
+  // En un combo se marca igual en todas las patas, porque sale un solo mail por grupo.
+  reminderSentAt DateTime? @map("reminder_sent_at") @db.Timestamptz
   // Cobro del SALDO restante (precio - seña) en el local — la seña ya se
   // cobra sola por Mercado Pago (mpPaymentId), pero el resto se paga en mano
   // al momento del servicio y hasta ahora no quedaba ningún registro. 'cash' |

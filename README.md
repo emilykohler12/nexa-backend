@@ -233,7 +233,7 @@ npm run dev
 ```
 ✅ Conectado a PostgreSQL
 👤 Admin inicial creado: admin@nexa.local
-[jobs] scheduler iniciado (hora de Argentina) — release-unpaid (cada 5 min) + auto-no-show (cada 5 min)
+[jobs] scheduler iniciado (hora de Argentina) — release-unpaid (cada 5 min) + auto-no-show (cada 5 min) + appointment-reminder (cada 5 min)
 🚀 Servidor en http://localhost:4000 (development)
 ```
 
@@ -316,8 +316,8 @@ npm test
 **Esperado:**
 
 ```
-Test Files  36 passed (36)
-     Tests  404 passed (404)
+Test Files  37 passed (37)
+     Tests  438 passed (438)
 ```
 
 Los tests del caso de uso vertical están en `tests/integration/appointments.booking.test.ts`, entre ellos:
@@ -406,6 +406,7 @@ Las cifras de 8.1 y 8.2 están cortadas en `6e7d8c0`. Desde ahí, cada fase de l
 | 1 — eliminaciones | `refactor/quitar-campanas-puntos-recordatorio-nacimiento` | `b30e849`, `8955406`, `308bb0a` (bitácora, entrada 70), `3139d13` (bitácora, entrada 71) |
 | 2 — inasistencia, horario reabierto y reserva tardía | `feat/inasistencia-horario-reabierto` | `1bfdf67`, `76fe8a3`, `3ccdf53` (bitácora, entrada 72), `924564f` (bitácora, entrada 73) |
 | 3 — cancelación y devolución | `feat/cancelacion-devolucion-hora-de-aviso` | `7e8a16e`, `60e56b1`, `d41644e` (bitácora, entrada 74) |
+| 3b — recordatorio de turno por mail | `feat/recordatorio-turno-mail` | `7cd9a6e`, `2125736`, `9553863`, `9102940` (bitácora, entrada 75) |
 
 ---
 

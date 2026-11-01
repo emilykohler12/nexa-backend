@@ -134,9 +134,9 @@ describe('cron en hora de Argentina', () => {
     const schedule = vi.spyOn(cron, 'schedule').mockReturnValue({} as any)
     try {
       startScheduledJobs()
-      expect(schedule).toHaveBeenCalledTimes(2)
+      expect(schedule).toHaveBeenCalledTimes(3)
       for (const call of schedule.mock.calls) {
-        expect(call[2]).toEqual({ timezone: 'America/Argentina/Buenos_Aires' })
+        expect(call[2]).toMatchObject({ timezone: 'America/Argentina/Buenos_Aires' })
       }
     } finally {
       schedule.mockRestore()
