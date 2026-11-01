@@ -176,8 +176,8 @@ describe('visibilidad de las alergias (RNF-03)', () => {
     return { ...base, other }
   }
 
-  it('la profesional asignada ve la alergia del turno y la del perfil de la clienta', async () => {
-    const { pro } = await setupWithAllergies()
+  it('la profesional asignada ve la alergia del turno, y la del perfil solo si ya atendió a la clienta', async () => {
+    const { pro, client } = await setupWithAllergies()
 
     const res = await request(app).get('/api/professional/appointments').set('Cookie', cookieFor(pro))
 
@@ -185,7 +185,43 @@ describe('visibilidad de las alergias (RNF-03)', () => {
     expect(res.body.appointments).toHaveLength(1)
     const view = res.body.appointments[0]
     expect(view.details.allergies).toBe(ALERGIA_TURNO)
-    expect(view.client.allergies).toBe(ALERGIA_PERFIL)
+    // Solo tiene un turno confirmado a futuro con ella: todavía no la atendió.
+    expect(view.client.allergies).toBe('')
+
+    const svc  = await createService()
+    const past = hoursFromNow(-48)
+    await createAppointmentDirect({
+      clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: past.date, time: past.time, status: 'finished',
+    })
+    const after = await request(app).get('/api/professional/appointments').set('Cookie', cookieFor(pro))
+    expect(after.body.appointments.every((a: any) => a.client.allergies === ALERGIA_PERFIL)).toBe(true)
+    expect(after.body.appointments.find((a: any) => a.id === view.id).details.allergies).toBe(ALERGIA_TURNO)
+  })
+
+  it('la respuesta al editar un turno propio tampoco trae la alergia del perfil si no la atendió', async () => {
+    const { pro, appt } = await setupWithAllergies()
+
+    const res = await request(app)
+      .patch(`/api/professional/appointments/${appt.id}`)
+      .set('Cookie', cookieFor(pro))
+      .send({ internalNotes: 'nota' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.appointment.client.allergies).toBe('')
+    expect(res.body.appointment.details.allergies).toBe(ALERGIA_TURNO)
+    expect(JSON.stringify(res.body)).not.toContain('penicilina')
+  })
+
+  it('al finalizar el turno, la respuesta ya trae la alergia del perfil', async () => {
+    const { pro, appt } = await setupWithAllergies()
+
+    const res = await request(app)
+      .patch(`/api/professional/appointments/${appt.id}`)
+      .set('Cookie', cookieFor(pro))
+      .send({ status: 'finished' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.appointment.client.allergies).toBe(ALERGIA_PERFIL)
   })
 
   it('una profesional que nunca atendió a la clienta no ve ni el turno ni ninguna de las dos alergias', async () => {
