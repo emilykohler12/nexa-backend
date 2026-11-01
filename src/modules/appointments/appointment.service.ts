@@ -29,7 +29,7 @@ import {
   type CancelledBy, type CancellationNotice, type NoticeChannel,
 } from './cancellationRules'
 
-function loadTemplate(name: string, replacements: Record<string, string>): string {
+export function loadTemplate(name: string, replacements: Record<string, string>): string {
   const candidates = [
     path.join(__dirname, 'templates', `${name}.html`),
     path.join(process.cwd(), 'src', 'modules', 'appointments', 'templates', `${name}.html`),
@@ -53,7 +53,7 @@ function loadTemplate(name: string, replacements: Record<string, string>): strin
   return html
 }
 
-function formatDate(date: string): string {
+export function formatDate(date: string): string {
   const formatted = new Date(`${date}T00:00:00`).toLocaleDateString('es-AR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
