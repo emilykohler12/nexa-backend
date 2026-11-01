@@ -19,6 +19,7 @@ Orden para llevar a producción las fases de la AE4. Reglas generales (de `CLAUD
 | `20261031130000_cancelacion_con_hora_de_aviso` | 3 | Columnas de la cancelación con hora de aviso | Agrega |
 | `20261031131000_politica_de_devolucion_full_o_none` | 3 | Los `partial` viejos pasan a `full` | Modifica datos |
 | `20261031140000_recordatorio_de_turno_enviado` | 3b | `appointments.reminder_sent_at` (nullable) | **Agrega** |
+| `20261101120000_fecha_ingreso_profesional` | 6 | `professionals.joined_at` (fecha, nullable): fecha de ingreso para el desempate por antigüedad | **Agrega** |
 
 La migración de la fase 3b solo **agrega** una columna nullable: por eso se aplica antes del despliegue. El backend nuevo la lee y la escribe; el backend viejo, que sigue corriendo mientras Render redespliega, la ignora sin problema.
 
