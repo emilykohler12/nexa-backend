@@ -1,0 +1,8 @@
+# RNF-10, fase 7: salida de npm run typecheck:all
+# Rama test/cobertura-completa, 2026-11-01 14:38 (hora de la máquina, UTC-3), Node v24.17.0, TypeScript Version 7.0.2
+
+
+> typecheck:all
+> tsc -p tsconfig.test.json --noEmit
+
+# Código de salida: 0
