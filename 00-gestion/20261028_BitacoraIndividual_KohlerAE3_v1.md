@@ -1116,3 +1116,16 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Opus 5.5) y Context7 para la documentación de Vitest 5. Commits sin la línea de coautoría, como pidió Emily. Revisión de Emily pendiente. |
 
 **Impacto en el frontend:** ninguno. No cambió ninguna ruta, método, código de error ni forma de respuesta.
+
+## Entrada 84: AE4, push de la fase 7 y pull request
+
+**Fecha:** 2026-11-01, 14:46 (hora de la máquina, UTC-3)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Opus 5.5)**: `git push -u origin test/cobertura-completa` y pull request 22 con base `integracion-ae4` (https://github.com/emilykohler12/nexa-backend/pull/22), con la lista de pruebas por requisito y los siete hallazgos sin corregir. Sin merge. |
+| 2 | Alternativas y criterio de descarte | Merge directo o push a `main`: descartados, el flujo de la AE4 es que Emily revise y mergee cada fase en `integracion-ae4`, y `main` redespliega a la clienta real. |
+| 3 | Evidencia que la sostiene | Commits `a34749a`, `f5c2390`, `a4aa471`, `77fd1b8`, `6cc47d7`, `aa86b17`, `718e8e6` (pruebas) y `45d8401` (documentación, entrada 83); `npm test` con 631 pruebas en verde antes del push. |
+| 4 | Aporte personal | Emily definió el flujo (push y pull request por fase, ella mergea). |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Opus 5.5) y `gh`. |
