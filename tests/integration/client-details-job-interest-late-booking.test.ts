@@ -75,26 +75,31 @@ describe('RF-31: detalles del servicio cargados por la clienta', () => {
 describe('RF-33: postulación', () => {
   const apply = (body: object) => request(app).post('/api/contact/job-interest').send(body)
 
-  it('una postulación con datos responde 201 y queda en la actividad del administrador (módulo jobs)', async () => {
+  it('una postulación con datos responde 201 y la actividad NO guarda nombre, correo ni teléfono', async () => {
     const res = await apply({ name: 'Postulante Test', email: 'postulante@test.local', phone: '3764000111', message: 'Soy manicura' })
 
     expect(res.status).toBe(201)
     const log = await prisma.activityLog.findFirstOrThrow({ where: { module: 'jobs' } })
     expect(log.action).toBe('Nueva postulación')
-    expect(log.detail).toBe('Nombre: Postulante Test — Email: postulante@test.local — Teléfono: 3764000111 — Mensaje: Soy manicura')
+    expect(log.detail).toBe('Datos recibidos: nombre, correo, teléfono. Mensaje: Soy manicura')
+    expect(log.detail).not.toContain('Postulante Test')
+    expect(log.detail).not.toContain('postulante@test.local')
+    expect(log.detail).not.toContain('3764000111')
   })
 
-  // Hallazgo de la fase 7 (reportado, sin corregir por decisión de Emily del 01/11/2026): el endpoint no exige
-  // ningún campo y un cuerpo inválido no se rechaza, se registra como postulación vacía. Esta prueba describe el
-  // comportamiento actual para que un cambio futuro sea visible.
-  it('comportamiento actual: un cuerpo vacío o inválido igual responde 201 y deja "Postulación sin datos cargados"', async () => {
-    const empty   = await apply({})
-    const invalid = await apply({ email: 'x'.repeat(300) })
+  // Fase 10 (hallazgo de la fase 7): el cuerpo se valida con zod y un cuerpo vacío o inválido se rechaza.
+  it('un cuerpo vacío o con datos inválidos responde 400 VALIDATION_ERROR y no deja registro', async () => {
+    const empty    = await apply({})
+    const nulls    = await apply({ name: null, email: null, phone: null, message: null })
+    const badMail  = await apply({ name: 'Ana', email: 'no-es-un-correo' })
+    const badPhone = await apply({ name: 'Ana', phone: '123' })
+    const tooLong  = await apply({ message: 'x'.repeat(2001) })
 
-    expect(empty.status).toBe(201)
-    expect(invalid.status).toBe(201)
-    const logs = await prisma.activityLog.findMany({ where: { module: 'jobs' } })
-    expect(logs.map(l => l.detail)).toEqual(['Postulación sin datos cargados', 'Postulación sin datos cargados'])
+    for (const res of [empty, nulls, badMail, badPhone, tooLong]) {
+      expect(res.status).toBe(400)
+      expect(res.body.code).toBe('VALIDATION_ERROR')
+    }
+    expect(await prisma.activityLog.count({ where: { module: 'jobs' } })).toBe(0)
   })
 })
 
