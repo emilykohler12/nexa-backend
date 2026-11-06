@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { activityService } from '../activity/activity.service'
 import { AppError } from '../../app/middlewares/errorHandler'
 import { HTTP } from '../../app/constants/http'
+import { contactService } from './contact.service'
 import { phoneSchema } from '../../app/validators/phone'
 
 // El formulario manda null en lo que la persona deja vacío.
@@ -29,20 +30,35 @@ export const contactController = {
       }
       const data = parsed.data
 
-      // Datos personales: el nombre, el correo y el teléfono NO se guardan en el registro de actividad
-      // (lo ve cualquier administradora y no tiene vencimiento). Solo queda qué campos vinieron.
+      // Datos personales: la postulación NO se guarda en la base. Va por mail al correo del estudio y en el
+      // registro de actividad (lo ve cualquier administradora y no tiene vencimiento) solo queda qué
+      // campos vinieron, sin nombre, correo, teléfono ni mensaje.
       const received = [
-        data.name  && 'nombre',
-        data.email && 'correo',
-        data.phone && 'teléfono',
-      ].filter(Boolean)
+        data.name    && 'nombre',
+        data.email   && 'correo',
+        data.phone   && 'teléfono',
+        data.message && 'mensaje',
+      ].filter(Boolean).join(', ')
+
+      try {
+        await contactService.sendJobInterest(data)
+      } catch {
+        // El detalle del error ya queda en el log del servidor (mailProvider); acá no se copia nada
+        // de la postulación.
+        await activityService.log({
+          action: 'No se pudo enviar una postulación', module: 'jobs', level: 'error',
+          detail: `Falló el envío del mail al estudio. Campos recibidos: ${received || 'ninguno'}.`,
+        })
+        throw new AppError(
+          HTTP.INTERNAL_SERVER_ERROR,
+          'No pudimos enviar tu postulación. Probá de nuevo en un rato.',
+          'JOB_INTEREST_MAIL_FAILED',
+        )
+      }
 
       await activityService.log({
         action: 'Nueva postulación', module: 'jobs',
-        detail: [
-          `Datos recibidos: ${received.length ? received.join(', ') : 'ninguno de contacto'}.`,
-          data.message && `Mensaje: ${data.message}`,
-        ].filter(Boolean).join(' '),
+        detail: `Postulación enviada por mail al estudio. Campos recibidos: ${received || 'ninguno'}.`,
       })
 
       res.status(201).json({ success: true })
