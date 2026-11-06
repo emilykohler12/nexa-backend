@@ -1,6 +1,8 @@
 // src/modules/specialEvents/specialEvent.controller.ts
 import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
+import { looseBoolean } from '../../app/validators/boolean'
+import { pickPresent } from '../../app/utils/partial'
 import { specialEventModel } from './specialEvent.model'
 import { AppError }      from '../../app/middlewares/errorHandler'
 import { HTTP }          from '../../app/constants/http'
@@ -12,7 +14,7 @@ const specialEventSchema = z.object({
   date:           dateSchema,
   title:          z.string().trim().max(150).nullable().optional(),
   description:    z.string().trim().max(2000).nullable().optional(),
-  active:         z.coerce.boolean().default(true),
+  active:         looseBoolean.default(true),
 })
 
 function getId(req: Request): string {
@@ -93,7 +95,7 @@ export const specialEventController = {
       if (!parsed.success) {
         throw new AppError(HTTP.BAD_REQUEST, parsed.error.issues[0].message, 'VALIDATION_ERROR')
       }
-      const updated = await specialEventModel.update(id, parsed.data)
+      const updated = await specialEventModel.update(id, pickPresent(parsed.data, req.body))
       res.json({ specialEvent: toResponse(updated) })
     } catch (err) { next(err) }
   },

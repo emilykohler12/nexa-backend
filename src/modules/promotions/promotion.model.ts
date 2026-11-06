@@ -1,5 +1,6 @@
 // src/modules/promotions/promotion.model.ts
 import type { Prisma } from '@prisma/client'
+import { orNotFound } from '../../app/utils/partial'
 import { prisma } from '../../app/database/prisma'
 import { todayArgentinaStr } from '../../app/utils/argentinaTime'
 
@@ -62,11 +63,11 @@ export const promotionModel = {
     }),
 
   update: (id: string, data: Partial<PromotionData>) =>
-    prisma.promotion.update({
+    orNotFound(prisma.promotion.update({
       where: { id },
       data:  { ...data, items: data.items as unknown as Prisma.InputJsonValue | undefined },
-    }),
+    }), 'Promoción no encontrada'),
 
   delete: (id: string) =>
-    prisma.promotion.delete({ where: { id } }),
+    orNotFound(prisma.promotion.delete({ where: { id } }), 'Promoción no encontrada'),
 }

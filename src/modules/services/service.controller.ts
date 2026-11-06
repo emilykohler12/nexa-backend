@@ -5,6 +5,8 @@ import { serviceModel } from './service.model'
 import { AppError }     from '../../app/middlewares/errorHandler'
 import { HTTP }         from '../../app/constants/http'
 import { z }            from 'zod'
+import { looseBoolean } from '../../app/validators/boolean'
+import { pickPresent } from '../../app/utils/partial'
 import { dateSchema, timeSchema } from '../../app/validators/datetime'
 import { clientNotificationService } from '../clients/client-notification.service'
 import { appointmentService } from '../appointments/appointment.service'
@@ -46,13 +48,13 @@ const serviceSchema = z.object({
   price:       z.coerce.number().min(0).max(999999),
   image:       z.string().url('URL de imagen inválida').nullable().optional(),
   status:      z.enum(['active', 'inactive']).default('active'),
-  isCombo:     z.coerce.boolean().default(false),
+  isCombo:     looseBoolean.default(false),
   comboServiceIds: z.array(z.string().uuid()).default([]),
-  simultaneous:    z.coerce.boolean().default(false),
+  simultaneous:    looseBoolean.default(false),
   // Profesionales habilitadas por componente del servicio simultáneo —
   // { [serviceId]: professionalId[] }. Vacío = cualquiera (comportamiento previo).
   comboProfessionals: z.record(z.string(), z.array(z.string().uuid())).default({}),
-  isSpecial:    z.coerce.boolean().default(false),
+  isSpecial:    looseBoolean.default(false),
   specialDate:  dateSchema.nullable().optional(),
   specialSlots: z.array(specialSlotSchema).default([]),
   zones:        z.array(serviceZoneSchema).default([]),
@@ -195,17 +197,19 @@ export const serviceController = {
       if (!parsed.success) {
         throw new AppError(HTTP.BAD_REQUEST, parsed.error.issues[0].message, 'VALIDATION_ERROR')
       }
-      assertServiceRules(parsed.data)
+      if (!existing) throw new AppError(HTTP.NOT_FOUND, 'Servicio no encontrado', 'NOT_FOUND')
+      const changes = pickPresent(parsed.data, req.body)
+      assertServiceRules(changes)
       // Solo se revisa si el pedido trae la categoría o el tipo de servicio (se mira el cuerpo crudo: zod completa
       // isCombo con su valor por defecto aunque no venga): guardar otro campo de un servicio viejo con una categoría
       // anterior a esta regla no se traba.
       if (req.body?.categoryId !== undefined || req.body?.isCombo !== undefined) {
-        assertCategory(parsed.data.categoryId ?? existing?.categoryId ?? '', parsed.data.isCombo ?? existing?.isCombo ?? false)
+        assertCategory(changes.categoryId ?? existing.categoryId, changes.isCombo ?? existing.isCombo)
       }
 
       const service = await serviceModel.update(id, {
-        ...parsed.data,
-        ...(parsed.data.specialSlots !== undefined ? { specialSlots: withSlotIds(parsed.data.specialSlots) } : {}),
+        ...changes,
+        ...(changes.specialSlots !== undefined ? { specialSlots: withSlotIds(changes.specialSlots) } : {}),
       })
       res.json({ service })
 
@@ -226,7 +230,7 @@ export const serviceController = {
     try {
       const id      = getId(req)
       const service = await serviceModel.toggleStatus(id)
-      if (!service) throw new AppError(HTTP.NOT_FOUND, 'Servicio no encontrado')
+      if (!service) throw new AppError(HTTP.NOT_FOUND, 'Servicio no encontrado', 'NOT_FOUND')
       res.json({ service })
 
       if (service.isSpecial && service.status === 'active') {
