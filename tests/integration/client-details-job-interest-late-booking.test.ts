@@ -1,6 +1,8 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import request from 'supertest'
 import { app } from '../../src/app/app'
+import { env } from '../../src/app/config/env'
+import { mailProvider } from '../../src/modules/auth/providers/mail.provider'
 import { prisma } from '../../src/app/database/prisma'
 import { createClientUser, createProfessionalUser, createService, createAppointmentDirect } from '../helpers/factories'
 import { cookieFor } from '../helpers/auth'
@@ -75,16 +77,52 @@ describe('RF-31: detalles del servicio cargados por la clienta', () => {
 describe('RF-33: postulación', () => {
   const apply = (body: object) => request(app).post('/api/contact/job-interest').send(body)
 
-  it('una postulación con datos responde 201 y la actividad NO guarda nombre, correo ni teléfono', async () => {
-    const res = await apply({ name: 'Postulante Test', email: 'postulante@test.local', phone: '3764000111', message: 'Soy manicura' })
+  beforeEach(() => { vi.mocked(mailProvider.send).mockReset().mockResolvedValue(undefined as any) })
+
+  it('manda un mail al correo del estudio con los datos y la actividad NO guarda nombre, correo, teléfono ni mensaje', async () => {
+    await prisma.businessSettings.create({ data: { email: 'estudio@test.local' } })
+    const res = await apply({ name: 'Postulante <b>Test</b>', email: 'postulante@test.local', phone: '3764000111', message: 'Soy manicura' })
 
     expect(res.status).toBe(201)
+    const calls = vi.mocked(mailProvider.send).mock.calls
+    expect(calls).toHaveLength(1)
+    const [to, subject, html] = calls[0]
+    expect(to).toBe('estudio@test.local')
+    expect(subject).toContain('postulación')
+    expect(html).toContain('Postulante &lt;b&gt;Test&lt;/b&gt;')
+    expect(html).toContain('postulante@test.local')
+    expect(html).toContain('3764000111')
+    expect(html).toContain('Soy manicura')
+
     const log = await prisma.activityLog.findFirstOrThrow({ where: { module: 'jobs' } })
     expect(log.action).toBe('Nueva postulación')
-    expect(log.detail).toBe('Datos recibidos: nombre, correo, teléfono. Mensaje: Soy manicura')
-    expect(log.detail).not.toContain('Postulante Test')
-    expect(log.detail).not.toContain('postulante@test.local')
-    expect(log.detail).not.toContain('3764000111')
+    expect(log.level).toBe('info')
+    expect(log.detail).toBe('Postulación enviada por mail al estudio. Campos recibidos: nombre, correo, teléfono, mensaje.')
+    for (const secret of ['Postulante', 'postulante@test.local', '3764000111', 'Soy manicura']) {
+      expect(log.detail).not.toContain(secret)
+    }
+  })
+
+  it('sin correo cargado en la configuración del negocio usa ADMIN_EMAIL', async () => {
+    const res = await apply({ name: 'Ana' })
+    expect(res.status).toBe(201)
+    expect(vi.mocked(mailProvider.send).mock.calls[0][0]).toBe(env.ADMIN_EMAIL)
+  })
+
+  it('si el mail falla NO responde 201: devuelve error claro y deja una entrada de error sin datos personales', async () => {
+    vi.mocked(mailProvider.send).mockRejectedValueOnce(new Error('SMTP caído'))
+    const res = await apply({ name: 'Postulante Test', email: 'postulante@test.local', phone: '3764000111', message: 'Soy manicura' })
+
+    expect(res.status).toBe(500)
+    expect(res.body.code).toBe('JOB_INTEREST_MAIL_FAILED')
+    expect(res.body.error).toContain('No pudimos enviar tu postulación')
+    const logs = await prisma.activityLog.findMany({ where: { module: 'jobs' } })
+    expect(logs).toHaveLength(1)
+    expect(logs[0].level).toBe('error')
+    expect(logs[0].action).not.toBe('Nueva postulación')
+    for (const secret of ['Postulante', 'postulante@test.local', '3764000111', 'Soy manicura', 'SMTP caído']) {
+      expect(logs[0].detail).not.toContain(secret)
+    }
   })
 
   // Fase 10 (hallazgo de la fase 7): el cuerpo se valida con zod y un cuerpo vacío o inválido se rechaza.
