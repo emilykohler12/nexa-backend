@@ -15,7 +15,9 @@ export default defineConfig({
     // (se trunca antes de cada test, ver tests/setup.ts) — correr archivos en
     // paralelo pisaría los datos entre sí, así que van secuenciales.
     fileParallelism: false,
-    testTimeout: 15000,
-    hookTimeout: 15000,
+    // CI (GitHub Actions): el 06/11/2026 el TRUNCATE del beforeEach superó los 15 s una sola vez (mismo código, pasó en la
+    // corrida siguiente). Más margen para runners lentos; una prueba que de verdad se cuelga igual falla.
+    testTimeout: 30000,
+    hookTimeout: 60000,
   },
 })
