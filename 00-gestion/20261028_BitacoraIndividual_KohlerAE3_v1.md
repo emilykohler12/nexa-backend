@@ -1408,3 +1408,33 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con `git`, `gh`, `psql` y Node. Context7 no se consultó: la prueba de `createPreference` usa el SDK de Mercado Pago tal como ya lo importa `payment.service.ts` y Vitest como en el resto de la suite. |
 
 **Impacto en el frontend (contrato):** ninguno. No cambia ninguna ruta ni respuesta.
+
+## Entrada 103: AE4, CI en rojo en `main` (pull request 31) por un tiempo de espera de la base en las pruebas (rama `chore/cierre-final`)
+
+**Fecha:** 2026-11-06 (hora de la máquina, UTC-3)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Sonnet 5.5), no por Emily**, a pedido de ella. El CI del push a `main` por el merge del pull request 31 falló: 651 de 652 pruebas, con `Hook timed out in 15000ms` en el `beforeEach` de `tests/setup.ts` (el `TRUNCATE` de las tablas) en «aviso cargado tarde con una hora anterior» de `appointments.cancellation-refund.test.ts`. Se subió `hookTimeout` de 15 a 60 s y `testTimeout` de 15 a 30 s en `vitest.config.mts`, y se volvió a correr el trabajo fallido. |
+| 2 | Alternativas y criterio de descarte | **Arreglar la prueba o el código de la cancelación:** descartado, el código no cambió respecto de las corridas verdes de la rama y la prueba solo usa `Date` falso, que se restaura en `afterEach`. **Reintentar sin tocar nada:** descartado como única medida, volvería a pasar el próximo fallo de un runner lento. |
+| 3 | Evidencia que la sostiene | Log del CI: el mismo archivo tardó 23 s y hay pausas de unos 20 s entre pruebas de otros archivos (runner lento); fue un único fallo; las dos corridas de la rama `chore/cierre-final` con el mismo código y los PR 28, 29, 30 y 31 dieron verde; local, 661 de 661. No se pudo probar la causa exacta (el log no la muestra): es una conclusión por descarte. |
+| 4 | Aporte personal | Emily detectó el CI en rojo y pidió revisar y corregir. |
+| 5 | Desacuerdo y resolución | Si vuelve a aparecer un fallo así con 60 s, deja de ser un runner lento y hay que mirar bloqueos en la base (un `TRUNCATE` espera a cualquier transacción abierta). |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con `gh`. Context7 no se consultó (solo valores de configuración de Vitest que ya estaban). |
+
+**Impacto en el frontend (contrato):** ninguno.
+
+## Entrada 104: AE4, fase 6 (pendiente) — reglas de alerta de Sentry filtradas por `environment:production` (rama `chore/cierre-final`)
+
+**Fecha:** 2026-11-06 04:36 (hora de la máquina, UTC-3)
+
+| # | Elemento | Registro |
+|---|----------|----------|
+| 1 | Qué se decidió | **Hecho por Claude Code**, a pedido de Emily, con la herramienta `update_alert_rule` del conector de Sentry (no hay cambio de código ni de GitHub). Las cuatro reglas «Send a notification for high priority issues» de la organización `kologic` (IDs 6064248, 6076334, 6064296 y 6064235) pasaron de `environment: null` a `environment: production`. Cumple el pendiente de la entrada 82. No se tocó la regla «Send a notification when pull requests are ready» (5913791). |
+| 2 | Alternativas y criterio de descarte | **Dejar las reglas sin filtro:** descartado, los avisos anteriores eran todos de `environment: test` (corridas de `npm test`). **Filtrar solo la regla del proyecto del backend:** descartado, las cuatro avisan por mail a los miembros activos y ninguna es de otro entorno que producción. |
+| 3 | Evidencia que la sostiene | `find_alert_rules` antes del cambio (las cinco reglas con `environment: null`) y la respuesta de cada `update_alert_rule` con `environment: "production"`. No se probó que una alerta de producción llegue: se verá con el próximo error real. |
+| 4 | Aporte personal | Emily indicó el pendiente y confirmó que se filtraran las reglas y se anotara el cambio. |
+| 5 | Desacuerdo y resolución | Sin desacuerdos. Siguen abiertos: la regla 6064235 no está conectada a ningún proyecto (conviene borrarla desde Sentry si es un resto de prueba) y la caída 503 de UptimeRobot del 31/10 a las 19:59 UTC, que requiere mirar los eventos y el log de Render de esa franja. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con el conector de Sentry. Context7 no se consultó (no hay código que dependa de una librería). |
+
+**Impacto en el frontend (contrato):** ninguno.
