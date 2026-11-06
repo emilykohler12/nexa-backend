@@ -1354,3 +1354,16 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily definió el flujo (push y pull request por fase, ella mergea). |
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Opus 5.5) y `gh`. |
+
+## Entrada 78 bis (recuperada de la rama local `feat/fase-4-tienda`, commit `ac0ba11`; en `main` el número 78 ya lo usa otra entrada): AE4, fase 4 (rama), correcciones de la fase 3b y política de privacidad
+
+**Fecha:** 2026-11-01, de 00:05 a 00:25 (hora de la máquina, UTC-3)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code**, a pedido de Emily. (a) El pull request 17 ya estaba mergeado (`c707180`) cuando se subió el commit `031e319` (entrada 77), que por eso no entró. Se actualizó `integracion-ae4`, se cortó `feat/fase-4-tienda` y se pasó ese commit con `cherry-pick` (`41cd6c0`), como commit aparte de la rama de la fase 4. (b) Antes de cambiar la versión se verificó su uso: `users.terms_version` solo se escribe (registro y confirmación de reserva), nada la lee ni la compara. Una clienta con `2026-09` no es bloqueada ni se le pide aceptar de nuevo al ingresar; al reservar se le regraba la versión nueva. Administradora y profesionales tienen `null` y siguen entrando. **No hay efecto sobre el personal.** (c) `PRIVACY_POLICY_VERSION = '2026-11'`. No quedaba ningún otro lugar con la versión `2026-09` (las otras coincidencias son fechas). (d) Pruebas nuevas en `terms-version.test.ts`: versión vigente fijada en `2026-11`, clienta con `2026-09` que ingresa sin cambios, la misma clienta que reserva y queda con `2026-11`, y administradora y profesional sin versión que ingresan y operan. (e) `docs/cambios-y-decisiones.md` deja la frase exacta que indicó Emily y dónde va (sección «2. Propósitos» de `PrivacyPolicyPage.tsx` del frontend, más la constante en `legal.ts`). Reemplaza la frase de una línea de la entrada 77. El frontend no se tocó. (f) La limpieza de `reminder_sent_at` al reprogramar y su prueba ya estaban hechas en `41cd6c0`. |
+| 2 | Alternativas y criterio de descarte | Cherry-pick a la rama de la fase 4 en vez de un pull request aparte: es lo que Emily pidió para el caso de pull request ya mergeado. Borrar `feat/recordatorio-turno-mail` (local y remota): descartado, el commit `031e319` no está mergeado; el contenido ya vive en la rama nueva y la rama vieja se puede borrar cuando Emily lo indique. |
+| 3 | Evidencia que la sostiene | `gh pr view 17`: estado `MERGED`, 2026-11-01 02:02 UTC. `git branch -r --contains 031e319` solo lista la rama de la fase. `grep` de `termsVersion` y `terms_version` en `src`: dos escrituras, ninguna lectura. `terms-version.test.ts`: 7 pruebas verdes. `typecheck:all` sin errores. |
+| 4 | Aporte personal | Emily pidió verificar el efecto de la versión antes de cambiarla (clientas y personal), actualizar las pruebas, no tocar el frontend y dejar la frase escrita; y que la limpieza de `reminder_sent_at` fuera con su prueba. |
+| 5 | Desacuerdo y resolución | Ninguno. Queda a la espera del enunciado de la fase 4. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con `git` y `gh`. Revisión de Emily pendiente. |
