@@ -98,6 +98,11 @@ export const inventoryMovementModel = {
       if (!existing) throw new AppError(HTTP.NOT_FOUND, 'Movimiento no encontrado', 'NOT_FOUND')
 
       const revertDelta = -deltaFor(existing.type as MovementType, existing.quantity)
+      // Borrar una entrada cuyo stock ya se vendió dejaría el stock negativo.
+      const current = await tx.product.findUnique({ where: { id: existing.productId } })
+      if (current && current.stock + revertDelta < 0) {
+        throw new AppError(HTTP.BAD_REQUEST, `No se puede borrar esa entrada: parte de ese stock de ${current.name} ya se vendió`, 'INSUFFICIENT_STOCK')
+      }
       const reverted = await tx.product.update({ where: { id: existing.productId }, data: { stock: { increment: revertDelta } } })
       await tx.inventoryMovement.delete({ where: { id } })
       const affectedProducts: AffectedProduct[] = [{ id: reverted.id, stock: reverted.stock }]

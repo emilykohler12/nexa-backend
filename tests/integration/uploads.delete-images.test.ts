@@ -12,16 +12,16 @@ const BASE = 'https://proyecto.supabase.test'
 const PUB  = `${BASE}/storage/v1/object/public/images`
 
 describe('uploadProvider.deleteImages', () => {
-  const original = { url: env.SUPABASE_URL, key: env.SUPABASE_ANON_KEY }
+  const original = { url: env.SUPABASE_URL, key: env.SUPABASE_SERVICE_ROLE_KEY }
 
   beforeEach(() => {
     remove.mockReset()
     env.SUPABASE_URL = BASE
-    env.SUPABASE_ANON_KEY = 'clave-de-prueba'
+    env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-prueba'
   })
   afterEach(() => {
     env.SUPABASE_URL = original.url
-    env.SUPABASE_ANON_KEY = original.key
+    env.SUPABASE_SERVICE_ROLE_KEY = original.key
   })
 
   it('manda al bucket la ruta de cada URL y da por borrados los archivos que Supabase confirma', async () => {

@@ -155,7 +155,8 @@ export const dashboardService = {
       }
       if (a.paymentStatus === 'refunded') refundedDeposits += 1
       if (a.paymentStatus === 'partial' && ['confirmed', 'finished'].includes(a.status)) {
-        pendingBalance += price - Number(a.depositAmount)
+        // Descuenta la seña y también el saldo ya cobrado en el local.
+        pendingBalance += Math.max(0, price - Number(a.depositAmount) - Number(a.balancePaidAmount ?? 0))
       }
 
       if (a.promotionId) withPromotion += 1

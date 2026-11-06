@@ -1,5 +1,8 @@
 // src/modules/services/service.model.ts
 import type { Prisma } from '@prisma/client'
+import { orNotFound, isRecordNotFound } from '../../app/utils/partial'
+import { AppError } from '../../app/middlewares/errorHandler'
+import { HTTP } from '../../app/constants/http'
 import { prisma } from '../../app/database/prisma'
 
 export type ServiceStatus = 'active' | 'inactive'
@@ -105,7 +108,7 @@ export const serviceModel = {
     }),
 
   update: (id: string, data: Partial<ServiceData>) =>
-    prisma.service.update({
+    orNotFound(prisma.service.update({
       where: { id },
       data: {
         ...data,
@@ -114,7 +117,7 @@ export const serviceModel = {
         packages:     data.packages     as unknown as Prisma.InputJsonValue | undefined,
         comboProfessionals: data.comboProfessionals as unknown as Prisma.InputJsonValue | undefined,
       },
-    }),
+    }), 'Servicio no encontrado'),
 
   delete: async (id: string): Promise<{ deleted: boolean }> => {
     try {
@@ -128,6 +131,7 @@ export const serviceModel = {
         await prisma.service.update({ where: { id }, data: { status: 'inactive' } })
         return { deleted: false }
       }
+      if (isRecordNotFound(err)) throw new AppError(HTTP.NOT_FOUND, 'Servicio no encontrado', 'NOT_FOUND')
       throw err
     }
   },

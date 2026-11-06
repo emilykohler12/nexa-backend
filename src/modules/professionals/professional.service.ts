@@ -500,29 +500,20 @@ export const professionalService = {
       })
     }
 
-    const languages = data.languages !== undefined
-      ? String(data.languages).split(',').map((l: string) => l.trim()).filter(Boolean)
-      : []
-
-    const professionalFields = {
-      bio:       data.bio       ?? null,
-      photo:     data.photo     ?? null,
-      specialty: data.specialty ?? null,
-      instagram: data.instagram ?? null,
-      facebook:  data.facebook  ?? null,
-      tiktok:    data.tiktok    ?? null,
-      twitter:   data.twitter   ?? null,
-      yearsExperience: data.yearsExperience ?? 0,
-      certifications:  data.certifications  ?? null,
-      languages,
-      paymentMethods:       data.paymentMethods       ?? [],
-      toleranceMinutes:     data.toleranceMinutes     ?? null,
-      latePenalty:          data.latePenalty          ?? null,
-      cancellationPolicy:   data.cancellationPolicy   ?? null,
-      reschedulePolicy:     data.reschedulePolicy     ?? null,
-      depositPolicy:        data.depositPolicy        ?? null,
-      priorRecommendations: data.priorRecommendations ?? null,
-      afterCare:            data.afterCare            ?? null,
+    // Actualización parcial: solo se escriben las claves que vienen en el pedido.
+    // Un PATCH de un solo campo no pisa el resto (antes la bio se borraba).
+    const professionalFields: Record<string, unknown> = {}
+    for (const key of [
+      'bio', 'photo', 'specialty', 'instagram', 'facebook', 'tiktok', 'twitter',
+      'yearsExperience', 'certifications', 'paymentMethods', 'toleranceMinutes',
+      'latePenalty', 'cancellationPolicy', 'reschedulePolicy', 'depositPolicy',
+      'priorRecommendations', 'afterCare',
+    ]) {
+      if (data[key] !== undefined) professionalFields[key] = data[key]
+    }
+    if (data.languages !== undefined) {
+      professionalFields.languages = (Array.isArray(data.languages) ? data.languages : String(data.languages).split(','))
+        .map((l: string) => l.trim()).filter(Boolean)
     }
 
     await prisma.professional.upsert({

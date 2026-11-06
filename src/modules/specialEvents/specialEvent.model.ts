@@ -1,6 +1,7 @@
 // src/modules/specialEvents/specialEvent.model.ts
 //
 // Evento especial destacado en el home (ver comentario del modelo en schema.prisma).
+import { orNotFound } from '../../app/utils/partial'
 import { prisma } from '../../app/database/prisma'
 import { todayArgentinaStr } from '../../app/utils/argentinaTime'
 
@@ -47,8 +48,8 @@ export const specialEventModel = {
     prisma.specialEvent.create({ data, include: withDisplayInfo }),
 
   update: (id: string, data: Partial<SpecialEventData>) =>
-    prisma.specialEvent.update({ where: { id }, data, include: withDisplayInfo }),
+    orNotFound(prisma.specialEvent.update({ where: { id }, data, include: withDisplayInfo }), 'Evento no encontrado'),
 
   delete: (id: string) =>
-    prisma.specialEvent.delete({ where: { id } }),
+    orNotFound(prisma.specialEvent.delete({ where: { id } }), 'Evento no encontrado'),
 }

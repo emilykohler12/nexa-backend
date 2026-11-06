@@ -1,6 +1,7 @@
 // src/modules/promotions/promotion.controller.ts
 import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
+import { pickPresent } from '../../app/utils/partial'
 import { promotionModel } from './promotion.model'
 import { AppError }       from '../../app/middlewares/errorHandler'
 import { HTTP }           from '../../app/constants/http'
@@ -128,11 +129,13 @@ export const promotionController = {
       if (!parsed.success) {
         throw new AppError(HTTP.BAD_REQUEST, parsed.error.issues[0].message, 'VALIDATION_ERROR')
       }
-      if (parsed.data.kind !== undefined && parsed.data.items !== undefined) {
-        assertKindRules(parsed.data.kind, parsed.data.items, parsed.data.buyQty, parsed.data.payQty)
+      if (!existing) throw new AppError(HTTP.NOT_FOUND, 'Promoción no encontrada', 'NOT_FOUND')
+      const changes = pickPresent(parsed.data, req.body)
+      if (changes.kind !== undefined && changes.items !== undefined) {
+        assertKindRules(changes.kind, changes.items, changes.buyQty, changes.payQty)
       }
 
-      const promotion = await promotionModel.update(id, parsed.data)
+      const promotion = await promotionModel.update(id, changes)
       res.json({ promotion: toResponse(promotion) })
 
       // Solo avisa cuando PASA a activa — nunca en una edición que la deja

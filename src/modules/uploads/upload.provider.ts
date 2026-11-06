@@ -81,7 +81,7 @@ export const uploadProvider = {
   // archivos que de verdad borró, así que lo que falte ahí cuenta como fallido.
   deleteImages: async (urls: string[]): Promise<{ deleted: string[]; failed: string[] }> => {
     if (urls.length === 0) return { deleted: [], failed: [] }
-    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return { deleted: [], failed: [...urls] }
+    if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return { deleted: [], failed: [...urls] }
 
     const prefix = `${env.SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/public/${BUCKET}/`
     const pathByUrl = new Map<string, string>()
@@ -98,7 +98,7 @@ export const uploadProvider = {
     if (pathByUrl.size === 0) return { deleted: [], failed }
 
     try {
-      const client = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY)
+      const client = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
       const { data, error } = await client.storage.from(BUCKET).remove([...new Set(pathByUrl.values())])
       const removed = new Set(error ? [] : (data ?? []).map(f => f.name))
       const deleted: string[] = []
