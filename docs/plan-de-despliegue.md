@@ -57,3 +57,26 @@ La fase 10 no agrega migraciones. Antes de publicar:
 
 - Con un turno de prueba confirmado que empiece en menos de 5 horas (creado con más de 5 horas de anticipación, con la cuenta de Emily y el correo verificado), comprobar que llega el mail y que aparece la entrada «Recordatorio de turno enviado» en Actividad.
 - Revisar en Actividad que no haya entradas «No se pudo enviar el recordatorio del turno» repetidas.
+
+## Instalación desde una base vacía (probada el 05/11/2026)
+
+Probado en una base PostgreSQL 18 vacía y local (`nexa_vacia_test`, borrada después), con variables de entorno de ejemplo puestas en la terminal (sin `.env`). **No falló ningún paso.**
+
+| Paso | Comando | Resultado |
+|---|---|---|
+| 1. Crear la base | `createdb nexa` (o desde psql: `create database nexa;`) | Base vacía |
+| 2. Variables | Copiar `.env.example` como `.env` y completar `DATABASE_URL`, los dos secretos JWT (32 caracteres o más), `FRONTEND_URL` y el administrador inicial. Las demás son opcionales | El proceso termina con `exit(1)` si falta una obligatoria |
+| 3. Dependencias | `npm ci` (usa `package-lock.json`, que está versionado; Node de `.node-version`) | — |
+| 4. Migraciones | `npx prisma migrate deploy` | «All migrations have been successfully applied» (63 archivos en `prisma/migrations`, el índice único parcial de R-01 incluido) |
+| 5. Arrancar | `npm run build` y `npm start` (en desarrollo, `npm run dev`) | Crea solo la administradora con `ADMIN_EMAIL`, `ADMIN_PASSWORD` y `ADMIN_NAME` |
+| 6. Datos de demostración (opcional, solo desarrollo) | `npm run seed:demo` | Servicio, profesional, clienta con tres turnos, promoción y WhatsApp de demo |
+
+Usuarios de demostración (datos inventados; nunca cargarlos en producción):
+
+| Rol | Usuario | Contraseña de prueba |
+|---|---|---|
+| Administradora | `admin@nexa.local` (el de `ADMIN_EMAIL`) | `Admin1234!` (la de `ADMIN_PASSWORD` del ejemplo) |
+| Profesional | `profesional@nexa.local` | `Profesional1234!` |
+| Clienta | `clienta@nexa.local` | `Clienta1234!` |
+
+Con el servidor arriba, el inicio de sesión de los tres respondió `200`, `GET /api/services` respondió `200` y `GET /api/store/products` devolvió una lista vacía. Este plan es de actualización de producción; para una instalación nueva alcanza con la tabla de arriba. Con la base vacía, `docs/consultas-previas-produccion.sql` y `node scripts/migration-checksums.mjs` no hacen falta.

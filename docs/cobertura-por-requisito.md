@@ -2,7 +2,7 @@
 
 Para cada requisito del libro de requisitos v7 (`03-requisitos/20261030_CatalogoRequisitos_Kohler_v7.xlsx`, hoja «Catálogo»): las pruebas automatizadas del backend que lo ejercitan (archivo y nombre completo, con el `describe` y el `it`), el resultado de la última corrida y si el criterio de aceptación queda cubierto **completo**, **parcial** o **sin prueba**. Quedan afuera los requisitos eliminados: RF-22 (campañas automáticas), RF-30 (recordatorio de inactividad) y la parte de fidelización de RF-28.
 
-**Última corrida:** `npm test` (Vitest con `--reporter=json`) el 01/11/2026, 15:07 (hora de Argentina) sobre la rama `docs/informes-v8`, igual a `integracion-ae4` en `d04ad34` (pull request 23 mergeado): **57 archivos y 638 pruebas, 638 pasaron y 0 fallaron.**
+**Última corrida:** `npm test` (Vitest con `--reporter=json`) el 06/11/2026 sobre la rama `chore/cierre-final`, cortada de `main` en `090f0db` (pull requests 28, 29 y 30 mergeados): **59 archivos y 661 pruebas, 661 pasaron y 0 fallaron.** El mapa requisito → pruebas de las versiones anteriores se conserva; en esta actualización se corrigieron RF-33 y RF-08 (pruebas nuevas de las fases 10 y de `terms-version.test.ts`). El script que armó el informe original no está versionado: el resto del mapa no se rehízo.
 
 **Cómo se armó.** El mapa requisito → pruebas se hizo leyendo el criterio de cada requisito y los nombres y el contenido de las pruebas; el resultado de cada prueba sale del reporte JSON de esa corrida. «Completo» quiere decir que cada parte del criterio tiene una prueba que la comprueba; «parcial», que alguna parte no la tiene o que el criterio escrito no coincide con lo que hace el código (se dice cuál); «sin prueba», que no hay ninguna prueba automatizada. Solo se miran las pruebas del backend: las del frontend (`nexa-frontend`) no se revisaron (**no determinado** si cubren algo más). Una prueba puede servir a más de un requisito.
 
@@ -40,7 +40,7 @@ Para cada requisito del libro de requisitos v7 (`03-requisitos/20261030_Catalogo
 | RF-29 | Parcial |
 | RF-31 | Completo |
 | RF-32 | Completo |
-| RF-33 | Parcial |
+| RF-33 | Completo |
 | RF-34 | Parcial |
 | RNF-01 | Sin prueba |
 | RNF-02 | Sin prueba |
@@ -53,7 +53,7 @@ Para cada requisito del libro de requisitos v7 (`03-requisitos/20261030_Catalogo
 | RNF-09 | Completo |
 | RNF-10 | Completo |
 
-Total: 42 requisitos; 29 completos, 11 parciales y 2 sin prueba.
+Total: 42 requisitos; 30 completos, 10 parciales y 2 sin prueba.
 
 **Criterios del libro v7 que no coinciden con el código** (para corregir en el libro, no en el código, salvo que Emily decida otra cosa): RF-05 (inasistencia: más de 30 minutos, `no_show_auto` y horario ocupado), RF-01 y RNF-08 (enunciado), RF-20 (promoción vencida: se rechaza), RF-21 (enunciado: los pedidos pagados sí crean movimiento), RF-28 (visitas: solo finalizados) y RNF-10 (cifras). RF-17 y RNF-09 figuran en el libro «sin prueba» y ya la tienen.
 
@@ -263,6 +263,10 @@ Total: 42 requisitos; 29 completos, 11 parciales y 2 sin prueba.
 | `tests/integration/terms-version.test.ts` | versión de la política aceptada › el registro graba fecha y versión de la política | pasó |
 | `tests/integration/terms-version.test.ts` | versión de la política aceptada › confirmar una reserva vuelve a grabar fecha y versión (cuentas viejas sin versión) | pasó |
 | `tests/integration/terms-version.test.ts` | versión de la política aceptada › si no acepta la política no se graba nada | pasó |
+| `tests/integration/terms-version.test.ts` | cambio de versión de la política (2026-09 → 2026-11) › la versión vigente es 2026-11 | pasó |
+| `tests/integration/terms-version.test.ts` | cambio de versión de la política (2026-09 → 2026-11) › una clienta que aceptó 2026-09 inicia sesión sin que se le pida nada y no se le toca la versión | pasó |
+| `tests/integration/terms-version.test.ts` | cambio de versión de la política (2026-09 → 2026-11) › al reservar, esa misma clienta queda con la versión nueva (solo se regraba lo que ya se acepta al confirmar) | pasó |
+| `tests/integration/terms-version.test.ts` | cambio de versión de la política (2026-09 → 2026-11) › la administradora y las profesionales (sin versión aceptada) siguen entrando y operando | pasó |
 | `tests/integration/auth.test.ts` | auth › rechaza el registro sin aceptar términos | pasó |
 | `tests/integration/appointments.booking.test.ts` | reserva de turnos › rechaza reservar sin aceptar términos | pasó |
 
@@ -751,14 +755,19 @@ Total: 42 requisitos; 29 completos, 11 parciales y 2 sin prueba.
 
 **Enunciado (libro v7):** El sitio permite a una visitante enviar su interés por trabajar en el estudio; el sistema deja una entrada «Nueva postulación» en el registro de actividad.
 
-**Criterio de aceptación (libro v7):** Dado el formulario de postulación del sitio, cuando una visitante lo envía, aparece en el registro de actividad una entrada del módulo «jobs» con la acción «Nueva postulación»; no se guarda ningún otro dato. Sin prueba automatizada.
+**Criterio de aceptación (libro v7):** Dado el formulario de postulación del sitio, cuando una visitante lo envía, aparece en el registro de actividad una entrada del módulo «jobs» con la acción «Nueva postulación»; no se guarda ningún otro dato.
+
+**Decisión de Emily del 05/11/2026 (posterior al libro v7):** la postulación se avisa por mail al correo del estudio (`BusinessSettings.email`, y `ADMIN_EMAIL` si está vacío) y no se guarda en la base. En la actividad queda solo la acción y qué campos llegaron, sin nombre, correo, teléfono ni mensaje. Si el mail falla no se responde 201.
 
 | Archivo | Prueba | Resultado |
 |---|---|---|
-| `tests/integration/client-details-job-interest-late-booking.test.ts` | RF-33: postulación › una postulación con datos responde 201 y queda en la actividad del administrador (módulo jobs) | pasó |
-| `tests/integration/client-details-job-interest-late-booking.test.ts` | RF-33: postulación › comportamiento actual: un cuerpo vacío o inválido igual responde 201 y deja "Postulación sin datos cargados" | pasó |
+| `tests/integration/client-details-job-interest-late-booking.test.ts` | RF-33: postulación › manda un mail al correo del estudio con los datos y la actividad NO guarda nombre, correo, teléfono ni mensaje | pasó |
+| `tests/integration/client-details-job-interest-late-booking.test.ts` | RF-33: postulación › sin correo cargado en la configuración del negocio usa ADMIN_EMAIL | pasó |
+| `tests/integration/client-details-job-interest-late-booking.test.ts` | RF-33: postulación › si el mail falla NO responde 201: devuelve error claro y deja una entrada de error sin datos personales | pasó |
+| `tests/integration/client-details-job-interest-late-booking.test.ts` | RF-33: postulación › un cuerpo vacío o con datos inválidos responde 400 VALIDATION_ERROR y no deja registro | pasó |
+| `tests/integration/fase-10-cierre-codigo.test.ts` | 5. postulaciones: limitador propio | pasó |
 
-**Cobertura: Parcial.** La entrada «Nueva postulación» del módulo `jobs` está probada. Que «no se guarde ningún otro dato» no lo prueba nada; además, el nombre, el correo y el teléfono quedan dentro del detalle de esa entrada y un cuerpo inválido igual se acepta (hallazgo de la fase 7).
+**Cobertura: Completo**, con la salvedad de que el criterio del libro v7 (una entrada «Nueva postulación» en la actividad) se mantiene y se le suma el aviso por mail; el cambio de criterio de Emily está pendiente de reflejarse en el libro de requisitos.
 
 ### RF-34
 
