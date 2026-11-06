@@ -7,6 +7,7 @@ import { notificationService } from './notification.service'
 import { AppError }            from '../../app/middlewares/errorHandler'
 import { HTTP }                from '../../app/constants/http'
 import type { AuthUser }       from '../auth/types/auth.types'
+import { parseOrThrow, profileSchema, scheduleSchema, onboardingSchema } from './dto/professional.dto'
 import { z }                from 'zod'
 import { dateSchema }       from '../../app/validators/datetime'
 
@@ -112,7 +113,7 @@ export const professionalsController = {
 
   updateMyProfile: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const profile = await professionalService.updateMyProfile(req.user!.id, req.body)
+      const profile = await professionalService.updateMyProfile(req.user!.id, parseOrThrow(profileSchema, req.body))
       res.json({ profile })
     } catch (err) { next(err) }
   },
@@ -133,14 +134,14 @@ export const professionalsController = {
 
   updateMySchedule: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const result = await professionalService.updateMySchedule(req.user!.id, req.body.availability ?? {})
+      const result = await professionalService.updateMySchedule(req.user!.id, parseOrThrow(scheduleSchema, req.body).availability)
       res.json(result)
     } catch (err) { next(err) }
   },
 
   submitOnboarding: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      await professionalService.saveOnboarding(req.user!.id, req.body)
+      await professionalService.saveOnboarding(req.user!.id, parseOrThrow(onboardingSchema, req.body))
       res.json({ message: 'Perfil completado' })
     } catch (err) { next(err) }
   },
