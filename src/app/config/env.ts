@@ -60,6 +60,8 @@ const schema = z.object({
   // solo desde el backend — nunca llega al navegador.
   SUPABASE_URL:      z.string().optional(),
   SUPABASE_ANON_KEY: z.string().optional(),
+  // Clave de servicio (SECRETA): solo la usa el backend para borrar archivos del bucket. Nunca va al frontend.
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
 
   // URL pública (túnel de VS Code / ngrok) a la que Mercado Pago manda los
   // webhooks en desarrollo. Sin esto, el webhook nunca llega — los pagos se
