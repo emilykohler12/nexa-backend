@@ -76,6 +76,12 @@ async function getByIdInternal(id: string) {
   return mapAdminClient(user, user.client, visits)
 }
 
+function assertGalleryCategory(category: unknown): void {
+  if (category !== 'before' && category !== 'after') {
+    throw new AppError(HTTP.BAD_REQUEST, 'Categoría inválida (usá before o after)', 'VALIDATION_ERROR')
+  }
+}
+
 export const adminService = {
 
   getAllClients: async () => {
@@ -296,9 +302,7 @@ export const adminService = {
     const user = await prisma.user.findUnique({ where: { id: clientId } })
     if (!user || user.role !== 'client') throw new AppError(HTTP.NOT_FOUND, 'Cliente no encontrado', 'NOT_FOUND')
     if (!data.url) throw new AppError(HTTP.BAD_REQUEST, 'La URL de la foto es obligatoria', 'VALIDATION_ERROR')
-    if (!['before', 'after'].includes(data.category)) {
-      throw new AppError(HTTP.BAD_REQUEST, 'Categoría inválida', 'VALIDATION_ERROR')
-    }
+    assertGalleryCategory(data.category)
 
     const photo = await prisma.clientGalleryPhoto.create({
       data: { clientId, url: data.url, category: data.category, showOnHome: data.showOnHome ?? false },
@@ -309,6 +313,7 @@ export const adminService = {
   updateClientGalleryPhoto: async (clientId: string, photoId: string, data: { showOnHome?: boolean; category?: string }) => {
     const photo = await prisma.clientGalleryPhoto.findUnique({ where: { id: photoId } })
     if (!photo || photo.clientId !== clientId) throw new AppError(HTTP.NOT_FOUND, 'Foto no encontrada', 'NOT_FOUND')
+    if (data.category !== undefined) assertGalleryCategory(data.category)
 
     const updated = await prisma.clientGalleryPhoto.update({
       where: { id: photoId },
@@ -324,5 +329,13 @@ export const adminService = {
     const photo = await prisma.clientGalleryPhoto.findUnique({ where: { id: photoId } })
     if (!photo || photo.clientId !== clientId) throw new AppError(HTTP.NOT_FOUND, 'Foto no encontrada', 'NOT_FOUND')
     await prisma.clientGalleryPhoto.delete({ where: { id: photoId } })
+    // El archivo se borra después de la fila; si no se puede, queda en la actividad para borrarlo a mano.
+    const files = await uploadProvider.deleteImages([photo.url])
+    if (files.failed.length > 0) {
+      await activityService.log({
+        action: 'No se pudo borrar el archivo de una foto de la galería', module: 'clients', level: 'error',
+        detail: `Foto ${photoId} del cliente ${clientId}. Archivo pendiente de borrar: ${files.failed.join(', ')}`,
+      })
+    }
   },
 }
