@@ -1,0 +1,130 @@
+umbral_minutos,sesion,inicio_art,fin_art,commits,commits_backend,commits_frontend,commits_con_marca_claude,duracion_horas,para_revisar,sprint,primer_commit,ultimo_commit
+60,1,2026-08-25 16:43,2026-08-25 16:53,2,1,1,0,0.67,no,Sprint 1 (hasta el 03/09),frontend:ebbdcdf,backend:98c15ea
+60,2,2026-08-27 13:10,2026-08-27 13:11,2,1,1,0,0.51,no,Sprint 1 (hasta el 03/09),backend:2586b81,frontend:3737d75
+60,3,2026-08-27 15:47,2026-08-27 15:47,1,1,0,0,0.50,no,Sprint 1 (hasta el 03/09),backend:bb61105,backend:bb61105
+60,4,2026-08-28 00:09,2026-08-28 01:37,6,3,3,0,1.96,no,Sprint 1 (hasta el 03/09),backend:ff93af9,backend:401a677
+60,5,2026-09-01 23:11,2026-09-01 23:13,2,1,1,2,0.52,no,Sprint 1 (hasta el 03/09),backend:b2d0a4d,frontend:e889569
+60,6,2026-09-04 17:21,2026-09-04 17:30,6,3,3,6,0.64,no,Sprint 2 (04/09 al 01/10),backend:c9434ff,frontend:5b211b5
+60,7,2026-09-10 18:41,2026-09-10 19:04,6,3,3,6,0.88,no,Sprint 2 (04/09 al 01/10),backend:4a818fa,frontend:6622809
+60,8,2026-09-10 20:14,2026-09-10 21:41,9,4,5,9,1.94,no,Sprint 2 (04/09 al 01/10),backend:93cbfca,frontend:3a471c1
+60,9,2026-09-11 00:26,2026-09-11 01:32,7,3,4,7,1.59,no,Sprint 2 (04/09 al 01/10),backend:0be5ad5,frontend:b5c7b20
+60,10,2026-09-14 18:20,2026-09-14 20:01,6,3,3,6,2.19,no,Sprint 2 (04/09 al 01/10),backend:1c90c9b,frontend:0becab0
+60,11,2026-09-15 19:42,2026-09-15 19:46,2,1,1,2,0.57,no,Sprint 2 (04/09 al 01/10),frontend:1d52425,backend:9e17916
+60,12,2026-09-16 20:56,2026-09-16 21:43,5,2,3,5,1.28,no,Sprint 2 (04/09 al 01/10),frontend:06d2106,frontend:2cb4709
+60,13,2026-09-17 00:06,2026-09-17 01:11,5,2,3,5,1.58,no,Sprint 2 (04/09 al 01/10),backend:a87f2f4,frontend:c1486db
+60,14,2026-09-17 16:06,2026-09-17 16:06,1,0,1,1,0.50,no,Sprint 2 (04/09 al 01/10),frontend:c3c4ab9,frontend:c3c4ab9
+60,15,2026-09-22 22:05,2026-09-22 22:06,2,1,1,2,0.51,no,Sprint 2 (04/09 al 01/10),backend:4cbfac3,frontend:7f46414
+60,16,2026-09-23 01:27,2026-09-23 01:27,2,1,1,2,0.51,no,Sprint 2 (04/09 al 01/10),backend:d1c8222,frontend:3c51f71
+60,17,2026-09-23 14:44,2026-09-23 14:53,4,2,2,4,0.65,no,Sprint 2 (04/09 al 01/10),backend:2dd1bb7,frontend:a803716
+60,18,2026-09-24 23:13,2026-09-25 00:40,16,11,5,3,1.96,no,Sprint 2 (04/09 al 01/10),backend:678cbcc,backend:4a0fecb
+60,19,2026-09-25 14:06,2026-09-25 14:18,6,4,2,0,0.69,no,Sprint 2 (04/09 al 01/10),backend:8fa18f7,backend:c413f0f
+60,20,2026-09-25 15:25,2026-09-25 16:36,6,4,2,0,1.69,no,Sprint 2 (04/09 al 01/10),backend:f2c9d9f,frontend:0bede0a
+60,21,2026-09-26 01:40,2026-09-26 01:49,2,0,2,0,0.65,no,Sprint 2 (04/09 al 01/10),frontend:858e2be,frontend:5b74e37
+60,22,2026-09-26 22:22,2026-09-26 22:23,2,2,0,0,0.52,no,Sprint 2 (04/09 al 01/10),backend:d7ac9fc,backend:3ebba2b
+60,23,2026-10-01 15:13,2026-10-01 15:13,2,1,1,0,0.50,no,Sprint 2 (04/09 al 01/10),backend:a44fddb,frontend:a986ca9
+60,24,2026-10-04 02:47,2026-10-04 02:56,3,2,1,0,0.66,no,Sprint 3 (02/10 al 29/10),frontend:c6bd2d9,backend:8a195de
+60,25,2026-10-05 16:41,2026-10-05 16:41,2,1,1,0,0.50,no,Sprint 3 (02/10 al 29/10),backend:9d97c8f,frontend:72b3a6c
+60,26,2026-10-05 18:09,2026-10-05 18:16,6,3,3,0,0.60,no,Sprint 3 (02/10 al 29/10),backend:3aa5b7b,frontend:1dd6936
+60,27,2026-10-05 21:35,2026-10-05 21:43,6,4,2,0,0.64,no,Sprint 3 (02/10 al 29/10),backend:c12671b,frontend:ec976da
+60,28,2026-10-06 02:44,2026-10-06 02:45,4,3,1,0,0.52,no,Sprint 3 (02/10 al 29/10),backend:2836e1d,frontend:2e7734f
+60,29,2026-10-06 13:33,2026-10-06 13:33,4,2,2,0,0.51,no,Sprint 3 (02/10 al 29/10),backend:9bdc3ee,frontend:edbac78
+60,30,2026-10-17 17:42,2026-10-17 17:42,1,0,1,0,0.50,no,Sprint 3 (02/10 al 29/10),frontend:e3c4b52,frontend:e3c4b52
+60,31,2026-10-23 16:53,2026-10-23 16:53,1,1,0,0,0.50,no,Sprint 3 (02/10 al 29/10),backend:a0aceac,backend:a0aceac
+60,32,2026-10-24 05:34,2026-10-24 05:40,2,2,0,0,0.60,no,Sprint 3 (02/10 al 29/10),backend:2b34aa7,backend:6c2db39
+60,33,2026-10-24 14:55,2026-10-24 17:05,12,11,1,0,2.67,no,Sprint 3 (02/10 al 29/10),backend:4398d15,backend:76383b5
+60,34,2026-10-27 00:58,2026-10-27 01:07,3,1,2,1,0.65,no,Sprint 3 (02/10 al 29/10),frontend:ad3abcf,frontend:63400ec
+60,35,2026-10-27 16:39,2026-10-27 16:57,3,1,2,0,0.81,no,Sprint 3 (02/10 al 29/10),frontend:bc0e6de,backend:7607b55
+60,36,2026-10-28 00:05,2026-10-28 01:35,11,8,3,0,1.99,no,Sprint 3 (02/10 al 29/10),backend:107a465,backend:a4a5aa0
+60,37,2026-10-28 16:09,2026-10-28 17:20,14,10,4,11,1.68,no,Sprint 3 (02/10 al 29/10),backend:688fb7a,frontend:c11524f
+60,38,2026-10-28 22:57,2026-10-28 23:11,8,4,4,0,0.74,no,Sprint 3 (02/10 al 29/10),frontend:ae60d51,backend:d77678f
+60,39,2026-10-30 01:48,2026-10-30 01:52,3,2,1,0,0.57,no,Después del sprint 3 (desde el 30/10),backend:76bb880,backend:15868b3
+60,40,2026-10-30 23:47,2026-10-31 00:17,9,5,4,4,1.00,no,Después del sprint 3 (desde el 30/10),backend:8955406,frontend:52397c8
+60,41,2026-10-31 04:35,2026-10-31 04:57,6,5,1,1,0.86,no,Después del sprint 3 (desde el 30/10),frontend:5138b78,backend:924564f
+60,42,2026-10-31 15:58,2026-10-31 16:05,10,5,5,5,0.63,no,Después del sprint 3 (desde el 30/10),backend:7e8a16e,frontend:546f4d9
+60,43,2026-10-31 22:55,2026-10-31 23:11,11,6,5,5,0.76,no,Después del sprint 3 (desde el 30/10),frontend:f247359,backend:a7ec372
+60,44,2026-11-01 03:40,2026-11-01 04:52,27,15,12,6,1.69,no,Después del sprint 3 (desde el 30/10),backend:ff25797,backend:b87a817
+60,45,2026-11-01 14:39,2026-11-01 15:20,18,18,0,0,1.18,no,Después del sprint 3 (desde el 30/10),backend:f5c2390,backend:55d8e68
+90,1,2026-08-25 16:43,2026-08-25 16:53,2,1,1,0,0.67,no,Sprint 1 (hasta el 03/09),frontend:ebbdcdf,backend:98c15ea
+90,2,2026-08-27 13:10,2026-08-27 13:11,2,1,1,0,0.51,no,Sprint 1 (hasta el 03/09),backend:2586b81,frontend:3737d75
+90,3,2026-08-27 15:47,2026-08-27 15:47,1,1,0,0,0.50,no,Sprint 1 (hasta el 03/09),backend:bb61105,backend:bb61105
+90,4,2026-08-28 00:09,2026-08-28 01:37,6,3,3,0,1.96,no,Sprint 1 (hasta el 03/09),backend:ff93af9,backend:401a677
+90,5,2026-09-01 23:11,2026-09-01 23:13,2,1,1,2,0.52,no,Sprint 1 (hasta el 03/09),backend:b2d0a4d,frontend:e889569
+90,6,2026-09-04 17:21,2026-09-04 17:30,6,3,3,6,0.64,no,Sprint 2 (04/09 al 01/10),backend:c9434ff,frontend:5b211b5
+90,7,2026-09-10 18:41,2026-09-10 21:41,15,7,8,15,3.49,no,Sprint 2 (04/09 al 01/10),backend:4a818fa,frontend:3a471c1
+90,8,2026-09-11 00:26,2026-09-11 01:32,7,3,4,7,1.59,no,Sprint 2 (04/09 al 01/10),backend:0be5ad5,frontend:b5c7b20
+90,9,2026-09-14 18:20,2026-09-14 20:01,6,3,3,6,2.19,no,Sprint 2 (04/09 al 01/10),backend:1c90c9b,frontend:0becab0
+90,10,2026-09-15 19:42,2026-09-15 19:46,2,1,1,2,0.57,no,Sprint 2 (04/09 al 01/10),frontend:1d52425,backend:9e17916
+90,11,2026-09-16 20:56,2026-09-16 21:43,5,2,3,5,1.28,no,Sprint 2 (04/09 al 01/10),frontend:06d2106,frontend:2cb4709
+90,12,2026-09-17 00:06,2026-09-17 01:11,5,2,3,5,1.58,no,Sprint 2 (04/09 al 01/10),backend:a87f2f4,frontend:c1486db
+90,13,2026-09-17 16:06,2026-09-17 16:06,1,0,1,1,0.50,no,Sprint 2 (04/09 al 01/10),frontend:c3c4ab9,frontend:c3c4ab9
+90,14,2026-09-22 22:05,2026-09-22 22:06,2,1,1,2,0.51,no,Sprint 2 (04/09 al 01/10),backend:4cbfac3,frontend:7f46414
+90,15,2026-09-23 01:27,2026-09-23 01:27,2,1,1,2,0.51,no,Sprint 2 (04/09 al 01/10),backend:d1c8222,frontend:3c51f71
+90,16,2026-09-23 14:44,2026-09-23 14:53,4,2,2,4,0.65,no,Sprint 2 (04/09 al 01/10),backend:2dd1bb7,frontend:a803716
+90,17,2026-09-24 23:13,2026-09-25 00:40,16,11,5,3,1.96,no,Sprint 2 (04/09 al 01/10),backend:678cbcc,backend:4a0fecb
+90,18,2026-09-25 14:06,2026-09-25 16:36,12,8,4,0,2.99,no,Sprint 2 (04/09 al 01/10),backend:8fa18f7,frontend:0bede0a
+90,19,2026-09-26 01:40,2026-09-26 01:49,2,0,2,0,0.65,no,Sprint 2 (04/09 al 01/10),frontend:858e2be,frontend:5b74e37
+90,20,2026-09-26 22:22,2026-09-26 22:23,2,2,0,0,0.52,no,Sprint 2 (04/09 al 01/10),backend:d7ac9fc,backend:3ebba2b
+90,21,2026-10-01 15:13,2026-10-01 15:13,2,1,1,0,0.50,no,Sprint 2 (04/09 al 01/10),backend:a44fddb,frontend:a986ca9
+90,22,2026-10-04 02:47,2026-10-04 02:56,3,2,1,0,0.66,no,Sprint 3 (02/10 al 29/10),frontend:c6bd2d9,backend:8a195de
+90,23,2026-10-05 16:41,2026-10-05 18:16,8,4,4,0,2.08,no,Sprint 3 (02/10 al 29/10),backend:9d97c8f,frontend:1dd6936
+90,24,2026-10-05 21:35,2026-10-05 21:43,6,4,2,0,0.64,no,Sprint 3 (02/10 al 29/10),backend:c12671b,frontend:ec976da
+90,25,2026-10-06 02:44,2026-10-06 02:45,4,3,1,0,0.52,no,Sprint 3 (02/10 al 29/10),backend:2836e1d,frontend:2e7734f
+90,26,2026-10-06 13:33,2026-10-06 13:33,4,2,2,0,0.51,no,Sprint 3 (02/10 al 29/10),backend:9bdc3ee,frontend:edbac78
+90,27,2026-10-17 17:42,2026-10-17 17:42,1,0,1,0,0.50,no,Sprint 3 (02/10 al 29/10),frontend:e3c4b52,frontend:e3c4b52
+90,28,2026-10-23 16:53,2026-10-23 16:53,1,1,0,0,0.50,no,Sprint 3 (02/10 al 29/10),backend:a0aceac,backend:a0aceac
+90,29,2026-10-24 05:34,2026-10-24 05:40,2,2,0,0,0.60,no,Sprint 3 (02/10 al 29/10),backend:2b34aa7,backend:6c2db39
+90,30,2026-10-24 14:55,2026-10-24 17:05,12,11,1,0,2.67,no,Sprint 3 (02/10 al 29/10),backend:4398d15,backend:76383b5
+90,31,2026-10-27 00:58,2026-10-27 01:07,3,1,2,1,0.65,no,Sprint 3 (02/10 al 29/10),frontend:ad3abcf,frontend:63400ec
+90,32,2026-10-27 16:39,2026-10-27 16:57,3,1,2,0,0.81,no,Sprint 3 (02/10 al 29/10),frontend:bc0e6de,backend:7607b55
+90,33,2026-10-28 00:05,2026-10-28 01:35,11,8,3,0,1.99,no,Sprint 3 (02/10 al 29/10),backend:107a465,backend:a4a5aa0
+90,34,2026-10-28 16:09,2026-10-28 17:20,14,10,4,11,1.68,no,Sprint 3 (02/10 al 29/10),backend:688fb7a,frontend:c11524f
+90,35,2026-10-28 22:57,2026-10-28 23:11,8,4,4,0,0.74,no,Sprint 3 (02/10 al 29/10),frontend:ae60d51,backend:d77678f
+90,36,2026-10-30 01:48,2026-10-30 01:52,3,2,1,0,0.57,no,Después del sprint 3 (desde el 30/10),backend:76bb880,backend:15868b3
+90,37,2026-10-30 23:47,2026-10-31 00:17,9,5,4,4,1.00,no,Después del sprint 3 (desde el 30/10),backend:8955406,frontend:52397c8
+90,38,2026-10-31 04:35,2026-10-31 04:57,6,5,1,1,0.86,no,Después del sprint 3 (desde el 30/10),frontend:5138b78,backend:924564f
+90,39,2026-10-31 15:58,2026-10-31 16:05,10,5,5,5,0.63,no,Después del sprint 3 (desde el 30/10),backend:7e8a16e,frontend:546f4d9
+90,40,2026-10-31 22:55,2026-10-31 23:11,11,6,5,5,0.76,no,Después del sprint 3 (desde el 30/10),frontend:f247359,backend:a7ec372
+90,41,2026-11-01 03:40,2026-11-01 04:52,27,15,12,6,1.69,no,Después del sprint 3 (desde el 30/10),backend:ff25797,backend:b87a817
+90,42,2026-11-01 14:39,2026-11-01 15:20,18,18,0,0,1.18,no,Después del sprint 3 (desde el 30/10),backend:f5c2390,backend:55d8e68
+120,1,2026-08-25 16:43,2026-08-25 16:53,2,1,1,0,0.67,no,Sprint 1 (hasta el 03/09),frontend:ebbdcdf,backend:98c15ea
+120,2,2026-08-27 13:10,2026-08-27 13:11,2,1,1,0,0.51,no,Sprint 1 (hasta el 03/09),backend:2586b81,frontend:3737d75
+120,3,2026-08-27 15:47,2026-08-27 15:47,1,1,0,0,0.50,no,Sprint 1 (hasta el 03/09),backend:bb61105,backend:bb61105
+120,4,2026-08-28 00:09,2026-08-28 01:37,6,3,3,0,1.96,no,Sprint 1 (hasta el 03/09),backend:ff93af9,backend:401a677
+120,5,2026-09-01 23:11,2026-09-01 23:13,2,1,1,2,0.52,no,Sprint 1 (hasta el 03/09),backend:b2d0a4d,frontend:e889569
+120,6,2026-09-04 17:21,2026-09-04 17:30,6,3,3,6,0.64,no,Sprint 2 (04/09 al 01/10),backend:c9434ff,frontend:5b211b5
+120,7,2026-09-10 18:41,2026-09-10 21:41,15,7,8,15,3.49,no,Sprint 2 (04/09 al 01/10),backend:4a818fa,frontend:3a471c1
+120,8,2026-09-11 00:26,2026-09-11 01:32,7,3,4,7,1.59,no,Sprint 2 (04/09 al 01/10),backend:0be5ad5,frontend:b5c7b20
+120,9,2026-09-14 18:20,2026-09-14 20:01,6,3,3,6,2.19,no,Sprint 2 (04/09 al 01/10),backend:1c90c9b,frontend:0becab0
+120,10,2026-09-15 19:42,2026-09-15 19:46,2,1,1,2,0.57,no,Sprint 2 (04/09 al 01/10),frontend:1d52425,backend:9e17916
+120,11,2026-09-16 20:56,2026-09-16 21:43,5,2,3,5,1.28,no,Sprint 2 (04/09 al 01/10),frontend:06d2106,frontend:2cb4709
+120,12,2026-09-17 00:06,2026-09-17 01:11,5,2,3,5,1.58,no,Sprint 2 (04/09 al 01/10),backend:a87f2f4,frontend:c1486db
+120,13,2026-09-17 16:06,2026-09-17 16:06,1,0,1,1,0.50,no,Sprint 2 (04/09 al 01/10),frontend:c3c4ab9,frontend:c3c4ab9
+120,14,2026-09-22 22:05,2026-09-22 22:06,2,1,1,2,0.51,no,Sprint 2 (04/09 al 01/10),backend:4cbfac3,frontend:7f46414
+120,15,2026-09-23 01:27,2026-09-23 01:27,2,1,1,2,0.51,no,Sprint 2 (04/09 al 01/10),backend:d1c8222,frontend:3c51f71
+120,16,2026-09-23 14:44,2026-09-23 14:53,4,2,2,4,0.65,no,Sprint 2 (04/09 al 01/10),backend:2dd1bb7,frontend:a803716
+120,17,2026-09-24 23:13,2026-09-25 00:40,16,11,5,3,1.96,no,Sprint 2 (04/09 al 01/10),backend:678cbcc,backend:4a0fecb
+120,18,2026-09-25 14:06,2026-09-25 16:36,12,8,4,0,2.99,no,Sprint 2 (04/09 al 01/10),backend:8fa18f7,frontend:0bede0a
+120,19,2026-09-26 01:40,2026-09-26 01:49,2,0,2,0,0.65,no,Sprint 2 (04/09 al 01/10),frontend:858e2be,frontend:5b74e37
+120,20,2026-09-26 22:22,2026-09-26 22:23,2,2,0,0,0.52,no,Sprint 2 (04/09 al 01/10),backend:d7ac9fc,backend:3ebba2b
+120,21,2026-10-01 15:13,2026-10-01 15:13,2,1,1,0,0.50,no,Sprint 2 (04/09 al 01/10),backend:a44fddb,frontend:a986ca9
+120,22,2026-10-04 02:47,2026-10-04 02:56,3,2,1,0,0.66,no,Sprint 3 (02/10 al 29/10),frontend:c6bd2d9,backend:8a195de
+120,23,2026-10-05 16:41,2026-10-05 18:16,8,4,4,0,2.08,no,Sprint 3 (02/10 al 29/10),backend:9d97c8f,frontend:1dd6936
+120,24,2026-10-05 21:35,2026-10-05 21:43,6,4,2,0,0.64,no,Sprint 3 (02/10 al 29/10),backend:c12671b,frontend:ec976da
+120,25,2026-10-06 02:44,2026-10-06 02:45,4,3,1,0,0.52,no,Sprint 3 (02/10 al 29/10),backend:2836e1d,frontend:2e7734f
+120,26,2026-10-06 13:33,2026-10-06 13:33,4,2,2,0,0.51,no,Sprint 3 (02/10 al 29/10),backend:9bdc3ee,frontend:edbac78
+120,27,2026-10-17 17:42,2026-10-17 17:42,1,0,1,0,0.50,no,Sprint 3 (02/10 al 29/10),frontend:e3c4b52,frontend:e3c4b52
+120,28,2026-10-23 16:53,2026-10-23 16:53,1,1,0,0,0.50,no,Sprint 3 (02/10 al 29/10),backend:a0aceac,backend:a0aceac
+120,29,2026-10-24 05:34,2026-10-24 05:40,2,2,0,0,0.60,no,Sprint 3 (02/10 al 29/10),backend:2b34aa7,backend:6c2db39
+120,30,2026-10-24 14:55,2026-10-24 17:05,12,11,1,0,2.67,no,Sprint 3 (02/10 al 29/10),backend:4398d15,backend:76383b5
+120,31,2026-10-27 00:58,2026-10-27 01:07,3,1,2,1,0.65,no,Sprint 3 (02/10 al 29/10),frontend:ad3abcf,frontend:63400ec
+120,32,2026-10-27 16:39,2026-10-27 16:57,3,1,2,0,0.81,no,Sprint 3 (02/10 al 29/10),frontend:bc0e6de,backend:7607b55
+120,33,2026-10-28 00:05,2026-10-28 01:35,11,8,3,0,1.99,no,Sprint 3 (02/10 al 29/10),backend:107a465,backend:a4a5aa0
+120,34,2026-10-28 16:09,2026-10-28 17:20,14,10,4,11,1.68,no,Sprint 3 (02/10 al 29/10),backend:688fb7a,frontend:c11524f
+120,35,2026-10-28 22:57,2026-10-28 23:11,8,4,4,0,0.74,no,Sprint 3 (02/10 al 29/10),frontend:ae60d51,backend:d77678f
+120,36,2026-10-30 01:48,2026-10-30 01:52,3,2,1,0,0.57,no,Después del sprint 3 (desde el 30/10),backend:76bb880,backend:15868b3
+120,37,2026-10-30 23:47,2026-10-31 00:17,9,5,4,4,1.00,no,Después del sprint 3 (desde el 30/10),backend:8955406,frontend:52397c8
+120,38,2026-10-31 04:35,2026-10-31 04:57,6,5,1,1,0.86,no,Después del sprint 3 (desde el 30/10),frontend:5138b78,backend:924564f
+120,39,2026-10-31 15:58,2026-10-31 16:05,10,5,5,5,0.63,no,Después del sprint 3 (desde el 30/10),backend:7e8a16e,frontend:546f4d9
+120,40,2026-10-31 22:55,2026-10-31 23:11,11,6,5,5,0.76,no,Después del sprint 3 (desde el 30/10),frontend:f247359,backend:a7ec372
+120,41,2026-11-01 03:40,2026-11-01 04:52,27,15,12,6,1.69,no,Después del sprint 3 (desde el 30/10),backend:ff25797,backend:b87a817
+120,42,2026-11-01 14:39,2026-11-01 15:20,18,18,0,0,1.18,no,Después del sprint 3 (desde el 30/10),backend:f5c2390,backend:55d8e68
