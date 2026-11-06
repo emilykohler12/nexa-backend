@@ -48,6 +48,6 @@ export const contactService = {
   // Lanza si el envío falla: el controller no responde 201 en ese caso.
   sendJobInterest: async (data: JobInterestData): Promise<void> => {
     const to = await resolveStudioEmail()
-    await mailProvider.send(to, 'Nueva postulación — Trabajá con nosotras', buildHtml(data))
+    await mailProvider.send(to, 'Nueva postulación — Nexa', buildHtml(data))
   },
 }

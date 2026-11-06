@@ -182,7 +182,7 @@ describe('RF-24: mails a la clienta por un turno', () => {
     expect(mailsTo(client.email).map(([, subject]) => subject)).toEqual(['Tu turno fue reprogramado — Nexa'])
   })
 
-  it('en el código, los únicos envíos de mail son los permitidos (personal, recordatorio, cuenta e invitación)', () => {
+  it('en el código, los únicos envíos de mail son los permitidos (personal, recordatorio, cuenta, invitación y aviso de postulación al estudio)', () => {
     const root = path.resolve(__dirname, '../../src')
     const sends: string[] = []
     const walk = (dir: string) => {
@@ -204,6 +204,7 @@ describe('RF-24: mails a la clienta por un turno', () => {
     expect(sends.sort()).toEqual([
       'jobs/appointmentReminder.job.ts: (sin asunto literal)',            // recordatorio del turno (excepción)
       'modules/appointments/appointment.service.ts: Nuevo turno agendado — Nexa',   // a la profesional
+      'modules/contact/contact.service.ts: Nueva postulación — Nexa',               // al estudio, RF-33 (no es un mail a la clienta)
       'modules/appointments/appointment.service.ts: Tu turno fue cancelado — Nexa', // a la clienta, solo con emailClient (personal)
       'modules/appointments/appointment.service.ts: Tu turno fue reprogramado — Nexa', // a la clienta, reprogramación del personal
       'modules/appointments/appointment.service.ts: Turno reprogramado — Nexa',     // a la profesional
