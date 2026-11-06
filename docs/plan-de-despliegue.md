@@ -39,10 +39,19 @@ Los botones del mail llevan a `FRONTEND_URL/mis-turnos?turno=<id>&accion=ver|rep
 
 La fase 8 no agrega migraciones ni cambia rutas. Lo que cambia para el manual (`00-gestion/RUNBOOK.md`, que no se edita en esta rama porque es documentación académica):
 
-1. **Lista de variables de Render** (RUNBOOK, «Variables de entorno que tienen que estar en Render»): le faltan `BREVO_API_KEY` (sin ella los mails intentan salir por SMTP, que Render bloquea), `SUPABASE_URL` y `SUPABASE_ANON_KEY` (sin ellas falla la subida de imágenes). `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER` y `MAIL_PASS` solo se usan sin `BREVO_API_KEY`, o sea en desarrollo. Si `JWT_EXPIRES_IN` o `JWT_REFRESH_EXPIRES_IN` están cargadas, no pueden estar vacías (un valor vacío no toma el valor por defecto de 15m y 7d). `BACKEND_PUBLIC_URL` tiene que ser la URL pública del backend: sin ella Mercado Pago no recibe `notification_url` y ningún pago se confirma solo. No definir `TZ`. Si en Render hoy están cargadas o no: **no determinado** (no se puede ver desde el repositorio).
+1. **Lista de variables de Render** (RUNBOOK, «Variables de entorno que tienen que estar en Render»): le faltan `BREVO_API_KEY` (sin ella los mails intentan salir por SMTP, que Render bloquea), `SUPABASE_URL` y `SUPABASE_ANON_KEY` (sin ellas falla la subida de imágenes) y, desde la fase 10, `SUPABASE_SERVICE_ROLE_KEY` (clave de servicio, secreta: sin ella no se borran los archivos del bucket al borrar una foto de la galería ni al anonimizar a una clienta, y cada archivo que queda se anota en Actividad). `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER` y `MAIL_PASS` solo se usan sin `BREVO_API_KEY`, o sea en desarrollo. Si `JWT_EXPIRES_IN` o `JWT_REFRESH_EXPIRES_IN` están cargadas, no pueden estar vacías (un valor vacío no toma el valor por defecto de 15m y 7d). `BACKEND_PUBLIC_URL` tiene que ser la URL pública del backend: sin ella Mercado Pago no recibe `notification_url` y ningún pago se confirma solo. No definir `TZ`. Si en Render hoy están cargadas o no: **no determinado** (no se puede ver desde el repositorio).
 2. **`.env.example`** ahora tiene todas las variables que lee el backend (las de `src/app/config/env.ts` más `SENTRY_DSN`), así que sirve de lista de control contra Render → Environment.
 3. **`npm run seed:demo`** carga un escenario completo (profesional, clienta de demo con un turno confirmado, uno `no_show_auto` y uno cancelado, y una promoción vigente). Es **solo para desarrollo o una base de demostración**: nunca correrlo contra Supabase de producción, porque crea cuentas de demo (`@nexa.local`) y una promoción visible en el inicio. Cada corrida borra y vuelve a crear los turnos de la clienta de demo.
 4. Las salidas esperadas del README (sección 4.5) cambian: la profesional de demo se llama «Valeria (demo)» y se suman la clienta de demo, los tres turnos y la promoción.
+
+## Qué cambia con la fase 10
+
+La fase 10 no agrega migraciones. Antes de publicar:
+
+1. **Cargar `SUPABASE_SERVICE_ROLE_KEY` en Render** (Supabase → Project Settings → API → `service_role`). Es secreta: solo va en Render, nunca en el repositorio ni en el frontend. Sin ella el backend arranca igual, pero el borrado de archivos del bucket falla y queda una entrada de error en Actividad.
+2. **Frontend:** cambian códigos de respuesta (ver la entrada 95 de la bitácora): `POST /api/contact/job-interest` ahora responde `400 VALIDATION_ERROR` con un cuerpo vacío o inválido y `429` tras 5 envíos por hora desde la misma IP; las franjas y el perfil de la profesional responden `400` con datos inválidos; un id inexistente en servicios, promociones y eventos responde `404 NOT_FOUND` (antes 500); borrar una entrada de stock ya vendida responde `400 INSUFFICIENT_STOCK`.
+3. **Número del panel:** `pendingBalance` ahora descuenta el saldo ya cobrado en el local, así que el valor del panel baja respecto de antes.
+4. **Las postulaciones ya no guardan nombre, correo ni teléfono** en Actividad: queda solo qué datos llegaron y el mensaje. Hoy no hay otro lugar donde guardarlos (ver las dudas de la entrada 95).
 
 ## Después del despliegue
 

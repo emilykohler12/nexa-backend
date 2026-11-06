@@ -96,3 +96,30 @@ WHERE s.is_special
   AND a.mp_payment_id IS NULL
   AND a.status NOT IN ('cancelled', 'cancelled_no_show')
 ORDER BY a.date, a.time;
+
+-- ── 9. Fase 10: datos que el código nuevo trata distinto (solo lectura) ───────────────────
+-- 9a. Entradas de stock que, de borrarse, dejarían el stock en negativo (ahora se rechaza el borrado).
+--     Cada fila es una entrada ya vendida en parte: el stock actual es menor que la cantidad de la entrada.
+SELECT m.id, m.product_name, m.quantity AS cantidad_entrada, p.stock AS stock_actual
+FROM inventory_movements m
+JOIN products p ON p.id = m.product_id
+WHERE m.type = 'entry' AND p.stock < m.quantity
+ORDER BY m.created_at;
+
+-- 9b. Franjas invertidas o con horas que no son HH:mm (ahora el perfil las rechaza; las que ya están cargadas siguen).
+SELECT id, professional_id, day_of_week, start_time, end_time
+FROM professional_availability
+WHERE start_time >= end_time
+   OR start_time !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+   OR end_time   !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$';
+
+-- 9c. Fotos de galería con una categoría distinta de before/after (ahora se rechazan al crear y al editar).
+SELECT category, count(*) AS fotos
+FROM client_gallery_photos
+WHERE category NOT IN ('before', 'after')
+GROUP BY category;
+
+-- 9d. Saldo cobrado en el local (lo que pendingBalance ahora descuenta).
+SELECT count(*) AS turnos_con_saldo_cobrado, coalesce(sum(balance_paid_amount), 0) AS total_cobrado_en_el_local
+FROM appointments
+WHERE balance_paid_amount IS NOT NULL;
