@@ -2,7 +2,7 @@
 
 Para cada requisito del libro de requisitos v7 (`03-requisitos/20261030_CatalogoRequisitos_Kohler_v7.xlsx`, hoja «Catálogo»): las pruebas automatizadas del backend que lo ejercitan (archivo y nombre completo, con el `describe` y el `it`), el resultado de la última corrida y si el criterio de aceptación queda cubierto **completo**, **parcial** o **sin prueba**. Quedan afuera los requisitos eliminados: RF-22 (campañas automáticas), RF-30 (recordatorio de inactividad) y la parte de fidelización de RF-28.
 
-**Última corrida:** `npm test` (Vitest con `--reporter=json`) el 06/11/2026 sobre la rama `chore/cierre-final`, cortada de `main` en `090f0db` (pull requests 28, 29 y 30 mergeados): **59 archivos y 661 pruebas, 661 pasaron y 0 fallaron.** El mapa requisito → pruebas de las versiones anteriores se conserva; en esta actualización se corrigieron RF-33 y RF-08 (pruebas nuevas de las fases 10 y de `terms-version.test.ts`). El script que armó el informe original no está versionado: el resto del mapa no se rehízo.
+**Última corrida:** `npm test` el 09/11/2026 sobre `main` con los cambios de reglas del 06/11/2026: **61 archivos y 682 pruebas, 682 pasaron y 0 fallaron.** Esta actualización agregó las pruebas del cambio de profesional en combos, del cobro en el local por la profesional, de la clienta bloqueada (error genérico), de la reprogramación sin cambio de profesional, del aviso único por profesional en un combo (RF-24), del recordatorio con correo sin verificar (RF-35) y de las vacaciones de la profesional (RF-29). El script que armó el informe original no está versionado: el resto del mapa no se rehízo.
 
 **Cómo se armó.** El mapa requisito → pruebas se hizo leyendo el criterio de cada requisito y los nombres y el contenido de las pruebas; el resultado de cada prueba sale del reporte JSON de esa corrida. «Completo» quiere decir que cada parte del criterio tiene una prueba que la comprueba; «parcial», que alguna parte no la tiene o que el criterio escrito no coincide con lo que hace el código (se dice cuál); «sin prueba», que no hay ninguna prueba automatizada. Solo se miran las pruebas del backend: las del frontend (`nexa-frontend`) no se revisaron (**no determinado** si cubren algo más). Una prueba puede servir a más de un requisito.
 
@@ -307,6 +307,13 @@ Total: 42 requisitos; 30 completos, 10 parciales y 2 sin prueba.
 | Archivo | Prueba | Resultado |
 |---|---|---|
 | `tests/integration/appointments.combo-deposit.test.ts` | combo con dos profesionales y una sola seña (RF-10) › crea dos turnos vinculados, uno por profesional, con el mismo inicio y la seña registrada una sola vez | pasó |
+| `tests/integration/appointments.combo-reassign.test.ts` | cambio de profesional en un combo › el administrador cambia la profesional de una pata: mismo comboGroupId, precio y seña intactos, con avisos | pasó |
+| `tests/integration/appointments.combo-reassign.test.ts` | cambio de profesional en un combo › la profesional de la pata la pasa a otra; no puede tocar la de otra profesional | pasó |
+| `tests/integration/appointments.combo-reassign.test.ts` | cambio de profesional en un combo › en un turno que no es de combo la profesional no puede cambiar de profesional | pasó |
+| `tests/integration/appointments.combo-reassign.test.ts` | cambio de profesional en un combo › rechaza a una profesional que no hace el servicio, está inactiva o está fuera de su franja | pasó |
+| `tests/integration/appointments.combo-reassign.test.ts` | cambio de profesional en un combo › en un simultáneo no se puede repetir profesional (409) y el índice de no superposición sigue protegiendo | pasó |
+| `tests/integration/appointments.combo-reassign.test.ts` | cambio de profesional en un combo › una profesional que ya tiene otra pata del combo no recibe un segundo aviso ni un segundo mail | pasó |
+| `tests/integration/appointments.combo-reassign.test.ts` | cambio de profesional en un combo › el administrador sigue pudiendo reasignar un turno suelto como siempre | pasó |
 | `tests/integration/appointments.combo.test.ts` | reserva de combos simultáneos › crea una pata por componente, todas con el mismo comboGroupId, fecha y hora | pasó |
 | `tests/integration/payments.webhook-amount.test.ts` | combo: la seña es la suma de las patas › pagando solo una pata (3000 de 6000) NO registra la seña | pasó |
 | `tests/integration/payments.webhook-amount.test.ts` | combo: la seña es la suma de las patas › pagando el total (6000) registra la seña de todas las patas | pasó |
@@ -422,16 +429,20 @@ Total: 42 requisitos; 30 completos, 10 parciales y 2 sin prueba.
 
 | Archivo | Prueba | Resultado |
 |---|---|---|
-| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (solo admin) › el admin registra el cobro en efectivo y queda el detalle completo | pasó |
-| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (solo admin) › al cubrir el precio total, paymentStatus pasa a "paid" | pasó |
-| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (solo admin) › un turno sin seña (walk-in) también puede cerrar su cobro completo | pasó |
-| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (solo admin) › un cobro parcial (menor al precio total) mantiene el turno en "partial" | pasó |
-| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (solo admin) › deja constancia en el log de actividad | pasó |
-| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (solo admin) › rechaza un monto negativo o cero | pasó |
-| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (solo admin) › rechaza un método de pago inválido | pasó |
-| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (solo admin) › rechaza registrar un cobro sobre un turno cancelado | pasó |
-| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (solo admin) › una profesional no puede registrar cobros — la ruta es admin-only | pasó |
-| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (solo admin) › ya no existe ninguna ruta de profesional para registrar cobros | pasó |
+| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (admin y profesional) › el admin registra el cobro en efectivo y queda el detalle completo | pasó |
+| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (admin y profesional) › al cubrir el precio total, paymentStatus pasa a "paid" | pasó |
+| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (admin y profesional) › un turno sin seña (walk-in) también puede cerrar su cobro completo | pasó |
+| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (admin y profesional) › un cobro parcial (menor al precio total) mantiene el turno en "partial" | pasó |
+| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (admin y profesional) › deja constancia en el log de actividad | pasó |
+| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (admin y profesional) › rechaza un monto negativo o cero | pasó |
+| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (admin y profesional) › rechaza un método de pago inválido | pasó |
+| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (admin y profesional) › la profesional registra el cobro de SU turno: seña + cobro cubren el precio y queda pagado | pasó |
+| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (admin y profesional) › la profesional puede cobrar el servicio completo en un turno sin seña | pasó |
+| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (admin y profesional) › una profesional no puede cobrar el turno de otra (404) | pasó |
+| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (admin y profesional) › la profesional también recibe INVALID_STATUS si el turno está cancelado | pasó |
+| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (admin y profesional) › los cobros parciales se suman, no se pisan; y no se cobra de más ni sobre un turno ya pagado | pasó |
+| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (admin y profesional) › rechaza registrar un cobro sobre un turno cancelado | pasó |
+| `tests/integration/appointments.balance-payment.test.ts` | cobro del saldo en el local (admin y profesional) › una profesional no puede registrar cobros — la ruta es admin-only | pasó |
 
 **Cobertura: Completo.**
 
@@ -461,11 +472,11 @@ Total: 42 requisitos; 30 completos, 10 parciales y 2 sin prueba.
 
 **Enunciado (libro v7):** El administrador puede bloquear a una clienta; una clienta bloqueada no puede reservar turnos ni comprar productos.
 
-**Criterio de aceptación (libro v7):** Dada una clienta bloqueada, cuando intenta reservar un turno o comprar un producto, el sistema responde 403 CLIENT_BLOCKED. Verificable con la prueba «rechaza reservar si la clienta está bloqueada»; la compra y el endpoint de bloqueo no tienen prueba.
+**Criterio de aceptación (libro v7):** Dada una clienta bloqueada, cuando intenta reservar un turno o comprar un producto, el sistema responde 400 OPERATION_FAILED con el mensaje genérico «No pudimos completar la operación» (no delata el bloqueo; desde el 06/11/2026). Verificable con la prueba «rechaza reservar si la clienta está bloqueada»; la compra y el endpoint de bloqueo no tienen prueba.
 
 | Archivo | Prueba | Resultado |
 |---|---|---|
-| `tests/integration/store.blocking-and-movements.test.ts` | RF-18: clienta bloqueada › una clienta bloqueada no puede comprar (403 CLIENT_BLOCKED) ni reservar; el stock no se toca | pasó |
+| `tests/integration/store.blocking-and-movements.test.ts` | RF-18: clienta bloqueada › una clienta bloqueada no puede comprar ni reservar y el error no delata el bloqueo; el stock no se toca | pasó |
 | `tests/integration/store.blocking-and-movements.test.ts` | RF-18: clienta bloqueada › el administrador la bloquea y la desbloquea; después del desbloqueo puede comprar | pasó |
 | `tests/integration/store.blocking-and-movements.test.ts` | RF-18: clienta bloqueada › el endpoint valida el cuerpo, exige una clienta y es solo del administrador | pasó |
 | `tests/integration/appointments.booking.test.ts` | reserva de turnos › rechaza reservar si la clienta está bloqueada | pasó |
@@ -583,6 +594,7 @@ Total: 42 requisitos; 30 completos, 10 parciales y 2 sin prueba.
 | `tests/integration/notifications.inbox-and-client-mail.test.ts` | RF-24: bandeja de avisos de la profesional › no ve ni marca los avisos de otra profesional | pasó |
 | `tests/integration/notifications.inbox-and-client-mail.test.ts` | RF-24: bandeja de avisos de la profesional › recibe el aviso cuando la clienta cancela su turno | pasó |
 | `tests/integration/notifications.inbox-and-client-mail.test.ts` | RF-24: bandeja de avisos de la profesional › la bandeja es solo de la profesional | pasó |
+| `tests/integration/notifications.investigation.test.ts` | RF-24: un solo aviso y un solo mail por profesional en un combo › una profesional con dos servicios del mismo combo recibe UN aviso y UN mail; la otra, el suyo | pasó |
 | `tests/integration/notifications.inbox-and-client-mail.test.ts` | RF-24: bandeja de avisos de la clienta › una promoción nueva le llega como aviso; lo lee y lo marca como leído | pasó |
 | `tests/integration/notifications.inbox-and-client-mail.test.ts` | RF-24: bandeja de avisos de la clienta › marca todos como leídos y no toca los de otra clienta | pasó |
 | `tests/integration/notifications.inbox-and-client-mail.test.ts` | RF-24: mails a la clienta por un turno › reservar, pagar la seña, cancelar o reprogramar ella misma: ningún mail a la clienta | pasó |
@@ -690,6 +702,14 @@ Total: 42 requisitos; 30 completos, 10 parciales y 2 sin prueba.
 | `tests/integration/gallery-and-professional-profile.test.ts` | RF-29: autogestión de la profesional › carga sus franjas (más de una por día) y un día sin franja queda sin atención | pasó |
 | `tests/integration/gallery-and-professional-profile.test.ts` | RF-29: autogestión de la profesional › completa el onboarding: guarda perfil, franjas y servicios, y queda marcado como completo | pasó |
 | `tests/integration/gallery-and-professional-profile.test.ts` | RF-29: autogestión de la profesional › perfil, servicios, franjas y onboarding son solo de la profesional | pasó |
+| `tests/integration/professional.vacation.test.ts` | RF-29: vacaciones de la profesional › la profesional carga sus vacaciones y las ve en su perfil | pasó |
+| `tests/integration/professional.vacation.test.ts` | RF-29: vacaciones de la profesional › las edita y las borra con null | pasó |
+| `tests/integration/professional.vacation.test.ts` | RF-29: vacaciones de la profesional › un PATCH sin vacaciones no las toca | pasó |
+| `tests/integration/professional.vacation.test.ts` | RF-29: vacaciones de la profesional › rechaza un inicio posterior al fin (400 VALIDATION_ERROR) y no guarda nada | pasó |
+| `tests/integration/professional.vacation.test.ts` | RF-29: vacaciones de la profesional › valida contra lo ya guardado cuando solo viene una de las dos fechas | pasó |
+| `tests/integration/professional.vacation.test.ts` | RF-29: vacaciones de la profesional › rechaza una sola fecha y un formato inválido | pasó |
+| `tests/integration/professional.vacation.test.ts` | RF-29: vacaciones de la profesional › nunca toca las de otra profesional: el id de la sesión manda, aunque el pedido traiga otro | pasó |
+| `tests/integration/professional.vacation.test.ts` | RF-29: vacaciones de la profesional › una clienta no puede usar la ruta, y el administrador sigue editándolas con la misma validación | pasó |
 | `tests/integration/gallery-and-professional-profile.test.ts` | RF-29: envío de la invitación › el administrador invita por mail: se guarda la invitación y sale el mail con el link de registro | pasó |
 | `tests/integration/gallery-and-professional-profile.test.ts` | RF-29: envío de la invitación › valida el email y es solo del administrador | pasó |
 | `tests/integration/auth.minor-fixes.test.ts` | PATCH /api/professional/:id/toggle-role › sobre una clienta responde 400 INVALID_ROLE_CHANGE y el rol no cambia | pasó |
