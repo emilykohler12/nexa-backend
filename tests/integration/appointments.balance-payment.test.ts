@@ -8,10 +8,8 @@ import {
 } from '../helpers/factories'
 import { cookieFor } from '../helpers/auth'
 
-// Lo completa el admin, no la profesional — es quien concilia el efectivo/
-// tarjeta recibido en el local, la información no la reporta sola cada
-// profesional. La ruta de profesional para esto ni siquiera existe.
-describe('cobro del saldo en el local (solo admin)', () => {
+// Lo registran el admin (cualquier turno) y la profesional (solo los suyos), con la forma de pago.
+describe('cobro del saldo en el local (admin y profesional)', () => {
   it('el admin registra el cobro en efectivo y queda el detalle completo', async () => {
     const client = await createClientUser()
     const pro    = await createProfessionalUser()
@@ -183,19 +181,106 @@ describe('cobro del saldo en el local (solo admin)', () => {
     expect(res.status).toBe(403)
   })
 
-  it('ya no existe ninguna ruta de profesional para registrar cobros', async () => {
+  it('la profesional registra el cobro de SU turno: seña + cobro cubren el precio y queda pagado', async () => {
     const client = await createClientUser()
     const pro    = await createProfessionalUser()
-    const svc    = await createService()
+    const svc    = await createService({ price: 10000 })
     const appt   = await createAppointmentDirect({
       clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: todayStr(), time: '10:00',
+      paymentStatus: 'partial', depositAmount: 4000,
     })
 
     const res = await request(app)
       .patch(`/api/professional/appointments/${appt.id}/balance-payment`)
       .set('Cookie', cookieFor(pro))
-      .send({ method: 'cash', amount: 5000 })
+      .send({ method: 'card', amount: 6000 })
+
+    expect(res.status).toBe(200)
+    expect(res.body.appointment.paymentStatus).toBe('paid')
+    expect(res.body.appointment.balancePayment).toMatchObject({ method: 'card', amount: 6000, collectedById: pro.id })
+    const fresh = await prisma.appointment.findUnique({ where: { id: appt.id } })
+    expect(fresh?.balanceCollectedById).toBe(pro.id)
+  })
+
+  it('la profesional puede cobrar el servicio completo en un turno sin seña', async () => {
+    const client = await createClientUser()
+    const pro    = await createProfessionalUser()
+    const svc    = await createService({ price: 8000 })
+    const appt   = await createAppointmentDirect({
+      clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: todayStr(), time: '10:00',
+      paymentStatus: 'pending', depositAmount: 0,
+    })
+
+    const res = await request(app)
+      .patch(`/api/professional/appointments/${appt.id}/balance-payment`)
+      .set('Cookie', cookieFor(pro))
+      .send({ method: 'cash', amount: 8000 })
+
+    expect(res.status).toBe(200)
+    expect(res.body.appointment.paymentStatus).toBe('paid')
+  })
+
+  it('una profesional no puede cobrar el turno de otra (404)', async () => {
+    const client = await createClientUser()
+    const owner  = await createProfessionalUser()
+    const other  = await createProfessionalUser()
+    const svc    = await createService()
+    const appt   = await createAppointmentDirect({
+      clientId: client.id, professionalId: owner.id, serviceId: svc.id, date: todayStr(), time: '10:00',
+    })
+
+    const res = await request(app)
+      .patch(`/api/professional/appointments/${appt.id}/balance-payment`)
+      .set('Cookie', cookieFor(other))
+      .send({ method: 'cash', amount: 1000 })
 
     expect(res.status).toBe(404)
+    const fresh = await prisma.appointment.findUnique({ where: { id: appt.id } })
+    expect(fresh?.balancePaidAt).toBeNull()
+  })
+
+  it('la profesional también recibe INVALID_STATUS si el turno está cancelado', async () => {
+    const client = await createClientUser()
+    const pro    = await createProfessionalUser()
+    const svc    = await createService()
+    const appt   = await createAppointmentDirect({
+      clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: todayStr(), time: '10:00', status: 'cancelled',
+    })
+
+    const res = await request(app)
+      .patch(`/api/professional/appointments/${appt.id}/balance-payment`)
+      .set('Cookie', cookieFor(pro))
+      .send({ method: 'cash', amount: 1000 })
+
+    expect(res.status).toBe(400)
+    expect(res.body.code).toBe('INVALID_STATUS')
+  })
+
+  it('los cobros parciales se suman, no se pisan; y no se cobra de más ni sobre un turno ya pagado', async () => {
+    const client = await createClientUser()
+    const pro    = await createProfessionalUser()
+    const svc    = await createService({ price: 10000 })
+    const appt   = await createAppointmentDirect({
+      clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: todayStr(), time: '10:00',
+      paymentStatus: 'partial', depositAmount: 4000,
+    })
+    const pay = (amount: number) => request(app)
+      .patch(`/api/professional/appointments/${appt.id}/balance-payment`)
+      .set('Cookie', cookieFor(pro)).send({ method: 'cash', amount })
+
+    const first = await pay(2000)
+    expect(first.body.appointment.paymentStatus).toBe('partial')
+
+    const tooMuch = await pay(5000)
+    expect(tooMuch.status).toBe(400)
+    expect(tooMuch.body.code).toBe('AMOUNT_EXCEEDS_BALANCE')
+
+    const second = await pay(4000)
+    expect(second.body.appointment.paymentStatus).toBe('paid')
+    expect(second.body.appointment.balancePayment.amount).toBe(6000)
+
+    const again = await pay(1)
+    expect(again.status).toBe(400)
+    expect(again.body.code).toBe('ALREADY_PAID')
   })
 })

@@ -175,13 +175,13 @@ describe('recordatorio de turno por mail: casos excluidos', () => {
     expect((await runAppointmentReminderJob(before(5))).sent).toBe(1)
   })
 
-  it('no manda si el correo de la clienta no está verificado', async () => {
+  it('manda aunque el correo de la clienta no esté verificado (RF-35)', async () => {
     const client = await createClientUser()
     await prisma.user.update({ where: { id: client.id }, data: { emailVerified: false } })
     await makeAppointment({}, { client })
 
-    expect((await runAppointmentReminderJob(before(5))).sent).toBe(0)
-    expect(sendMock()).not.toHaveBeenCalled()
+    expect((await runAppointmentReminderJob(before(5))).sent).toBe(1)
+    expect(sendMock()).toHaveBeenCalledTimes(1)
   })
 
   it('no manda si la clienta está bloqueada', async () => {

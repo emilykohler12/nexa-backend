@@ -266,7 +266,8 @@ describe('reserva de turnos', () => {
       .set('Cookie', cookieFor(client))
       .send({ serviceId: svc.id, professionalId: pro.id, date: tomorrowStr(), time: '10:00', termsAccepted: true })
 
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(400)
+    expect(res.body.code).toBe('OPERATION_FAILED')
   })
 
   describe('promociones', () => {

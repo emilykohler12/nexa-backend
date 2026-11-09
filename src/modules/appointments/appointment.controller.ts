@@ -151,6 +151,8 @@ const professionalUpdateAppointmentSchema = z.object({
   internalNotes: z.string().max(2000).optional(),
   date:          dateSchema.optional(),
   time:          timeSchema.optional(),
+  // Solo para pasar un servicio de combo a otra profesional (el servicio lo valida y si no es de combo, 400).
+  professionalId: z.string().uuid('ID de profesional inválido').optional(),
 }).refine(requireCancelledBy.check, { message: requireCancelledBy.message, path: requireCancelledBy.path })
 
 const adminCreateAppointmentSchema = z.object({
@@ -367,6 +369,14 @@ export const appointmentController = {
   markArrivalForAdmin: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const appointment = await appointmentService.markArrivalForAdmin(getId(req))
+      res.json({ appointment })
+    } catch (err) { next(err) }
+  },
+
+  registerBalancePaymentForProfessional: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const input = parseBody(balancePaymentSchema, req.body)
+      const appointment = await appointmentService.registerBalancePaymentForProfessional(req.user!.id, getId(req), input)
       res.json({ appointment })
     } catch (err) { next(err) }
   },

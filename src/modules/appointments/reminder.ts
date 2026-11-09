@@ -7,7 +7,7 @@
 //  - Un mail por turno (o por grupo de combo) cuando faltan 5 horas o menos para la hora de inicio.
 //  - Solo turnos 'confirmed' con la seña paga o sin seña requerida.
 //  - No se manda si la reserva se hizo con menos de 5 horas de anticipación, si el correo de la clienta no está
-//    verificado, si la cuenta está desactivada o anonimizada, o si la clienta está bloqueada.
+//    desactivada o anonimizada, o si la clienta está bloqueada. El correo SIN verificar no impide el envío (RF-35).
 //  - Si el envío falla se reintenta en cada corrida, pero solo hasta 1 hora antes del turno.
 //
 // Los botones del mail son enlaces a la web (FRONTEND_URL/mis-turnos?turno=<id>&accion=ver|reprogramar|cancelar):
@@ -65,7 +65,8 @@ export function isReminderDue(a: ReminderCandidate, now: Date): boolean {
   if (Number(a.depositAmount) > 0 && !isDepositPaid(a)) return false
 
   const c = a.client
-  if (!c.emailVerified || !c.active || c.client?.blocked) return false
+  // RF-35: se manda aunque el correo no esté verificado.
+  if (!c.active || c.client?.blocked) return false
   return true
 }
 

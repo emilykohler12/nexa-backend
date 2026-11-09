@@ -99,7 +99,8 @@ export const orderService = {
 
     const clientProfile = await prisma.client.findUnique({ where: { userId: clientId } })
     if (clientProfile?.blocked) {
-      throw new AppError(HTTP.FORBIDDEN, 'Tu cuenta está bloqueada y no puede realizar compras. Contactanos para más información.', 'CLIENT_BLOCKED')
+      // Genérico a propósito: la clienta bloqueada no debe enterarse de que lo está.
+      throw new AppError(HTTP.BAD_REQUEST, 'No pudimos completar la operación', 'OPERATION_FAILED')
     }
 
     // Separa líneas con promo (se repricean contra la promo real) de líneas de

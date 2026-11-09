@@ -23,7 +23,7 @@ describe('RF-18: clienta bloqueada', () => {
     request(app).post('/api/client/orders').set('Cookie', cookieFor(client))
       .send({ items: [{ productId, quantity: 1 }], delivery: { type: 'pickup' } })
 
-  it('una clienta bloqueada no puede comprar (403 CLIENT_BLOCKED) ni reservar; el stock no se toca', async () => {
+  it('una clienta bloqueada no puede comprar ni reservar y el error no delata el bloqueo; el stock no se toca', async () => {
     const client = await createClientUser({ blocked: true })
     const pro    = await createProfessionalUser()
     const svc    = await createService()
@@ -33,10 +33,11 @@ describe('RF-18: clienta bloqueada', () => {
     const book = await request(app).post('/api/client/appointments').set('Cookie', cookieFor(client))
       .send({ serviceId: svc.id, professionalId: pro.id, date: '2027-03-02', time: '10:00', termsAccepted: true })
 
-    expect(buy.status).toBe(403)
-    expect(buy.body.code).toBe('CLIENT_BLOCKED')
-    expect(book.status).toBe(403)
-    expect(book.body.code).toBe('CLIENT_BLOCKED')
+    expect(buy.status).toBe(400)
+    expect(buy.body).toEqual({ error: 'No pudimos completar la operación', code: 'OPERATION_FAILED' })
+    expect(book.status).toBe(400)
+    expect(book.body).toEqual(buy.body)
+    expect(JSON.stringify([buy.body, book.body]).toLowerCase()).not.toMatch(/bloque|blocked/)
     expect(await prisma.order.count()).toBe(0)
     expect(await prisma.appointment.count()).toBe(0)
     expect(await stockOf(item.id)).toBe(5)
@@ -50,7 +51,7 @@ describe('RF-18: clienta bloqueada', () => {
     const blocked = await setBlocked(admin, client.id, true)
     expect(blocked.status).toBe(200)
     expect(blocked.body.client.blocked).toBe(true)
-    expect((await order(client, item.id)).status).toBe(403)
+    expect((await order(client, item.id)).status).toBe(400)
 
     const unblocked = await setBlocked(admin, client.id, false)
     expect(unblocked.body.client.blocked).toBe(false)
