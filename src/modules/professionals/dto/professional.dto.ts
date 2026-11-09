@@ -2,7 +2,7 @@
 //
 // Validación en el borde del perfil, las franjas y el onboarding de la profesional.
 import { z } from 'zod'
-import { timeSchema } from '../../../app/validators/datetime'
+import { timeSchema, dateSchema } from '../../../app/validators/datetime'
 import { AppError } from '../../../app/middlewares/errorHandler'
 import { HTTP } from '../../../app/constants/http'
 
@@ -42,6 +42,9 @@ export const profileSchema = z.object({
   yearsExperience: z.number().int().min(0).max(80).optional(),
   certifications:  text(1000),
   languages: z.union([z.string().max(300), z.array(z.string().max(50)).max(20)]).optional(),
+  // RF-29: la profesional carga y edita sus propias vacaciones (null/'' las borra). El orden se valida en el servicio.
+  vacationFrom: z.union([dateSchema, z.literal(''), z.null()]).optional(),
+  vacationTo:   z.union([dateSchema, z.literal(''), z.null()]).optional(),
   ...policiesShape,
 })
 

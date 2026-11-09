@@ -27,6 +27,38 @@ function parseJoinedAt(value: unknown): Date | null | undefined {
   return new Date(`${parsed.data}T00:00:00.000Z`)
 }
 
+// RF-29: vacaciones. Acepta 'YYYY-MM-DD', null o '' (borra). Como el PATCH es parcial, lo que no viene se toma de lo
+// ya guardado para validar el par completo: inicio no posterior al fin, y no una sola de las dos fechas.
+function resolveVacation(
+  data: { vacationFrom?: unknown; vacationTo?: unknown },
+  current: { vacationFrom: Date | null; vacationTo: Date | null } | null,
+): { vacationFrom?: Date | null; vacationTo?: Date | null } {
+  if (data.vacationFrom === undefined && data.vacationTo === undefined) return {}
+  const norm = (value: unknown, stored: Date | null | undefined): string | null => {
+    if (value === undefined) return stored ? stored.toISOString().slice(0, 10) : null
+    if (value === null || value === '') return null
+    const parsed = dateSchema.safeParse(value)
+    if (!parsed.success) {
+      throw new AppError(HTTP.BAD_REQUEST, 'La fecha de vacaciones no es válida (formato AAAA-MM-DD)', 'VALIDATION_ERROR')
+    }
+    return parsed.data
+  }
+  const from = norm(data.vacationFrom, current?.vacationFrom)
+  const to   = norm(data.vacationTo,   current?.vacationTo)
+  if ((from === null) !== (to === null)) {
+    throw new AppError(HTTP.BAD_REQUEST, 'Cargá la fecha de inicio y la de fin de las vacaciones', 'VALIDATION_ERROR')
+  }
+  if (from && to && from > to) {
+    throw new AppError(HTTP.BAD_REQUEST, 'El inicio de las vacaciones no puede ser posterior al fin', 'VALIDATION_ERROR')
+  }
+  return {
+    ...(data.vacationFrom !== undefined || data.vacationTo !== undefined ? {
+      vacationFrom: from ? new Date(`${from}T00:00:00.000Z`) : null,
+      vacationTo:   to   ? new Date(`${to}T00:00:00.000Z`)   : null,
+    } : {}),
+  }
+}
+
 type DayRange = { start: string; end: string }
 // Se acepta tanto el formato viejo (un solo rango u null, todavía usado por la
 // edición de horario del admin) como el nuevo (array de rangos, self-service y
@@ -367,6 +399,7 @@ export const professionalService = {
 
     assertValidPhone(data.phone)
     const joinedAt = parseJoinedAt(data.joinedAt)
+    const vacation = resolveVacation(data, await prisma.professional.findUnique({ where: { userId: id }, select: { vacationFrom: true, vacationTo: true } }))
     const userUpdate: Record<string, unknown> = {}
     if (data.name   !== undefined) userUpdate.name   = data.name
     if (data.phone  !== undefined) userUpdate.phone  = data.phone
@@ -394,8 +427,8 @@ export const professionalService = {
         twitter:   data.socials?.twitter   ?? null,
         commissionType: data.commissionType ?? 'earned',
         commissionPct:  data.commissionPct  ?? 0,
-        vacationFrom:   data.vacationFrom ? new Date(data.vacationFrom) : null,
-        vacationTo:     data.vacationTo   ? new Date(data.vacationTo)   : null,
+        vacationFrom:   vacation.vacationFrom ?? null,
+        vacationTo:     vacation.vacationTo   ?? null,
         joinedAt:       joinedAt ?? null,
       },
       update: {
@@ -408,8 +441,7 @@ export const professionalService = {
         ...(data.socials?.twitter    !== undefined ? { twitter:   data.socials.twitter   } : {}),
         ...(data.commissionType      !== undefined ? { commissionType: data.commissionType } : {}),
         ...(data.commissionPct       !== undefined ? { commissionPct:  data.commissionPct  } : {}),
-        ...(data.vacationFrom        !== undefined ? { vacationFrom: data.vacationFrom ? new Date(data.vacationFrom) : null } : {}),
-        ...(data.vacationTo          !== undefined ? { vacationTo:   data.vacationTo   ? new Date(data.vacationTo)   : null } : {}),
+        ...vacation,
       },
     })
 
@@ -469,6 +501,8 @@ export const professionalService = {
       // El formulario de configuración lo edita como texto separado por comas
       // (igual que el paso de onboarding) — no como array.
       languages:       (professional?.languages ?? []).join(', '),
+      vacationFrom:    professional?.vacationFrom ? professional.vacationFrom.toISOString().slice(0, 10) : null,
+      vacationTo:      professional?.vacationTo   ? professional.vacationTo.toISOString().slice(0, 10)   : null,
       instagram:       professional?.instagram       ?? null,
       facebook:        professional?.facebook        ?? null,
       tiktok:          professional?.tiktok          ?? null,
@@ -490,6 +524,8 @@ export const professionalService = {
 
   updateMyProfile: async (userId: string, data: any) => {
     assertValidPhone(data.phone)
+    // Solo se toca el registro de ESTA profesional (userId sale de la sesión, nunca del pedido).
+    const vacation = resolveVacation(data, await prisma.professional.findUnique({ where: { userId }, select: { vacationFrom: true, vacationTo: true } }))
     if (data.name !== undefined || data.phone !== undefined) {
       await prisma.user.update({
         where: { id: userId },
@@ -515,6 +551,8 @@ export const professionalService = {
       professionalFields.languages = (Array.isArray(data.languages) ? data.languages : String(data.languages).split(','))
         .map((l: string) => l.trim()).filter(Boolean)
     }
+
+    Object.assign(professionalFields, vacation)
 
     await prisma.professional.upsert({
       where:  { userId },
