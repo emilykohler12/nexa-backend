@@ -918,7 +918,9 @@ function isSlotConflict(err: any): boolean {
 async function assertClientNotBlocked(clientId: string) {
   const client = await prisma.client.findUnique({ where: { userId: clientId } })
   if (client?.blocked) {
-    throw new AppError(HTTP.FORBIDDEN, 'Tu cuenta está bloqueada y no puede reservar turnos. Contactanos para más información.', 'CLIENT_BLOCKED')
+    // La clienta bloqueada nunca tiene que enterarse de que lo está: mensaje y código genéricos (solo el
+    // administrador ve el bloqueo, en su panel).
+    throw new AppError(HTTP.BAD_REQUEST, 'No pudimos completar la operación', 'OPERATION_FAILED')
   }
 }
 
