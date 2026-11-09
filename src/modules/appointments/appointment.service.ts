@@ -950,6 +950,71 @@ async function assertClientNotBlocked(clientId: string) {
   }
 }
 
+// ── Cambio de profesional en un servicio de un combo ─────────────────────────────────────────────────────────
+// El administrador (cualquier pata) y la profesional (solo una pata suya) pueden pasarle un servicio del combo a
+// otra profesional. La pata conserva su comboGroupId y su precio, y la seña única (vive en la primera pata) no se
+// toca. La no superposición la garantiza el índice único parcial (409 PROFESSIONAL_SLOT_TAKEN); acá se valida lo
+// que el índice no ve: que la nueva profesional esté activa, ofrezca el servicio, tenga franja ese día y hora (y no
+// esté de vacaciones), y no tenga ya otra pata del mismo grupo a esa hora.
+async function assertComboLegReassignable(
+  appointment: AppointmentRow, newProfessionalId: string, target: { date: string; time: string },
+): Promise<void> {
+  if (!appointment.comboGroupId) {
+    throw new AppError(HTTP.BAD_REQUEST, 'Solo se puede cambiar la profesional de un servicio que forma parte de un combo', 'NOT_A_COMBO')
+  }
+  if (!['pending', 'confirmed'].includes(appointment.status)) {
+    throw new AppError(HTTP.BAD_REQUEST, 'Solo se puede cambiar la profesional de un turno pendiente o confirmado', 'INVALID_STATUS')
+  }
+  const user = await prisma.user.findUnique({
+    where:   { id: newProfessionalId },
+    include: { professional: { include: { services: { where: { serviceId: appointment.serviceId, active: true } } } } },
+  })
+  if (!user || !['professional', 'admin'].includes(user.role) || !user.active) {
+    throw new AppError(HTTP.BAD_REQUEST, 'Profesional no disponible', 'PROFESSIONAL_NOT_FOUND')
+  }
+  if (!user.professional || user.professional.services.length === 0) {
+    throw new AppError(HTTP.BAD_REQUEST, 'Esa profesional no realiza este servicio', 'PROFESSIONAL_NOT_ALLOWED')
+  }
+  await assertWithinAvailability(newProfessionalId, target.date, target.time)
+  const sameSlot = await prisma.appointment.findFirst({
+    where: {
+      comboGroupId: appointment.comboGroupId, id: { not: appointment.id }, professionalId: newProfessionalId,
+      status: { in: ['pending', 'confirmed'] }, date: target.date, time: target.time,
+    },
+    select: { id: true },
+  })
+  if (sameSlot) {
+    throw new AppError(
+      HTTP.CONFLICT,
+      'Esa profesional ya tiene otro servicio de este combo a la misma hora. Elegí una profesional distinta.',
+      'SAME_PROFESSIONAL_SIMULTANEOUS',
+    )
+  }
+}
+
+// Avisos del cambio: a la que sale (aviso in-app), a la que entra (aviso + mail como turno nuevo, salvo que ya
+// tenga otra pata de este combo y ya se haya enterado: un solo aviso y un solo mail por profesional y por grupo,
+// RF-24) y una entrada en Actividad. La clienta no recibe mail propio (ver CLAUDE.md).
+async function afterComboReassign(updated: AppointmentRow, previousProfessionalId: string, actorName: string) {
+  const previous = await prisma.user.findUnique({ where: { id: previousProfessionalId }, select: { name: true } })
+  await activityService.log({
+    userName: actorName, action: 'Profesional cambiada en un combo', module: 'appointments', appointmentId: updated.id,
+    detail: `${updated.service.name} — ${fullName(updated.client)}: de ${previous?.name ?? 'otra profesional'} a ${updated.professional.name} (${updated.date} ${updated.time})`,
+  })
+  await notificationService.notify(previousProfessionalId, {
+    type:  'cancelled_appointment',
+    title: 'Turno reasignado',
+    body:  `El turno de ${fullName(updated.client)} (${updated.service.name}, ${updated.date} a las ${updated.time}) pasó a ${updated.professional.name}.`,
+  })
+  const alreadyInGroup = await prisma.appointment.count({
+    where: {
+      comboGroupId: updated.comboGroupId, id: { not: updated.id }, professionalId: updated.professionalId,
+      status: { in: ['pending', 'confirmed'] },
+    },
+  })
+  if (alreadyInGroup === 0) await notifyProfessionalOfNewAppointments([updated])
+}
+
 function isPromoLive(promo: { status: string; startDate: string | null; endDate: string | null }): boolean {
   if (promo.status !== 'active') return false
   const today = todayArgentinaStr()
@@ -1864,7 +1929,7 @@ export const appointmentService = {
   updateForProfessional: async (
     professionalId: string,
     id: string,
-    data: { status?: string; internalNotes?: string; date?: string; time?: string } & StaffCancellationInput,
+    data: { status?: string; internalNotes?: string; date?: string; time?: string; professionalId?: string } & StaffCancellationInput,
   ) => {
     const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
     if (!appointment || appointment.professionalId !== professionalId) {
@@ -1879,6 +1944,12 @@ export const appointmentService = {
     )
 
     assertNoShowStateAllowsChange(appointment, { cancelling, rescheduling })
+
+    // Cambio de profesional: solo en un servicio de combo, y se valida antes de tocar nada.
+    const reassigning = !cancelling && data.professionalId !== undefined && data.professionalId !== appointment.professionalId
+    if (reassigning) {
+      await assertComboLegReassignable(appointment, data.professionalId!, { date: data.date ?? appointment.date, time: data.time ?? appointment.time })
+    }
 
     if (cancelling) {
       // Quién cancela y el aviso de la clienta se validan ANTES de tocar nada (hora de aviso futura o de más de
@@ -1902,6 +1973,7 @@ export const appointmentService = {
     const updated = await updateAppointmentRow(id, {
       ...(statusChanging && !viaNoShowRules ? { status: data.status, slotLocked: false } : {}),
       ...(data.internalNotes !== undefined ? { internalNotes: data.internalNotes } : {}),
+      ...(reassigning ? { professionalId: data.professionalId } : {}),
       ...(data.date           !== undefined ? { date: data.date }                   : {}),
       ...(data.time           !== undefined ? { time: data.time }                   : {}),
       ...(rescheduling ? {
@@ -1914,6 +1986,7 @@ export const appointmentService = {
     if (statusChanging && !viaNoShowRules) {
       await logStatusChange(updated, appointment.status, data.status!, appointment.professional.name)
     }
+    if (reassigning) await afterComboReassign(updated, appointment.professionalId, appointment.professional.name)
     if (rescheduling) await afterStaffReschedule(updated, appointment.date, appointment.time)
     const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
     return toProfessionalView(updated, peers, await hasAttended(professionalId, updated.clientId))
@@ -2053,6 +2126,14 @@ export const appointmentService = {
 
     assertNoShowStateAllowsChange(appointment, { cancelling, rescheduling })
 
+    // Cambiar la profesional de un servicio de combo tiene sus propias reglas (franja, servicio, avisos).
+    // En un turno suelto el administrador conserva el comportamiento de siempre.
+    const reassigning = !cancelling && !!appointment.comboGroupId
+      && data.professionalId !== undefined && data.professionalId !== appointment.professionalId
+    if (reassigning) {
+      await assertComboLegReassignable(appointment, data.professionalId!, { date: data.date ?? appointment.date, time: data.time ?? appointment.time })
+    }
+
     if (cancelling) {
       // Quién cancela y el aviso de la clienta se validan ANTES de tocar nada. El administrador puede cargar
       // un aviso de cualquier antigüedad.
@@ -2079,6 +2160,7 @@ export const appointmentService = {
     if (statusChanging && !viaNoShowRules) {
       await logStatusChange(updated, appointment.status, data.status!, actorName)
     }
+    if (reassigning) await afterComboReassign(updated, appointment.professionalId, actorName)
     if (rescheduling) await afterStaffReschedule(updated, appointment.date, appointment.time)
     const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
     return toAdminView(updated, peers)

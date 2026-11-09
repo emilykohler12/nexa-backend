@@ -151,6 +151,8 @@ const professionalUpdateAppointmentSchema = z.object({
   internalNotes: z.string().max(2000).optional(),
   date:          dateSchema.optional(),
   time:          timeSchema.optional(),
+  // Solo para pasar un servicio de combo a otra profesional (el servicio lo valida y si no es de combo, 400).
+  professionalId: z.string().uuid('ID de profesional inválido').optional(),
 }).refine(requireCancelledBy.check, { message: requireCancelledBy.message, path: requireCancelledBy.path })
 
 const adminCreateAppointmentSchema = z.object({
