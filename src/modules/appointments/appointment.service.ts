@@ -285,10 +285,22 @@ function toAdminView(a: AppointmentRow, peers: ComboPeer[] | null = null) {
 // varios al mismo tiempo en un combo — de a uno, y si falla queda registrado
 // en Actividad en vez de perderse en la consola del servidor.
 async function notifyProfessionalOfNewAppointment(a: AppointmentRow) {
+  await notifyProfessionalOfNewAppointments([a])
+}
+
+// RF-24: UN solo aviso y UN solo mail por profesional y por turno nuevo. En un combo, una profesional que tiene
+// dos servicios del mismo grupo recibe un único aviso (con los dos servicios) y un único mail; profesionales
+// distintas reciben cada una el suyo. `legs` son las patas de ESA profesional.
+async function notifyProfessionalOfNewAppointments(legs: AppointmentRow[]) {
+  const a = legs[0]
+  const services = legs.map(l => l.service.name).join(' y ')
+  const when = legs.length === 1
+    ? `para el ${a.date} a las ${a.time}`
+    : `para ${legs.map(l => `el ${l.date} a las ${l.time}`).join(' y ')}`
   await notificationService.notify(a.professionalId, {
     type:  'new_appointment',
     title: 'Nuevo turno',
-    body:  `${fullName(a.client)} reservó ${a.service.name} para el ${a.date} a las ${a.time}.`,
+    body:  `${fullName(a.client)} reservó ${services} ${when}.`,
   })
   try {
     await mailProvider.send(
@@ -297,16 +309,16 @@ async function notifyProfessionalOfNewAppointment(a: AppointmentRow) {
       loadTemplate('appointmentCreated', {
         PROFESSIONAL_NAME: a.professional.name,
         CLIENT_NAME:        fullName(a.client),
-        SERVICE_NAME:        a.service.name,
-        DATE:                formatDate(a.date),
-        TIME:                a.time,
+        SERVICE_NAME:        services,
+        DATE:                [...new Set(legs.map(l => formatDate(l.date)))].join(' y '),
+        TIME:                [...new Set(legs.map(l => l.time))].join(' y '),
       }),
     )
   } catch (err: any) {
     console.error('[mail] error notificando nuevo turno:', err.message)
     await activityService.log({
       action: 'No se pudo enviar el mail de aviso de turno nuevo', module: 'system', level: 'warning', appointmentId: a.id,
-      detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}: ${err.message}`,
+      detail: `${services} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}: ${err.message}`,
     })
   }
 }
@@ -332,7 +344,10 @@ async function afterCreateGroup(legs: AppointmentRow[]) {
     action: 'Nuevo turno simultáneo', module: 'appointments', level: 'success', appointmentId: legs[0].id,
     detail: `${fullName(legs[0].client)} el ${legs[0].date} ${legs[0].time}: ${summary}`,
   })
-  for (const leg of legs) await notifyProfessionalOfNewAppointment(leg)
+  // Una vez por profesional (no por pata), en orden de aparición.
+  const byProfessional = new Map<string, AppointmentRow[]>()
+  for (const leg of legs) byProfessional.set(leg.professionalId, [...(byProfessional.get(leg.professionalId) ?? []), leg])
+  for (const proLegs of byProfessional.values()) await notifyProfessionalOfNewAppointments(proLegs)
 }
 
 async function afterCancel(a: AppointmentRow, emailClient: boolean, extraDetail = '') {
