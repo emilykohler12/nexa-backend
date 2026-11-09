@@ -1513,3 +1513,18 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5) con `git`, `npm`, Vitest y ESLint. Context7 no se consultó: sin APIs nuevas de librerías. |
 
 **Impacto en el frontend (contrato):** es el propio frontend. Archivos tocados: `src/shared/ui/molecules/BalancePaymentForm.tsx`, `src/shared/ui/molecules/ChangeLegProfessional.tsx`, `src/shared/utils/balancePayment.ts`, `src/shared/utils/cancelReason.ts`, `src/shared/utils/errorMessage.ts`, `src/pages/admin/appointments/AppointmentModal.tsx`, `src/pages/admin/appointments/AppointmentsPage.tsx`, `src/pages/admin/clients/tabs/HistoryTab.tsx`, `src/pages/admin/clients/types.ts`, `src/features/professional/agenda/Agenda.tsx`, `src/features/professional/agenda/dialogs/AppointmentDialog.tsx`, `src/features/professional/types/appointment.ts`, `src/features/professional/settings/Settings.tsx`, `src/features/professional/settings/VacationSection.tsx`, `src/features/client/booking/RescheduleModal.tsx` y `README.md`.
+
+## Entrada 110: AE4, cambios de reglas del 06/11/2026 — subida por rama y pull requests 34 (backend) y 22 (frontend)
+
+**Fecha:** 2026-11-09, 03:00 aprox. (hora de la máquina, UTC-3).
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), a pedido de Emily** («subí todos los cambios y yo solo hago merge»). En cada repositorio se creó la rama `feat/cambios-de-reglas-06-11` desde el `main` local con los commits de las entradas 108 y 109 (backend: 12 sobre `origin/main`, incluida esta entrada; frontend: 7) y se pusheó. Se abrieron los pull requests [nexa-backend#34](https://github.com/emilykohler12/nexa-backend/pull/34) y [nexa-frontend#22](https://github.com/emilykohler12/nexa-frontend/pull/22). El de backend lleva además las entradas 105, 106 y 107 que Emily había escrito en otro chat y que estaban sin commitear en el árbol de trabajo (no estaban en `origin/main`). **Orden de merge: primero el backend, después el frontend** (el frontend ya espera `OPERATION_FAILED`, `cancelledBy` y la ruta de cobro de la profesional). |
+| 2 | Alternativas y criterio de descarte | **Push directo a `main`:** descartado, un hook del proyecto lo bloquea y redespliega Render/Vercel; el flujo acordado es rama y pull request que mergea Emily. **Un solo pull request para los dos repositorios:** imposible, son repositorios distintos. **Dejar el `main` local adelantado:** descartado, divergiría del `main` remoto tras el merge. |
+| 3 | Evidencia que la sostiene | `git push -u origin feat/cambios-de-reglas-06-11` en ambos (`new branch`); `gh pr create` devolvió las URL de los pull requests 34 y 22. `origin/main` no tenía ninguno de estos commits ni las entradas 105 a 107 antes de la subida. |
+| 4 | Aporte personal | Emily aclaró que ya había escrito las entradas 105 a 107, pidió subir todo y que ella solo hace el merge. |
+| 5 | Desacuerdo y resolución | Emily creía que los cambios ya estaban subidos; en realidad todo estaba solo en la máquina (el push a `main` estaba bloqueado). Se resolvió con la rama y los pull requests. Los chequeos de CI de cada pull request no se revisaron en esta sesión. |
+| 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5) con `git` y `gh`. Context7 no se consultó (sin código nuevo). |
+
+**Impacto en el frontend (contrato):** ninguno adicional; ver la entrada 108.
