@@ -371,6 +371,14 @@ export const appointmentController = {
     } catch (err) { next(err) }
   },
 
+  registerBalancePaymentForProfessional: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const input = parseBody(balancePaymentSchema, req.body)
+      const appointment = await appointmentService.registerBalancePaymentForProfessional(req.user!.id, getId(req), input)
+      res.json({ appointment })
+    } catch (err) { next(err) }
+  },
+
   registerBalancePaymentForAdmin: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const input = parseBody(balancePaymentSchema, req.body)

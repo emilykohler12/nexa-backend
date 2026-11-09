@@ -219,6 +219,8 @@ function toProfessionalView(a: AppointmentRow, peers: ComboPeer[] | null, attend
     statusLabel:    STATUS_LABELS[displayStatusOf(a)] ?? a.status,
     cancelReason:   a.cancelReason,
     paymentStatus:  a.paymentStatus,
+    depositAmount:  Number(a.depositAmount),
+    balancePayment: balancePaymentOf(a),
     arrivedAt:      a.arrivedAt ? a.arrivedAt.toISOString() : null,
     cancellation:   cancellationOf(a),
     internalNotes:  a.internalNotes ?? '',
@@ -566,16 +568,25 @@ async function registerBalancePayment(
     throw new AppError(HTTP.BAD_REQUEST, 'No se puede registrar un cobro sobre un turno cancelado o no asistido', 'INVALID_STATUS')
   }
 
-  const alreadyPaid = appointment.paymentStatus === 'partial' || appointment.paymentStatus === 'paid'
-    ? Number(appointment.depositAmount)
-    : 0
-  const fullyPaid = alreadyPaid + data.amount >= Number(appointment.servicePrice)
+  if (appointment.paymentStatus === 'paid') {
+    throw new AppError(HTTP.BAD_REQUEST, 'Este turno ya figura como pagado', 'ALREADY_PAID')
+  }
+
+  const depositPaid   = appointment.paymentStatus === 'partial' ? Number(appointment.depositAmount) : 0
+  const collectedSoFar = Number(appointment.balancePaidAmount ?? 0)
+  const remaining     = Math.max(Number(appointment.servicePrice) - depositPaid - collectedSoFar, 0)
+  if (data.amount > remaining) {
+    throw new AppError(HTTP.BAD_REQUEST, `El monto supera lo que falta cobrar ($${remaining})`, 'AMOUNT_EXCEEDS_BALANCE')
+  }
+  // Seña + lo cobrado antes + este cobro cubren el precio: el turno queda pagado.
+  const fullyPaid = depositPaid + collectedSoFar + data.amount >= Number(appointment.servicePrice)
 
   const updated = await prisma.appointment.update({
     where: { id: appointment.id },
     data: {
       balancePaymentMethod: data.method,
-      balancePaidAmount:    data.amount,
+      // Acumulado: varios cobros parciales suman en vez de pisarse (método, fecha y quién cobró son los del último).
+      balancePaidAmount:    collectedSoFar + data.amount,
       balancePaidAt:        new Date(),
       balanceCollectedById: collectedById,
       paymentStatus:        fullyPaid ? 'paid' : appointment.paymentStatus,
@@ -2101,9 +2112,20 @@ export const appointmentService = {
   },
 
   // ── Cobro del saldo en el local ──────────────────────────────────
-  // Solo el admin lo completa (no la profesional) — es quien concilia el
-  // efectivo/tarjeta recibido en el local, no la información la reporta
-  // sola cada profesional.
+  // Lo registran el administrador (cualquier turno) y la profesional (solo los suyos): ambos pueden cobrar en
+  // el local el servicio completo o lo que falta después de la seña.
+  registerBalancePaymentForProfessional: async (
+    professionalId: string, id: string, data: { method: string; amount: number },
+  ) => {
+    const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
+    if (!appointment || appointment.professionalId !== professionalId) {
+      throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
+    }
+    const updated = await registerBalancePayment(appointment, data as { method: BalancePaymentMethod; amount: number }, professionalId)
+    const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
+    return toProfessionalView(updated, peers, await hasAttended(professionalId, updated.clientId))
+  },
+
   registerBalancePaymentForAdmin: async (
     adminId: string, id: string, data: { method: string; amount: number },
   ) => {
