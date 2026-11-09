@@ -43,9 +43,9 @@ describe('RF-26: historial', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.history).toEqual([
-      { id: h.noShow.id, clientId: h.client.id, service: 'Alisado', professional: 'Otra Profesional', date: '2026-10-15', time: '12:00', price: 25000, status: 'cancelled_no_show', cancelReason: null },
-      { id: h.cancelled.id, clientId: h.client.id, service: 'Alisado', professional: 'Profesional Historial', date: '2026-10-12', time: '11:00', price: 25000, status: 'cancelled', cancelReason: 'Cancelado por la clienta' },
-      { id: h.finished.id, clientId: h.client.id, service: 'Alisado', professional: 'Profesional Historial', date: '2026-10-10', time: '10:00', price: 25000, status: 'finished', cancelReason: null },
+      { id: h.noShow.id, clientId: h.client.id, service: 'Alisado', professional: 'Otra Profesional', date: '2026-10-15', time: '12:00', price: 25000, status: 'cancelled_no_show', cancelReason: null, cancelledBy: null },
+      { id: h.cancelled.id, clientId: h.client.id, service: 'Alisado', professional: 'Profesional Historial', date: '2026-10-12', time: '11:00', price: 25000, status: 'cancelled', cancelReason: 'Cancelado por la clienta', cancelledBy: null },
+      { id: h.finished.id, clientId: h.client.id, service: 'Alisado', professional: 'Profesional Historial', date: '2026-10-10', time: '10:00', price: 25000, status: 'finished', cancelReason: null, cancelledBy: null },
     ])
   })
 
@@ -159,5 +159,29 @@ describe('RF-34: indicadores del panel del administrador (período "day")', () =
       { name: 'Profesional Panel', attended: 1, hoursWorked: 1, revenue: 10000, cancelled: 1 },
     ])
     expect(res.body.dashboard.heatmap[1]).toEqual({ day: 'Martes', morning: 2, afternoon: 1, evening: 0 })
+  })
+})
+
+describe('RF-26: motivo de la cancelación en el historial de la clienta', () => {
+  it('devuelve el motivo y quién canceló (cliente, estudio o sistema) para que el panel arme el texto', async () => {
+    const admin  = await createAdminUser()
+    const client = await createClientUser()
+    const pro    = await createProfessionalUser()
+    const svc    = await createService({ name: 'Manicura', price: 9000 })
+    const make = async (time: string, cancelReason: string, cancelledBy: string) => {
+      const a = await createAppointmentDirect({ clientId: client.id, serviceId: svc.id, professionalId: pro.id, date: '2026-10-20', time, status: 'cancelled' })
+      await prisma.appointment.update({ where: { id: a.id }, data: { cancelReason, cancelledBy } })
+      return a
+    }
+    const byClient = await make('09:00', 'user_cancelled', 'client')
+    const byStudio = await make('10:00', 'user_cancelled', 'studio')
+    const bySystem = await make('11:00', 'unpaid_expired', 'system')
+
+    const res = await request(app).get(`/api/admin/clients/${client.id}/history`).set('Cookie', cookieFor(admin))
+
+    const row = (id: string) => res.body.history.find((h: { id: string }) => h.id === id)
+    expect(row(byClient.id)).toMatchObject({ cancelReason: 'user_cancelled', cancelledBy: 'client' })
+    expect(row(byStudio.id)).toMatchObject({ cancelReason: 'user_cancelled', cancelledBy: 'studio' })
+    expect(row(bySystem.id)).toMatchObject({ cancelReason: 'unpaid_expired', cancelledBy: 'system' })
   })
 })

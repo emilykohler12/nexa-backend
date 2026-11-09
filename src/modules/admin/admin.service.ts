@@ -115,6 +115,8 @@ export const adminService = {
       price:        Number(a.servicePrice),
       status:       a.status,
       cancelReason: a.cancelReason,
+      // Quién canceló (client, studio o system): con el motivo, el panel arma el texto del historial (RF-26).
+      cancelledBy:  a.cancelledBy,
     }))
   },
 
