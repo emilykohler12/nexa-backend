@@ -1666,6 +1666,14 @@ export const appointmentService = {
     if (input.professionalId === ANY_PROFESSIONAL_SENTINEL) {
       throw new AppError(HTTP.BAD_REQUEST, 'Para reprogramar elegí un profesional específico', 'INVALID_PROFESSIONAL')
     }
+    // Una vez confirmado el turno, la clienta no cambia de profesional: solo cancela o reprograma con la misma.
+    if (input.professionalId !== existing.professionalId) {
+      throw new AppError(
+        HTTP.BAD_REQUEST,
+        'No se puede cambiar de profesional al reprogramar. Podés elegir otro horario con la misma profesional o cancelar el turno.',
+        'PROFESSIONAL_CHANGE_NOT_ALLOWED',
+      )
+    }
 
     const service = await prisma.service.findUnique({ where: { id: input.serviceId } })
     if (!service || service.status !== 'active') {

@@ -7,6 +7,7 @@ import {
   createAppointmentDirect, hoursFromNow,
 } from '../helpers/factories'
 import { cookieFor } from '../helpers/auth'
+import { prisma } from '../../src/app/database/prisma'
 
 describe('cancelación', () => {
   it('reembolsa si se cancela con más margen que el corte (12hs por default, RF-04)', async () => {
@@ -141,6 +142,29 @@ describe('reprogramación', () => {
     expect(res.body.appointment.date).toBe(newTime.date)
     expect(res.body.appointment.time).toBe(newTime.time)
     expect(res.body.appointment.status).toBe('confirmed')
+  })
+
+  it('la clienta no puede cambiar de profesional al reprogramar: 400 y el turno queda igual', async () => {
+    const client = await createClientUser()
+    const pro    = await createProfessionalUser()
+    const other  = await createProfessionalUser()
+    const svc    = await createService()
+    const far    = hoursFromNow(48)
+    const appt   = await createAppointmentDirect({
+      clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: far.date, time: far.time,
+    })
+
+    const newTime = hoursFromNow(72)
+    const res = await request(app)
+      .patch(`/api/client/appointments/${appt.id}/reschedule`)
+      .set('Cookie', cookieFor(client))
+      .send({ serviceId: svc.id, professionalId: other.id, date: newTime.date, time: newTime.time })
+
+    expect(res.status).toBe(400)
+    expect(res.body.code).toBe('PROFESSIONAL_CHANGE_NOT_ALLOWED')
+    const fresh = await prisma.appointment.findUnique({ where: { id: appt.id } })
+    expect(fresh?.professionalId).toBe(pro.id)
+    expect(fresh?.date).toBe(far.date)
   })
 
   it('rechaza reprogramar a un horario ocupado de la misma profesional', async () => {
