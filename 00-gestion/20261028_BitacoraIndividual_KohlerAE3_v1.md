@@ -2083,3 +2083,5 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code: la sesión empezó con Claude Sonnet 5.5 (`claude-sonnet-5-5`) y se retomó con Claude Fable 5.2 (`claude-fable-5-2`). `git`, `gh` y Node. Context7 no se consultó (no cambió código que dependa de una librería). El hash del commit de este cambio va en la línea de abajo, agregada en un commit posterior porque un commit no puede citar su propio hash. |
 
 **Impacto en el frontend (contrato):** ninguno. No cambia ninguna ruta ni respuesta.
+
+**Commit de este cambio:** `6146c03` (sobre `078c0c4`, el merge del pull request 34).
