@@ -9,6 +9,7 @@ Esta bitácora **continúa la de la AE2** ([`20261006_BitacoraIndividual_KohlerA
 Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período es el del correo de contacto del pie de página del frontend (commit `e3c4b52`, 17/10/2026), que no tiene entrada propia. Hasta la entrada 59 inclusive el archivo se llamaba `bitacora3.md` y estaba en la raíz de nexa-backend; el cambio de nombre y de lugar está en la entrada 60. En las entradas anteriores, «la bitácora 3» es este archivo.
 ---
 
+
 ## Entrada 1: rama de trabajo y verificación de hallazgos
 
 **Fecha:** 2026-10-23, 16:20 (hora de la máquina)
@@ -21,6 +22,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Definición de las reglas del trabajo (no tocar `.env`, no commit, rama nueva) en la consigna; registro en el repositorio: rama `chore/claude-config`. |
 | 5 | Desacuerdo y resolución | Ninguno registrado. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5), solo lectura del repositorio y creación de la rama. Alcance: el artefacto de configuración, sin tocar la documentación académica. |
+
 
 ## Entrada 2: creación de `CLAUDE.md`
 
@@ -35,6 +37,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | La consigna hablaba de "multi-tenancy" y el ADR-001 dice lo contrario. Se resolvió siguiendo el código y el ADR vigente, y se deja avisado para que Emily decida si corrige el ADR-003. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): redacción del archivo a partir de la lectura de README, package.json, tsconfig, vitest, `app.ts`, `routes.ts`, módulo appointments, auth, ADR 001 a 003, RUNBOOK y workflows. Revisión final por Emily pendiente. |
 
+
 ## Entrada 3: hooks de seguridad y calidad (`.claude/settings.json` y `.claude/hooks/*.mjs`)
 
 **Fecha:** 2026-10-23, 16:28 (hora de la máquina)
@@ -47,6 +50,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Consigna con las reglas a bloquear y los criterios (rama nueva, nada de producción, hooks en `.mjs`). Archivos: `.claude/settings.json`, `.claude/hooks/`. |
 | 5 | Desacuerdo y resolución | Ninguno. Limitación aceptada y a conocer: los hooks de archivos no ven escrituras hechas desde un comando de shell (`sed -i`, redirecciones), y el hook de `Bash` analiza el texto del comando, por lo que puede dar falsos positivos con texto citado. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): escritura de los scripts y ejecución de las pruebas simuladas. Revisión de Emily pendiente. |
+
 
 ## Entrada 4: subagentes (`.claude/agents/`)
 
@@ -61,6 +65,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. Pendiente: los agentes aún no se probaron sobre un cambio real; se verá su utilidad al usarlos. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): redacción de los tres archivos a partir de la lectura de middlewares, webhook, uploads, jobs, scheduler y tests. Revisión de Emily pendiente. |
 
+
 ## Entrada 5: skills del proyecto (`.claude/skills/`)
 
 **Fecha:** 2026-10-23, 16:40 (hora de la máquina)
@@ -73,6 +78,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Consigna con el contenido de cada skill y las reglas de migración segura. Archivos: `.claude/skills/nuevo-modulo/`, `nueva-migracion/`, `cambio-de-contrato/`. |
 | 5 | Desacuerdo y resolución | Ninguno. Pendiente de confirmar con Emily el paso de registrar la migración en `_prisma_migrations` (cálculo del checksum), que la skill indica contrastar con migraciones anteriores antes de aplicarlo. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): redacción de las skills y verificación contra el código. Las skills no se ejecutaron sobre una tarea real. Revisión de Emily pendiente. |
+
 
 ## Entrada 6: evaluación de servidores MCP (sin cambios en archivos)
 
@@ -87,6 +93,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno; falta su confirmación. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): solo análisis y recomendación, sin instalar nada. |
 
+
 ## Entrada 7: configuración de Context7 (`.mcp.json`)
 
 **Fecha:** 2026-10-23, 16:47 (hora de la máquina)
@@ -99,6 +106,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Decisión de configurar solo Context7. Archivo: `.mcp.json`. |
 | 5 | Desacuerdo y resolución | Ninguno. Limitación: el comando usa `cmd /c npx`, que es la forma de Windows; en macOS o Linux habría que cambiarlo a `npx`. Claude Code pedirá aprobación la primera vez que se use el servidor del proyecto. Sin probar: el servidor no se ejecutó en esta sesión. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): redacción del archivo y consulta de versiones en npm. No se instaló nada en el proyecto. |
+
 
 ## Entrada 8: cierre, `.gitignore` y verificaciones
 
@@ -113,6 +121,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): verificaciones y edición de `.gitignore`. Revisión final de Emily pendiente antes del commit. |
 
+
 ## Entrada 9: commit y push de la rama de configuración (registro retroactivo)
 
 **Fecha:** 2026-10-23, 16:53 (commit) y 16:54 (push), hora de la máquina. Registrado el 2026-10-24, 05:30.
@@ -125,6 +134,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Pidió revisar y commitear, y después pushear la rama. Registro: commit `a0aceac` en el repositorio. |
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): preparó el commit y ejecutó el push a pedido explícito de Emily. |
+
 
 ## Entrada 10: `launch.json` ignorado en `.gitignore`
 
@@ -139,6 +149,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): edición de `.gitignore`. |
 
+
 ## Entrada 11: conector de Supabase apagado en la sesión
 
 **Fecha:** 2026-10-24, 05:30 (hora de la máquina)
@@ -151,6 +162,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Decisión de Emily ("apagalo en esta sesión"). |
 | 5 | Desacuerdo y resolución | Ninguno. Si hace falta usarlo en otro proyecto, se vuelve a encender desde los conectores. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): llamó a la herramienta de conectores con la aprobación de Emily. |
+
 
 ## Entrada 12: borrado de `evolver.config.json`
 
@@ -165,6 +177,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): búsqueda y borrado. |
 
+
 ## Entrada 13: reglas de Context7 y de bitácora en `CLAUDE.md` y en la memoria
 
 **Fecha:** 2026-10-24, 05:30 (hora de la máquina)
@@ -177,6 +190,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Las dos reglas son decisión de Emily. Archivos: `CLAUDE.md` y dos memorias en la carpeta de memoria del proyecto. |
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): redacción de las reglas y de las memorias. |
+
 
 ## Entrada 14: hook de comandos más preciso (`.claude/hooks/guard-bash.mjs`)
 
@@ -191,6 +205,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): reescritura del hook y pruebas. Revisión de Emily pendiente. |
 
+
 ## Entrada 15: commit de la primera tanda de ajustes
 
 **Fecha:** 2026-10-24, 05:34 (hora del commit `2b34aa7`), registrado el 2026-10-24, 05:40.
@@ -203,6 +218,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Pidió "commit y seguir". Registro: commit `2b34aa7`. |
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): armó y ejecutó el commit a pedido de Emily. |
+
 
 ## Entrada 16: Sentry deja de recibir datos sensibles (`src/sentry.ts`)
 
@@ -217,6 +233,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5), con consulta a Context7 para la documentación de Sentry. Revisión de Emily pendiente. |
 
+
 ## Entrada 17: webhook de Mercado Pago, idempotencia y frescura del `ts`
 
 **Fecha:** 2026-10-24, 05:40 (hora de la máquina)
@@ -229,6 +246,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Pidió resolver el punto del webhook como se explicó. Registro: archivos modificados del repositorio. |
 | 5 | Desacuerdo y resolución | El plan inicial era rechazar avisos viejos si Mercado Pago lo permitía sin cortar sus reintentos. La documentación indica que no lo permite con seguridad, así que se resolvió con idempotencia, que es la protección real contra repeticiones. No cambia ninguna ruta ni forma de respuesta: no afecta al frontend. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): usó el subagente `revisor-seguridad-api` (solo lectura) para revisar el flujo, Context7 para la documentación de Mercado Pago, y escribió el arreglo y los tests. Revisión de Emily pendiente. |
+
 
 ## Entrada 18: commit de Sentry y webhook
 
@@ -243,6 +261,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): ejecutó el commit a pedido de Emily. |
 
+
 ## Entrada 19: `VITE_TENANT_SLUG` y aclaración en `CLAUDE.md`
 
 **Fecha:** 2026-10-24, 14:43 (hora de la máquina)
@@ -255,6 +274,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | La idea de un sistema para Loren que se adapta a otro cliente. Archivo: `CLAUDE.md`. |
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): lectura del frontend (solo lectura) y redacción de la aclaración. |
+
 
 ## Entrada 20: ADR-003 reescrito (`04-diseno/adr-003-jwt-auth.md`)
 
@@ -269,6 +289,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. El ADR deja anotados, sin corregirlos en el código, seis riesgos: access token no revocable, refresh token en texto plano, una sola sesión renovable por usuario, posible CSRF por `SameSite=None` con el parser urlencoded activo, cambio de contraseña sin la contraseña actual y login sin email verificado. Quedan a decisión de Emily. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): redacción y verificación contra el código. Revisión de Emily pendiente, por tratarse de un documento de la entrega. |
 
+
 ## Entrada 21: zona horaria de Argentina (ART) en turnos, jobs y tests
 
 **Fecha:** 2026-10-24, 14:54 (hora de la máquina)
@@ -281,6 +302,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Pidió resolver la zona horaria como se explicó. Archivos: `src/app/utils/argentinaTime.ts`, `autoNoShow.job.ts`, `scheduler.ts`, `appointment.service.ts`, `order.service.ts`, `promotion.model.ts`, `specialEvent.model.ts`, `vitest.config.mts`, `tests/helpers/factories.ts`, `tests/integration/timezone-art.test.ts`. |
 | 5 | Desacuerdo y resolución | Ninguno con Emily. Con el subagente: su informe tenía el signo del desfase invertido; se resolvió verificando con una ejecución (`TZ=UTC node -e …`). **Pendiente de verificar por Emily:** la zona real del servidor de Render. Si corre en UTC, el no-show automático de producción venía marcando turnos antes de su hora. Cómo comprobarlo: Render, Shell del servicio, `node -e "console.log(new Date().toString())"`; o en el panel de actividad buscar "Turno marcado como no show (automático)" y comparar con la hora del turno. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): usó el subagente `revisor-reservas` (solo lectura), Context7 para node-cron, y escribió el arreglo y los tests. Revisión de Emily pendiente. Al desplegar cambia el comportamiento en producción: conviene revisar después los turnos marcados como no-show. |
+
 
 ## Entrada 22: commits de la zona horaria y de la documentación
 
@@ -295,6 +317,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): preparó y ejecutó los commits a pedido de Emily. |
 
+
 ## Entrada 23: push de la rama y pull request #1
 
 **Fecha:** 2026-10-24, 15:35 (hora de la máquina)
@@ -307,6 +330,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Pidió "push y abrir PR". Registro: pull request #1. |
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): ejecutó el push y creó el PR con `gh` a pedido de Emily. La aplicación activó Auto-fix: ante fallos del CI o conflictos corrige, verifica, commitea y pushea en esta rama; ante comentarios de revisión no actúa sin que Emily lo confirme. |
+
 
 ## Entrada 24: checksum de migraciones verificado y script `migration-checksums.mjs`
 
@@ -321,6 +345,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. **Pendiente de Emily:** correr el SELECT en el SQL Editor de Supabase para confirmar el estado real de producción; este registro solo verifica la base de pruebas. `00-gestion/SOP.md` indica `migrate deploy` con la cadena de Supabase, lo que no coincide con lo que se pudo hacer desde su PC; no se editó. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): consulta de solo lectura a la base de pruebas, escritura del script y de la skill, y consulta a Context7. Revisión de Emily pendiente. |
 
+
 ## Entrada 25: commit y push del script de migraciones
 
 **Fecha:** 2026-10-24, 15:43 (commit `13177c6`), registrado el 2026-10-24, 15:43.
@@ -333,6 +358,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Pidió "commit y push". Registro: commit `13177c6`. |
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): ejecutó el commit y el push a pedido de Emily. |
+
 
 ## Entrada 26: seguridad del login, primera tanda (CSRF, cierre de sesión y refresh token)
 
@@ -347,6 +373,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. **Efectos al desplegar:** las sesiones abiertas siguen funcionando (transición); no hay migraciones ni cambios de rutas ni de formato de respuesta. **Verificar en producción:** que `FRONTEND_URL` en Render sea exactamente el origen que usan las usuarias (CORS ya lo exigía, pero ahora una diferencia también bloquearía los POST con 403). El pedido de pago y el webhook de Mercado Pago no traen `Origin` y pasan. **Pendiente (segunda tanda, con cambios en el frontend):** contraseña actual en `change-password` y email en `reset-password`. Después del 2026-10-31 quitar la aceptación del refresh token en texto plano. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): usó el subagente `revisor-seguridad-api` (solo lectura), Context7 para Express y jsonwebtoken, y escribió el arreglo y los tests. Revisión de Emily pendiente. |
 
+
 ## Entrada 27: commit y push de la primera tanda de seguridad del login
 
 **Fecha:** 2026-10-24, 16:09 (hora de la máquina). El hash del commit figura en `git log` con el mensaje "Seguridad del login: CSRF, cierre de sesión y refresh token".
@@ -359,6 +386,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Pidió "commit y push". |
 | 5 | Desacuerdo y resolución | Ninguno. Antes de mergear a `main`: verificar `FRONTEND_URL` en Render (ver entrada 26). |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): ejecutó el commit y el push a pedido de Emily. |
+
 
 ## Entrada 28: el pull request #1 fue mergeado a `main`
 
@@ -373,6 +401,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. **Consecuencia:** el merge redespliega el backend en Render con los cambios de hora de Argentina, Sentry y webhook. Quedan por verificar en producción: la zona horaria real del servidor, que el no-show y los mails de las 9:00 sigan comportándose bien, y el estado de las migraciones con el SELECT de `migration-checksums.mjs`. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): detectó el merge al consultar el estado del PR y lo registró. No intervino en el merge. |
 
+
 ## Entrada 29: pull request #2 (seguridad del login)
 
 **Fecha:** 2026-10-24, 16:11 (hora de la máquina)
@@ -385,6 +414,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Pidió abrir el PR nuevo. Registro: pull request #2. |
 | 5 | Desacuerdo y resolución | Ninguno. El merge queda a decisión de Emily, después de verificar `FRONTEND_URL` en Render; al mergear se redespliega el backend. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): creó el PR con `gh` a pedido de Emily. Auto-fix corrige y pushea ante fallos del CI o conflictos; ante comentarios de revisión no actúa sin confirmación. |
+
 
 ## Entrada 30: seguridad del login, segunda tanda (contraseña actual y código de recuperación)
 
@@ -399,6 +429,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. **Orden de despliegue obligatorio:** primero el frontend (manda los campos nuevos y el backend actual los ignora) y recién después el backend. Como el pull request #2 ya incluye la primera tanda, mergear el #2 despliega también esta tanda: hay que mergear y desplegar antes el PR del frontend. Hasta recargar la página, una pestaña con el frontend viejo verá errores al cambiar o recuperar la contraseña. Para un cambio de contraseña sin sesión, ahora el email es obligatorio. Pendiente: probar a mano ambos formularios en un entorno real. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): usó el subagente `revisor-seguridad-api` (solo lectura), Context7 para express-rate-limit, y escribió el arreglo y los tests en los dos repositorios. Se creó una rama en `nexa-frontend`; no se hizo ningún commit ni push allí. Revisión de Emily pendiente. |
 
+
 ## Entrada 31: commits y pull requests de la segunda tanda de seguridad del login
 
 **Fecha:** 2026-10-24, 16:28 (hora de la máquina)
@@ -411,6 +442,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Pidió "commit y abrir PR". Registro: `dffa1b6` (frontend), pull request #1 del frontend y actualización del #2 del backend. |
 | 5 | Desacuerdo y resolución | Ninguno. **Recordatorio:** orden de despliegue = (1) mergear y desplegar nexa-frontend#1, (2) probar los dos formularios y la recuperación con un código real, (3) mergear nexa-backend#2 con `FRONTEND_URL` verificado en Render. Después del 2026-10-31 quitar la aceptación del refresh token en texto plano. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): ejecutó los commits, los push y la creación y edición de los pull requests con `gh` a pedido de Emily. Auto-fix queda activo solo para el pull request del backend. |
+
 
 ## Entrada 32: webhook de Mercado Pago, monto y moneda, respuesta 500 y logs
 
@@ -425,6 +457,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. **Riesgo a conocer:** si un pago se cobra por un monto distinto, el dinero entra a Mercado Pago pero la seña no se registra; hay que mirar en la actividad las entradas con nivel de error. La tolerancia es de medio centavo. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): implementación y tests. Revisión de Emily pendiente. |
 
+
 ## Entrada 33: hora de Argentina en jobs de recordatorio y dashboards
 
 **Fecha:** 2026-10-24, 16:44 (hora de la máquina)
@@ -437,6 +470,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Pidió terminar lo pendiente de la hora de Argentina. |
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
+
 
 ## Entrada 34: menores del login, uso del subagente `escritor-tests` y logs sin emails
 
@@ -451,6 +485,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. Contrato: `POST /api/invitations/register` ya no devuelve `accessToken`; `PATCH /api/client/profile` responde 400 si los valores no son válidos; las rutas de admin pueden responder los códigos nuevos (el frontend muestra el mensaje). |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con el subagente `escritor-tests` (escribe y corre tests; no modifica `src/`). Revisión de Emily pendiente. |
 
+
 ## Entrada 35: commit, push y pull request #3 (pendientes del backend)
 
 **Fecha:** 2026-10-24, 16:55 (commit `91d0996`), registrado el 2026-10-24, 16:55.
@@ -463,6 +498,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Pidió "commit, push y PR". Registro: commit `91d0996` y pull request #3. |
 | 5 | Desacuerdo y resolución | Ninguno. **Orden para publicar:** (1) nexa-frontend#1, (2) nexa-backend#2, (3) nexa-backend#3. Este último no cambia rutas ni exige cambios en el frontend. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): ejecutó el commit, el push y la creación del PR con `gh` a pedido de Emily. |
+
 
 ## Entrada 36: corrección de la fecha de transición del refresh token
 
@@ -477,6 +513,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). |
 
+
 ## Entrada 37: revisión de seguridad general, dependencias, subida de imágenes y límite de login por cuenta
 
 **Fecha:** 2026-10-27, 00:50 (hora de la máquina)
@@ -489,6 +526,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Pidió una revisión de seguridad completa de la API. |
 | 5 | Desacuerdo y resolución | Ninguno. Contrato: `POST /api/uploads/image` puede responder `400 INVALID_IMAGE_CONTENT` y `403` (SVG de no admin); `POST /api/auth/login` puede responder `429` con `code: TOO_MANY_ATTEMPTS`. El frontend ya envía solo PNG/JPG/WEBP salvo el logo del admin. Límite conocido: quien falle 10 veces con el email de otra persona la deja 15 minutos sin entrar; los contadores viven en memoria y se reinician con cada despliegue. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
+
 
 ## Entrada 38: sesiones por dispositivo (varios dispositivos a la vez)
 
@@ -503,6 +541,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. **Antes de mergear: aplicar la migración en Supabase** (el código nuevo consulta la tabla `refresh_sessions`; sin ella, iniciar sesión da error). Pasos en la descripción del pull request. Durante los 7 días siguientes al despliegue las sesiones antiguas se siguen aceptando una vez; después se puede quitar `users.refresh_token`. **Nota:** mientras se hizo este cambio otra sesión trabajaba en el mismo directorio (entrada 37: límite de login por cuenta, SVG en `uploads/`, dependencias); no se tocaron sus archivos y este commit incluye solo los míos. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
 
+
 ## Entrada 39: configuración de Claude Code en el frontend y pull request nexa-frontend#2
 
 **Fecha:** 2026-10-27, 01:00 (hora de la máquina)
@@ -515,6 +554,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Pidió los seis bloques, uno por vez, y decidió: base `main`, mencionar la bitácora, Context7 sí y Playwright no, y el commit y el pull request. |
 | 5 | Desacuerdo y resolución | Ninguno. Pendiente de Emily: qué hacer con `@/` y `evolver.config.json`; si se permite el push a `main` desde Claude Code; si las skills deben pedir `useQuery` (hoy casi todo usa `useEffect` + `api.get`). Observación para `revisor-reserva`: `PaymentStep.tsx` maneja el 409 `PROFESSIONAL_SLOT_TAKEN` pero no vi manejo explícito del 400 `OUT_OF_HOURS`. No cambia el contrato con el backend. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): escribió la configuración, la probó, hizo el commit, subió la rama y abrió el pull request a pedido de Emily. Revisión de Emily pendiente. |
+
 
 ## Entrada 40: limpieza de ramas del frontend y estado de verificaciones (sin cambios de código)
 
@@ -529,6 +569,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. **Pendientes detectados (frontend):** (1) terminar el lint (`chore/lint-cero`, en curso por otra sesión) y revisar que el commit de configuración quede en `chore/claude-config` y no se mezcle; (2) autorizar o desbloquear el deploy de `nexa-frontend` en Vercel; (3) ningún archivo de `src/` maneja el `400 OUT_OF_HOURS` por su código (sí el `409 PROFESSIONAL_SLOT_TAKEN` en 4 flujos), cae al mensaje genérico; (4) la carpeta `@/` de la raíz y `evolver.config.json` siguen sin resolverse; (5) la dependencia `@sentry/tracing` (7.x) no se importa en ningún archivo de `src/` y convive con `@sentry/react` 11; (6) hay 13 archivos de test para 174 componentes. Sin impacto en el contrato con el backend. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): borró las ramas, corrió las verificaciones y escribió esta entrada a pedido de Emily. Revisión de Emily pendiente. |
 
+
 ## Entrada 41: lint del frontend en cero (rama chore/lint-cero, sin commitear)
 
 **Fecha:** 2026-10-27, 16:49 (hora de la máquina)
@@ -541,6 +582,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily pidió arreglar los 121 problemas de lint del frontend. |
 | 5 | Desacuerdo y resolución | Ninguno. Sin commitear ni subir: queda en el árbol de trabajo de `nexa-frontend` (rama `chore/lint-cero`). Sin impacto en el contrato con el backend. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
+
 
 ## Entrada 42: SOP actualizado, commit del frontend, limpieza de ramas y subida de cambios del backend
 
@@ -555,6 +597,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. Contrato con el frontend (viene de la entrada 37, todavía sin desplegar): `POST /api/auth/login` puede responder `429` con `code: TOO_MANY_ATTEMPTS`; `POST /api/uploads/image` puede responder `400 INVALID_IMAGE_CONTENT` y `403` si un no admin sube SVG. Antes de mergear, confirmar en Supabase que la migración 52 figura como `OK`. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
 
+
 ## Entrada 43: migración refresh_sessions aplicada en Supabase (hecho por Emily)
 
 **Fecha:** 2026-10-28, 00:05 (hora de la máquina)
@@ -567,6 +610,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily ejecutó el SQL en Supabase y avisó el resultado. |
 | 5 | Desacuerdo y resolución | Ninguno. Con la tabla creada ya se puede mergear el pull request #5 y desplegar sin romper el login. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
+
 
 ## Entrada 44: frontend subido (nexa-frontend#3), recordatorio de limpieza y diagnóstico del mail (sin cambios de código)
 
@@ -581,6 +625,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. Pendiente: confirmación del log de Render, elegir proveedor de mail, qué hacer con `@/` y `evolver.config.json`. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
 
+
 ## Entrada 45: borrado de `@/` y `evolver.config.json` del frontend, revisión de pendientes y resultados de Supabase
 
 **Fecha:** 2026-10-28, 00:24 (hora de la máquina)
@@ -593,6 +638,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily pidió revisar si algo usaba `@/` y `evolver.config.json`, borrarlos, anotar todo en esta bitácora y subir los commits para hacer ella el merge; pegó los logs de Render y los resultados de Supabase. |
 | 5 | Desacuerdo y resolución | Ninguno. Contrato con el backend: sin cambios. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
+
 
 ## Entrada 46: se quita el formato viejo del refresh token; frontend: `OUT_OF_HOURS`, sin `@sentry/tracing` y tests de pago y horarios
 
@@ -607,6 +653,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. **Orden para publicar (importante):** la migración que borra la columna se aplica en Supabase **después** de que Render termine de desplegar el código nuevo, y no antes: el código actualmente en producción todavía lee `users.refresh_token` en cada consulta a `users` y fallaría. Orden: (1) mergear el pull request del backend y esperar el deploy; (2) correr el SQL de la migración en Supabase; (3) registrarla con `scripts/migration-checksums.mjs insert`; (4) mergear el del frontend. Cambia el contrato: un refresh token sin `sid` da 401 (ya lo trata el frontend como cierre de sesión). Hay que cancelar el recordatorio del 2026-11-04. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
 
+
 ## Entrada 47: envío de mails por Brevo y revisión de todos los envíos
 
 **Fecha:** 2026-10-28, 00:57 (hora de la máquina)
@@ -619,6 +666,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily creó la cuenta de Brevo y pidió revisar todo el código de envío para que solo se use `kologic6@gmail.com`. Escribió la dirección sin la arroba (`kologic6gmail.com`); se interpretó como `kologic6@gmail.com`, que es la que ya figura en `tenant.data.ts` del frontend. |
 | 5 | Desacuerdo y resolución | Ninguno. **Para que funcione, en Render (Environment):** `BREVO_API_KEY` = la clave de Brevo y `MAIL_FROM` = `kologic6@gmail.com`; la dirección tiene que figurar como remitente verificado en Brevo. **Advertencia:** Brevo avisa que los remitentes de dominios gratuitos (gmail.com) no se pueden autenticar con DKIM/DMARC propios y los mails pueden caer en spam; para uso real conviene un dominio propio. El resto de los mails que dependen de esto (verificación, turnos, recordatorios) también empezará a salir. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
+
 
 ## Entrada 48: error de Brevo "valid sender email required" y validación del remitente
 
@@ -633,6 +681,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. **Acción de Emily en Render (Environment):** revisar que `MAIL_FROM` valga exactamente `kologic6@gmail.com`; guardar. Con este cambio, si sigue mal, el log dirá qué valor llegó. El cambio del código solo mejora el diagnóstico y tolera comillas: no reemplaza corregir la variable. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
 
+
 ## Entrada 49: registro de lo ya arreglado, invitación con email repetido, nodemailer 10, versión de Node y alias de shadcn
 
 **Fecha:** 2026-10-28, 01:30 (hora de la máquina)
@@ -645,6 +694,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily pidió revisar de nuevo mail, refresh token y migraciones, y los pendientes del frontend; dijo que no quiere verificar el email; delegó nodemailer, el servidor MCP, el push a `main`, `useQuery` y los alias; pidió revisar cambios sin commitear y registrar todo lo arreglado; informó que Render no tiene `NODE_VERSION`. |
 | 5 | Desacuerdo y resolución | Ninguno. **Contrato con el frontend:** solo se suma que `POST /api/invitations/register` puede responder `409 EMAIL_TAKEN` (`ProfessionalRegisterPage` muestra el error con `safeErrorMessage`, así que el texto del servidor llega a la pantalla; no se probó a mano). **Hecho por Emily después de escribir esto:** (1) corrigió `MAIL_FROM` en Render y probó un código de recuperación: el mail llega (lo informó ella; sin captura, como pidió). (2) Corrió el control de migraciones en Supabase y, si hacía falta, el SQL y el INSERT de `20261028120000_drop_users_refresh_token`; informó que lo hizo, pero el resultado del SELECT de control no se vio, así que el `OK 52` y `OK 53` siguen sin constar acá. **Pendiente de Emily:** (3) mergear esta rama para que Render use Node 24.22.1 y redesplegar; (4) mergear la del frontend si le parece bien. **Sin tocar:** Sentry en los tests (`initSentry()` no mira `NODE_ENV=test`, por eso llegaron a su mail los errores de `environment = test`); prueba manual de reservar fuera de franja. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5), con Context7 (nodemailer, shadcn) y la documentación de Render. Revisión de Emily pendiente. |
+
 
 ## Entrada 50: commits, push y pull requests de la entrada 49 (backend #10, frontend #6)
 
@@ -659,6 +709,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. El merge de los dos pull requests queda a decisión de Emily. Al mergear el del backend, Render redespliega con Node 24.22.1 (`.node-version`). |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
 
+
 ## Entrada 51: correcciones de la revisión docente (AE2) en backend y frontend, rama `fix/ae2-correcciones`
 
 **Fecha:** 2026-10-28, 16:20 (hora de la máquina)
@@ -671,6 +722,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily pidió las correcciones del docente, fijó las reglas (no tocar RF-01, no debilitar pruebas, no pushear ni etiquetar) y confirmó las decisiones de la fase 1: valor `cancelled_no_show`, ramas desde `origin/main`, arreglar `lastName`, dejar las alergias cargadas por el admin como pendiente. |
 | 5 | Desacuerdo y resolución | Ninguno. **Pendiente decidido por Emily:** el panel admin guarda `clinical.allergies` (`admin.service.ts`) sin pedir consentimiento (RF-07 solo se exige en la reserva de la clienta); no se tocó. **RNF-03:** hoy también ven la alergia el admin, la propia clienta y cualquier profesional que haya atendido alguna vez a esa clienta (alergia del perfil en `listClientsForProfessional`); el criterio del catálogo se prueba contra «una profesional distinta a la asignada». **RNF-01** sigue «Pendiente» en el catálogo: `scripts/load-test.yml` es una prueba de carga, no la medición 4G de 5 s. **Orden de despliegue:** aplicar la migración `20261028160000` en Supabase (SQL Editor + `node scripts/migration-checksums.mjs insert 20261028160000_rename_no_show_to_cancelled_no_show`) ANTES del push a `main`, y después volver a correr solo el `UPDATE` por si el código viejo marcó algún `no_show` en el medio. **Contrato con el frontend:** `status` de un turno puede ser `cancelled_no_show` (el frontend de esta rama ya lo entiende; el desplegado no); el endpoint `POST /api/admin/clients/:id/anonymize` ya existía y ahora también deja `lastName` en null. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5), con Context7 (Prisma, migraciones personalizadas). Revisión de Emily pendiente. |
+
 
 ## Entrada 52: push de `fix/ae2-correcciones` y pull requests (backend #11, frontend #7)
 
@@ -685,6 +737,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. **Pendiente de Emily:** confirmar en Supabase que `_prisma_migrations` tiene `20261028160000_rename_no_show_to_cancelled_no_show`; mergear primero el backend y enseguida el frontend; volver a correr el `UPDATE` de `no_show` después del despliegue; crear la etiqueta nueva. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
 
+
 ## Entrada 53: consentimiento de alergias en el panel admin, tests de RNF-03 y cifras del README (8.1)
 
 **Fecha:** 2026-10-28, 16:47 (hora de la máquina)
@@ -697,6 +750,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily eligió las tres opciones (exigir consentimiento en el admin, solo documentar RNF-03, no tocar el catálogo). |
 | 5 | Desacuerdo y resolución | Ninguno. **Contrato con el frontend (corregido 2026-10-28, 16:50):** la primera redacción de esta fila decía que `InfoTab.tsx` daría `400` al cambiar alergias; revisado el código, **es falso**. El frontend no tiene ningún campo para cargar alergias en el panel admin: `InfoTab.tsx` (guardado desde `ClientsPage.tsx`, `PUT /api/admin/clients/:id`) solo edita nombre, teléfono, email, nacimiento y género, y reenvía el bloque `clinical` tal como lo recibió, sin cambios; con el mismo texto (o vacío) el backend no pide consentimiento. `CreateClientModal.tsx` tampoco manda alergias. Resultado: **no hay impacto en el frontend actual ni orden de despliegue que respetar**. Las alergias del admin solo se podrían cargar llamando a la API directamente; si algún día se agrega ese campo a la pantalla, tiene que traer un checkbox y mandar `consentAlertas: true`. **Pendiente:** las cifras de 8.1 vuelven a quedar atrasadas con el commit de esta entrada y con los siguientes; la tabla 8.2 sigue con el corte del 06/10. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
+
 
 ## Entrada 54: solo la clienta carga alergias (reemplaza la decisión A de la entrada 53), ramas nuevas tras el merge y limpieza de ramas locales
 
@@ -711,6 +765,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | **Las ramas remotas NO se borraron:** el clasificador de permisos del entorno bloqueó el comando que ejecutaba `git push origin --delete` sobre las ramas mergeadas y no se intentó otra vía. Quedan en GitHub, todas mergeadas: backend `chore/endurecimiento-sop`, `chore/quitar-refresh-token-viejo`, `docs/bitacora-45-limpieza`, `feat/mail-brevo`, `fix/ae2-correcciones`, `fix/invitacion-email-y-nodemailer-10`, `fix/mail-from-valido`; frontend `chore/alias-components-json`, `chore/lint-cero`, `chore/quitar-restos-shadcn-evolver`, `feat/fuera-de-horario-tests-sentry`, `fix/ae2-correcciones`. **Contrato con el frontend:** sin cambios de ruta ni de forma; `PUT /api/admin/clients/:id` ahora responde `400` si cambia `clinical.allergies`, y la pantalla actual no tiene ese campo, así que no se nota. **Pendiente:** borrar las ramas remotas (Emily las borra desde GitHub o autoriza el comando), commitear y subir las dos ramas nuevas, y revisar las cifras de 8.1. Los cambios están **sin commitear**. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
 
+
 ## Entrada 55: borrado de las ramas remotas ya mergeadas (backend y frontend)
 
 **Fecha:** 2026-10-28, 16:57 (hora de la máquina)
@@ -723,6 +778,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily autorizó el borrado de las ramas remotas. |
 | 5 | Desacuerdo y resolución | En la entrada 54 el entorno había bloqueado un único comando compuesto que borraba en bucle las ramas remotas y las locales de los dos repositorios y adelantaba `main` local; tras la autorización explícita de Emily se repitió el borrado rama por rama y funcionó. Las ramas borradas se pueden recrear desde el commit en `main` si hiciera falta. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
+
 
 ## Entrada 56: README de los dos repositorios (cifras de commits, autoría, pruebas, versión v1.3)
 
@@ -737,6 +793,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | La bitácora 3 solo cubre desde el 23/10, así que no alcanza para afirmar «todos»; se escribió lo que el repositorio permite probar. **Pendiente de Emily:** confirmar si los commits de agosto fueron hechos a mano o con Claude Code, y el commit `e3c4b52` del frontend (17/10, correo del pie de página), que cae antes de esta bitácora y figura como Claude Code (Sonnet 5.5) en la fila nueva sin que haya entrada que lo respalde. Las cifras vuelven a quedar atrasadas con el commit de este README y los siguientes. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
 
+
 ## Entrada 57: etiqueta v1.3 en los dos repositorios y revisión del CI de `main`
 
 **Fecha:** 2026-10-28, 17:20 (hora de la máquina)
@@ -749,6 +806,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily pidió crear la etiqueta y anotar la corrida del CI en el registro del Portafolio (eso último lo hace ella). |
 | 5 | Desacuerdo y resolución | **Aviso:** `v1.3` queda en el merge de los PR #11 y #7, que todavía tiene el README con `v1.2`, las cifras viejas y los conteos de tests viejos; el README corregido (entrada 56) llega a `main` con un pull request posterior. Quien clone `v1.3` verá ese README viejo. Si Emily prefiere que la etiqueta incluya el README corregido, hay que mergear primero esos pull requests y mover la etiqueta (borrarla y volver a crearla). A diferencia de `v1`, `v1.1` y `v1.2`, el mensaje de la etiqueta no lleva el número de corrida del CI: figura acá. **Producción:** no se pudo verificar desde acá que la migración `20261028160000` esté en la base de Supabase (no se toca esa base); se verifica en el SQL Editor con la salida de `node scripts/migration-checksums.mjs`, que no se conecta a ninguna base. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
+
 
 ## Entrada 58: medición de RNF-01 con 4G móvil y prueba manual de la pantalla «Anonimizar datos»
 
@@ -763,6 +821,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | **RNF-01 sigue «Pendiente»:** falta el recorrido en producción desde un celular real, tres veces seguidas (ver el README de la evidencia). **Defecto encontrado en la pantalla de anonimizar (sin arreglar):** después de anonimizar, el encabezado muestra «Cliente eliminado», pero la pestaña «Información» sigue mostrando el nombre, el teléfono y el email anteriores, y el botón «Bloquear cliente» sigue visible. El formulario (`InfoTab.tsx`) guarda su estado al abrirse y `ClientDetail.tsx` lo monta sin `key`, por lo que no se actualiza con el cliente nuevo. Según el código de `updateClient`, si alguien aprieta «Guardar cambios» ahí, el `PUT /api/admin/clients/:id` vuelve a escribir esos datos y deshace la anonimización (no se probó ese clic). Arreglo propuesto: `key` en `InfoTab` según el nombre y el email del cliente, y ocultar el bloqueo y el formulario cuando el email empieza con `anonimo_`. Se dejó sin tocar porque no estaba en el pedido; conviene hacerlo en su propia rama del frontend. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5), con Lighthouse 13.6.0 y Playwright 1.62.1 (ya instalado en `node_modules` del backend). Revisión de Emily pendiente. |
 
+
 ## Entrada 59: arreglo de la pantalla «Anonimizar datos» (formulario con datos viejos), rama `fix/anonimizar-datos-y-readme` del frontend
 
 **Fecha:** 2026-10-28, 22:57 (hora de la máquina)
@@ -775,6 +834,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily eligió arreglarlo («Arreglar») cuando se le propuso. |
 | 5 | Desacuerdo y resolución | Ninguno. **Pendiente de Emily:** subir la rama, abrir el pull request y mergearlo. El README de los dos repositorios pasó a decir 77 tests del frontend (decía 74 en la entrada 56). La rama `docs/readme-cifras-8-1` ya no existe: se renombró y el pull request único lleva el README y el arreglo. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5), con Playwright 1.62.1 para la prueba en el navegador. Revisión de Emily pendiente. |
+
 
 ## Entrada 60: la bitácora pasa a `00-gestion` como bitácora de la AE3, y cambios en el README de los dos repositorios
 
@@ -789,6 +849,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. **A tener en cuenta:** la fecha del nombre del archivo (28/10/2026) es la del traslado, y el período arranca el 23/10; las entradas anteriores dicen «bitácora 3» y no se tocaron. **Pendiente de Emily:** decidir si quiere esta bitácora también como \`.docx\` para entregarla junto a la de la AE2. La entrada del push y los pull requests va en la entrada 61. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
 
+
 ## Entrada 61: push de las dos ramas y pull requests (backend #12, frontend #8)
 
 **Fecha:** 2026-10-28, 23:01 (hora de la máquina)
@@ -801,6 +862,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily pidió subir todos los cambios a GitHub y dijo que hace ella el merge. |
 | 5 | Desacuerdo y resolución | Ninguno. **Orden de despliegue:** los dos pull requests son independientes y no hay migraciones nuevas ni cambios de ruta. **Pendiente de Emily:** mergear los dos pull requests; la corrida de CI de \`main\` tras cada merge queda para el registro del Portafolio. Las cifras de commits del README (8.1) quedan atrasadas con estos commits. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
+
 
 ## Entrada 62: SEO del frontend para que Google indexe el sitio (rama `feat/seo-indexacion-google`, commit `e8b42c2`)
 
@@ -815,6 +877,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. **Pendiente de Emily, después del merge y del despliegue en Vercel:** en Search Console tocar «Verificar» (la etiqueta tiene que estar publicada antes), enviar `https://lorenestudiodebelleza.vercel.app/sitemap.xml` y pedir indexar la home con «Inspección de URL». Indexar lleva días y no lo controla el código. Ninguna ruta, método ni respuesta de la API cambia, así que el backend no se ve afectado. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5), con la documentación de React consultada en Context7. Revisión de Emily pendiente. |
 
+
 ## Entrada 63: push de la rama de SEO y pull request del frontend (#9)
 
 **Fecha:** 2026-10-28, 23:21 (hora de la máquina)
@@ -827,6 +890,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily pidió subir los cambios a GitHub y dijo que hace ella el merge. |
 | 5 | Desacuerdo y resolución | Ninguno. **Orden de merge:** la rama de SEO sale de `fix/anonimizar-datos-y-readme` (frontend #8), así que el #9 trae también esos commits hasta que se mergee el #8; conviene mergear primero el #8. Las cifras de commits del README (8.1) siguen atrasadas. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
+
 
 ## Entrada 64: lectura de la devolución del AE2 (DEV-AE2) y lista de correcciones
 
@@ -841,6 +905,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. Queda sin verificar si algunas correcciones ya se hicieron después del 8/10 (README v1.3, Bloque A, columna de trazabilidad, entrevistas). Emily las confirma contra su repositorio. |
 | 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5): lectura de los PDF y el libro y armado de la lista. Revisión final por Emily pendiente: marcar solo lo que realmente cerró. |
 
+
 ## Entrada 65: lectura de los materiales de la AE4 y fechas de trabajo
 
 **Fecha:** 2026-10-29, por la tarde (hora aproximada)
@@ -853,6 +918,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 4 | Aporte personal | Emily compartió la carpeta de la cátedra, indicó que la defensa es el 23/12 y que primero debe aprobar la AE4, y pidió saber qué hacer, qué subir y qué decir en la presentación oral. |
 | 5 | Desacuerdo y resolución | La premisa «casi 8 semanas» no coincidía con la entrega. Se corrigió con la consigna v02 (21/10/2026), que prevalece sobre el cronograma. |
 | 6 | Herramienta auxiliar | Claude (chat) con el conector de Google Drive: lectura y cotejo de fechas. Revisión final por Emily pendiente: confirmar el turno del 20/11 con el docente y la fecha de la defensa con la Dirección de Carrera. |
+
 
 ## Entrada 66: formulario de confirmación para Loren y decisión sobre R-04
 
@@ -867,6 +933,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | La guía técnica y el libro se contradecían en R-04. Se resolvió con el libro. R-04 y RF-06 quedan «Pendiente» hasta que Loren lo marque por escrito. El formulario advierte que, si marca No en las franjas, el sistema pasa a bloquear todo el tiempo del servicio, y que hoy compara solo la hora de inicio (turno de 60 min a las 10:00 y otro a las 10:30). |
 | 6 | Herramienta auxiliar | Claude (chat): redacción y archivo .docx con la biblioteca docx de Node. Revisión final por Emily pendiente: repasar las preguntas con Loren y completar en el libro v7 la fecha y el medio de la aprobación. |
 
+
 ## Entrada 67: tablero de Trello de la AE4 y tareas de código pendientes
 
 **Fecha:** 2026-10-29, de 19:00 a 19:16 (marcas de tiempo de Trello, hora de Argentina)
@@ -880,7 +947,34 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. Claude corrigió en la misma sesión un error de redacción propio en la tarjeta del coloquio. |
 | 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello. Todas las tarjetas se crearon sin completar. Revisión final por Emily pendiente: leer cada tarjeta, ajustar fechas y alcance, confirmar que los pendientes de código siguen vigentes en la etiqueta actual y mover a TERMINADOS solo lo hecho. |
 
-## Entrada 68: RF-05 en el borde de los 20 minutos, limpieza de Sentry y cifras de los README (rama `fix/sentry-limpieza-y-rf05-borde`)
+
+## Entrada 68: confirmación escrita de Loren y efecto sobre el catálogo
+
+**Fecha:** 2026-10-30 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Tomar el formulario `Confirmacion_Loren_Nexa.pdf` (firmado por Lorena Gonzalez, propietaria, 30/10/2026, 12 de 12 preguntas con «Sí») como constancia de la validación. Con ella: RF-01 se mantiene con franjas por profesional y no se implementa el rango horario; R-04 y RF-06 pasan a «Validada» con constancia; L-02 y L-06 quedan confirmados por escrito. El libro v7 debe registrar fecha, medio y ruta del PDF. |
+| 2 | Alternativas y criterio de descarte | (a) Implementar el bloqueo por todo el rango horario de RF-01: descartado, Loren aceptó el modelo de franjas (pregunta 3). (b) Cambiar el sistema para asignar por antigüedad como hace hoy Loren: descartado, aceptó la regla de menor carga semanal con desempate por antigüedad (pregunta 4). (c) Apoyar RNF-01 solo en la pregunta 12: pendiente, vale solo si Loren vio ese requisito. |
+| 3 | Evidencia que la sostiene | PDF firmado del 30/10/2026 (respuestas 1 a 12 marcadas «Sí»; la reunión del 28/09 duró unos 60 minutos y Loren no pidió cambios). Libro v6: fila «Aprobación del catálogo por Loren» con `[completar: fecha]`; R-04 y RF-06 marcadas «Validada» antes de tener la constancia. DEV-AE2 apartados 7 y 13. |
+| 4 | Aporte personal | Emily llevó el formulario a Loren, obtuvo la firma y subió el PDF. Había informado antes, de palabra, que Loren aceptaba la regla de menor carga. |
+| 5 | Desacuerdo y resolución | En el PDF el editor muestra la opción marcada como «Sí» tachada, por el estilo de las casillas marcadas: la casilla está tildada y la opción «No» está vacía. Se resuelve conservando el PDF original en el Portafolio. Ninguna pregunta quedó con «No». |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5): lectura del PDF (imagen de las casillas) y cotejo con el libro v6. Revisión final por Emily pendiente: cargar la constancia en el libro v7 y confirmar que Loren vio RNF-01. |
+
+## Entrada 69: estado del código en el tablero y lista del catálogo v7
+
+**Fecha:** 2026-10-30 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Marcar como hechas y mover a TERMINADOS siete tarjetas del tablero «Nexa - AE4 PIF» que el código ya cumple (RF-09, RF-05, pruebas de RF-07, RF-10, RNF-03 y RNF-04, Sentry, ADR-003, funciones Must, inventario y el formulario a Loren). Crear la tarjeta «CATÁLOGO v7» con 18 pasos por hoja del libro. Quitar de pendientes el módulo de notificaciones, las reseñas, el historial de clientes, las solicitudes de clientas y el registro de actividad, porque el sistema ya los tiene, y registrar que la tienda está construida y le falta su requisito. |
+| 2 | Alternativas y criterio de descarte | (a) Mantener esas funciones como «pendientes»: descartado, Emily informó que existen en el sistema. (b) Marcar completada la tarjeta de la devolución: descartado, solo el README está hecho. (c) Escribir hallazgos H-xx para justificar las funciones sin requisito: descartado, no hay evidencia; se declaran como extras o se cita el acta si Loren las pidió. |
+| 3 | Evidencia que la sostiene | Reporte de Emily del 30/10: rama `fix/alergias-solo-la-clienta` en `main` (PR #12), `typecheck:all` sin errores y 32 archivos con 303 pruebas en verde. Pruebas: `admin.clients.test.ts`, `allergies.consent-visibility.test.ts`, `appointments.combo-deposit.test.ts`, `schema.no-card-data.test.ts`, `sentry.scrub.test.ts`. README con 54 migraciones. ADR-003 reescrito el 24/10. Libro v6: 17 requisitos, 9 entidades, R-01 a R-07, límites L-01 a L-06. |
+| 4 | Aporte personal | Emily programó y probó los cambios, aportó el informe del estado del código y decidió borrar lo que ya existe del tablero. |
+| 5 | Desacuerdo y resolución | La primera versión del tablero (29/10) listaba como pendientes funciones que el sistema ya tenía: Claude se basó en la guía técnica y no leyó el repositorio. Emily lo corrigió y se actualizó la tarjeta. |
+| 6 | Herramienta auxiliar | Claude (chat) con el conector de Trello: comentarios, cambios de estado, tarjeta nueva y lista de verificación. El estado del código sale del texto que pegó Emily, no de la lectura del repositorio. Revisión final por Emily pendiente: confirmar cada ítem de la lista del catálogo contra el libro y el repo. |
+
+## Entrada 70: RF-05 en el borde de los 20 minutos, limpieza de Sentry y cifras de los README (rama `fix/sentry-limpieza-y-rf05-borde`)
 
 **Fecha:** 2026-10-30, 04:50 (hora de la máquina)
 
@@ -893,7 +987,8 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. **Límites:** la limpieza actúa en `beforeSend` (errores); las trazas de rendimiento (`tracesSampleRate` 0,1 en producción) no pasan por ese filtro y no se revisaron. Un texto libre que no sea un email ni venga en un error de Prisma, escrito por nosotros con `console.error` o dentro de un `throw new Error(...)`, sigue pasando: hoy ningún `console.*` ni `AppError` del código incluye datos clínicos, y conviene mantenerlo así. La prueba de 19 minutos tiene una probabilidad despreciable de fallar si el job corre a menos de un milisegundo de cumplirse los 20 minutos. Sin migraciones ni cambios de rutas, métodos o respuestas, así que el frontend no se ve afectado. La etiqueta `v1.3` sigue apuntando al merge con el README viejo (entrada 57). Context7 no se pudo usar (el servidor no conectó, `CONNECT_TIMEOUT`); el cambio se hizo contra los tipos del SDK instalado (`@sentry/node` 11.0.0). |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
 
-## Entrada 69: catálogo de requisitos v6 al repositorio y constancia de Loren (pull request #13)
+
+## Entrada 71: catálogo de requisitos v6 al repositorio y constancia de Loren (pull request #13)
 
 **Fecha:** 2026-10-30 (hora de la máquina)
 
@@ -907,7 +1002,151 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Revisión de Emily pendiente. |
 
 
-## Entrada 70: AE4, fase 1 — se eliminan campañas automáticas, puntos, recordatorio de inactividad y fecha de nacimiento (rama `refactor/quitar-campanas-puntos-recordatorio-nacimiento`)
+
+## Entrada 72: libro de requisitos v7 (20261030_CatalogoRequisitos_Kohler_v7.xlsx)
+
+**Fecha:** 2026-10-30 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Armar el libro v7 editando una copia del v6 (que no se modifica): 44 requisitos (27 nuevos, RF-13 a RF-34 y RNF-06 a RNF-10, en estado «Pendiente»), reglas R-08 a R-21, límites L-07 a L-10, 14 entidades nuevas, columnas de componente y prueba en la trazabilidad y tres hojas nuevas («Código y pruebas», «Funciones de apoyo y deuda» y «Cambios v7»). Se carga en «Reuniones y datos» la constancia de Loren del 30/10/2026. Se mantienen los requisitos que Loren validó y las diferencias con el código se registran como brechas; solo RF-09 pasa a «Pendiente» por alcance. |
+| 2 | Alternativas y criterio de descarte | (a) Reescribir los requisitos validados para que coincidan con el código: descartado, el requisito lo validó la propietaria y el código debe satisfacerlo; las diferencias (RF-04, RF-05, RF-06, RNF-03) quedan como brechas con su decisión. (b) Inventar hallazgos H-xx para las funciones agregadas: descartado, no hay evidencia; se declaran «EXTRA: sin hallazgo». (c) Marcar «Validado» los requisitos nuevos por la pregunta 12 del formulario: descartado, esa pregunta refiere a la lista general mostrada, que no los incluía. (d) Agregar nuevos requisitos «Must»: descartado, cambiaría el MVP del apartado V.5; los nuevos son Should o Could. |
+| 3 | Evidencia que la sostiene | Formulario firmado el 30/10/2026 (12 respuestas «Sí»). Archivo `insumos-catalogo-v7.md` de Claude Code (HEAD 15868b3, 32 archivos y 310 tests en verde; `main` del backend en 61f1f53 y del frontend en 7650a65). Libro v6 (17 requisitos, 9 entidades, R-01 a R-07, L-01 a L-06). DEV-AE2 apartados 7, 8 y 14. Recalculado con LibreOffice: 506 fórmulas, 0 errores, Panel «Coherente». |
+| 4 | Aporte personal | Emily indicó que la tienda la agregó ella, que a Loren le mostró solo la lista general, que no tiene registro de horas (las 200 son una referencia) y que el v6 subido es el más reciente. Obtuvo la firma de Loren y pidió el libro completo. Archivo: `20261030_CatalogoRequisitos_Kohler_v7.xlsx`. |
+| 5 | Desacuerdo y resolución | El código contradice requisitos validados: RF-09 (anonimización parcial), RNF-03 (alergia visible con cualquier turno), RF-04 (marca sin reembolso real), RF-05 (20 minutos exactos) y RF-06 (antigüedad por fecha de alta). Se dejó el requisito y la brecha registrada, y a Emily la decisión de cambiar el código o declarar el límite. Las horas reales no existen: las 200 horas se declaran como presupuesto planificado. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5): cotejo de los insumos de Claude Code con el libro v6, redacción de los requisitos, reglas, límites y entidades, y edición del archivo con openpyxl. Los datos del código se tomaron del archivo de insumos, no de la lectura del repositorio. Revisión final por Emily pendiente: leer cada requisito nuevo, confirmar los criterios y decidir las brechas abiertas. |
+
+## Entrada 73: plan de cierre de brechas de código y pruebas (prompts P1 a P7)
+
+**Fecha:** 2026-10-30 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Redactar los prompts P1 a P7 para Claude Code, los pasos de medición de RNF-01 y RNF-02, y una tarjeta de Trello por cada tarea: P1 ampliar la anonimización a fecha de nacimiento y fotos (alergias, observaciones y notas quedan en el límite L-07); P2 que la alergia del perfil la vea solo quien atendió a la clienta (turno finalizado); P3 pasar la tolerancia de 20 a 30 minutos manteniendo el horario ocupado; P4 y P4b que la tienda pública no muestre ni permita comprar productos inactivos o sin stock; P5 y P6 pruebas faltantes; P7 estimación de horas desde los commits. Marcar como hechas en Trello las tarjetas «Libro v7» y «Actas de revisión y retrospectiva», y 15 de los 19 ítems de la tarjeta «Catálogo v7». |
+| 2 | Alternativas y criterio de descarte | (a) Aplicar el cambio de RF-05 sin avisar a Loren: descartado, contradice la pregunta 6 que firmó el 30/10; requiere confirmación escrita. (b) Liberar el horario al marcar la inasistencia: descartado por la autora, porque el personal puede cerrar el turno al final del turno o del día y la clienta que llega tarde se toparía con el horario ocupado. (c) Anonimizar también alergias, observaciones y notas: descartado por la autora; se declara como límite L-07. (d) Tomar las 200 horas como horas reales: descartado, no hay registro; se estiman desde los commits con método declarado y rango. (e) Mantener la ruta pública de la tienda y filtrar solo en el frontend: descartado, el backend expone inactivos y stock. |
+| 3 | Evidencia que la sostiene | Insumos de Claude Code del 30/10/2026 (diferencias del código con el catálogo). Formulario firmado de Loren del 30/10/2026 (pregunta 6). Libro v7 (hoja «Código y pruebas»: 10 requisitos sin prueba, 19 con prueba parcial y 32 brechas abiertas). Tablero «Nexa - AE4 PIF» con 11 tarjetas nuevas. |
+| 4 | Aporte personal | Emily decidió el alcance de cada cambio: fecha de nacimiento y fotos sí, alergias, observaciones y notas no; 30 minutos con horario ocupado en lugar de 20 con liberación; que los productos inactivos o sin stock no se muestren ni se compren; que las horas se estimen desde los commits. Declaró que no tiene registro de horas reales. |
+| 5 | Desacuerdo y resolución | Claude señaló que anonimizar sin tocar las alergias deja datos de salud sin anonimizar. Emily mantuvo la decisión y queda declarado como L-07. Claude señaló que el cambio de RF-05 contradice la validación de Loren; se resuelve con una segunda confirmación escrita antes de congelar. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: redacción de los prompts y de los pasos de medición, creación de tarjetas y actualización del tablero. Claude no ejecutó ni verificó ningún cambio de código. Revisión final por Emily pendiente: probar cada prompt en Claude Code, revisar los resultados y registrar las pruebas y las mediciones reales. |
+
+## Entrada 74: segunda confirmación para Loren y reglas de inasistencia y cancelación
+
+**Fecha:** 2026-10-30 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Crear `Confirmacion2_Loren_Nexa.docx` (12 preguntas Sí y No) con las reglas nuevas: inasistencia automática a los 30 minutos con el horario ocupado y liberación solo cuando el personal la confirma; corrección si la clienta vino; cancelación por el personal con devolución según la hora en que la clienta avisó, devolución total si cancela el estudio, y horario libre en el momento; devolución del dinero fuera del sistema; sin recordatorios; tienda sin productos inactivos o sin stock; funciones extra; alcance de la anonimización. Rediseñar P3 (estado `no_show_auto`), crear P8 (cancelación del personal) y P9 (pruebas del frontend), y actualizar las tarjetas de Trello. |
+| 2 | Alternativas y criterio de descarte | (a) Pasar directo a `cancelled_no_show` a los 30 minutos: descartado por la autora, liberaría el horario antes de que el personal cierre el turno. (b) Calcular la devolución con la hora en que se toca el botón: descartado, perjudica a la clienta cuando el personal registra tarde su aviso. (c) Devolver siempre cuando cancela el personal: descartado para el caso en que la clienta avisó, donde se aplica la regla de las 12 horas con la hora de aviso. (d) Dar por válidas las reglas nuevas sin consulta: descartado, la pregunta 6 de la primera confirmación dice lo contrario y exige una nueva constancia. |
+| 3 | Evidencia que la sostiene | Formulario firmado del 30/10/2026 (pregunta 6: «más de 20 minutos y el horario queda libre»). Insumos de Claude Code: `cancelWithGroup`, `cancelForClient` y `runAutoNoShowJob`; el índice parcial excluye `cancelled_no_show`; `refunded` es solo una marca. Libro v7, hoja «Código y pruebas» (RF-04 y RF-05). |
+| 4 | Aporte personal | Emily definió las reglas: marca automática a los 30 minutos con horario ocupado; liberación solo si el personal marca «No asistió»; liberación inmediata al cancelar; devolución según el tiempo transcurrido. |
+| 5 | Desacuerdo y resolución | La nueva regla de RF-05 contradice la validación de Loren. Se resuelve con la segunda confirmación escrita antes de congelar. Queda pendiente verificar si el sistema permite reservar horarios que ya pasaron. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: redacción del formulario y de los prompts P3 (v2), P8, P9 y P10, y actualización del tablero. Claude no ejecutó ni verificó ningún cambio de código. Revisión final por Emily pendiente: enviar el Word a Loren, guardar el PDF firmado y probar los prompts en Claude Code. |
+
+## Entrada 75: corrección de la regla de liberación del horario (inasistencia y cancelación)
+
+**Fecha:** 2026-10-30 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Corregir las preguntas 3 y 7 de la segunda confirmación a Loren y el prompt P3: al marcar «No asistió» o cancelar un turno cuya hora de inicio ya pasó, el horario original no se reabre; se abre un horario nuevo desde el momento de la marca, con una demora máxima de 5 minutos. Si el turno todavía no empezó, el horario original queda libre al cancelar. Redactar un mensaje para Loren con la regla y los ejemplos. |
+| 2 | Alternativas y criterio de descarte | Reabrir el horario original al marcar «No asistió»: descartado por la autora, porque ese horario ya pasó y una clienta no puede reservarlo; lo que se libera es la agenda de la profesional desde ese momento. |
+| 3 | Evidencia que la sostiene | Ejemplos de la autora: Maria (turno de 8:00 cerrado como completado recién a las 10:00) y Jazmin (turno de 16:00, marcado automáticamente a las 16:30 y por la profesional a las 16:32). El índice parcial y el job de inasistencia del insumo de Claude Code. |
+| 4 | Aporte personal | Emily definió la regla con dos ejemplos y señaló que Claude había entendido mal que el horario original se reabría. |
+| 5 | Desacuerdo y resolución | Claude interpretó antes que el horario original quedaba libre al marcar «No asistió». Emily lo corrigió y se rehicieron las dos preguntas y el prompt. Queda pendiente confirmar con el código cómo se arman los horarios que ve la clienta. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5): redacción de las preguntas corregidas, del mensaje para Loren y del cambio de P3. No se tocó código ni archivos en este paso. Revisión final por Emily pendiente: regenerar el Word, enviarlo a Loren y probar P3 en Claude Code. |
+
+## Entrada 76: diseño de la cancelación registrada por el personal con hora de aviso
+
+**Fecha:** 2026-10-30 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Definir que el personal que registra una cancelación cargue quién cancela (clienta o estudio) y, si avisó la clienta, el día, la hora y el medio del aviso. El sistema muestra antes de confirmar si la seña se devuelve (12 horas o más de aviso) o se retiene, y guarda quién cargó el dato. Límites: no puede ser futura ni posterior al turno; la profesional puede cargar hasta 48 horas atrás y más atrás solo la administradora. Ajustar la pregunta 5 del Word para Loren, completar P8 con esos límites y agregar el prompt P8b para el frontend. |
+| 2 | Alternativas y criterio de descarte | (a) Calcular la devolución con la hora en que se aprieta el botón: descartado, perjudica a la clienta cuando el personal registra tarde su aviso. (b) Dejar que el personal cargue cualquier hora sin límite: descartado, permite devolver señas con horas inventadas; se limita a 48 horas y se registra quién lo cargó. (c) Pedir comprobante adjunto obligatorio: descartado por ahora, el texto opcional del medio alcanza para el alcance del proyecto. |
+| 3 | Evidencia que la sostiene | Insumos de Claude Code del 30/10/2026: `cancelWithGroup` y `cancelForClient` calculan con la hora actual y `refundPolicy`; `refunded` es solo una marca. Regla R-02 validada por Loren (12 horas). Consulta de Emily del 30/10/2026. |
+| 4 | Aporte personal | Emily señaló que el sistema debería preguntarle a la profesional o a la administradora la hora en que la clienta avisó. |
+| 5 | Desacuerdo y resolución | Sin desacuerdos. Claude agregó el límite de 48 horas y el registro del autor del dato como control; la decisión final queda en Emily y en la respuesta de Loren. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: diseño, redacción de P8b y del ajuste de P8, y un comentario en la tarjeta de P8. Claude no ejecutó ni verificó código. Revisión final por Emily pendiente: regenerar el Word con la pregunta 5 ajustada y probar P8 y P8b en Claude Code. |
+
+## Entrada 77: segunda confirmación a Loren, versión 2 (reglas de inasistencia y cancelación)
+
+**Fecha:** 2026-10-30 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Rehacer el Word `Confirmacion2_Loren_Nexa_v2.docx` (13 preguntas Sí y No) con las reglas finales: marca automática a los 30 minutos con el horario ocupado; si la clienta vino y la profesional no registró nada, se corrige al finalizar; el personal puede marcar «No asistió» hasta 40 minutos después y el sistema abre un horario nuevo desde ese momento (demora máxima de 5 minutos); ese horario se reserva hasta 60 minutos después de la hora original, después queda cancelado definitivamente; un horario libre se reserva hasta 15 minutos después de su inicio; la cancelación pide la hora del aviso de la clienta; la cancelación del estudio devuelve siempre; y la liberación del horario al cancelar depende de si el turno ya empezó. Actualizar la tarjeta de Loren y dejar un comentario en P3 que pide esperar su respuesta antes de programar. |
+| 2 | Alternativas y criterio de descarte | (a) Liberar el horario original al marcar «No asistió»: descartado por la autora, el horario nuevo empieza al momento de la marca. (b) Interpretar los 5 minutos como la ventana de la clienta: descartado, son la demora máxima del sistema para generar el horario nuevo. (c) Dejar reservar el horario nuevo sin tope: descartado, el tope de las 17:00 evita atrasar el turno siguiente. |
+| 3 | Evidencia que la sostiene | Ejemplos de la autora del 30/10/2026 (turno de 16:00 con marca a las 16:32 y a las 16:40, y el caso de María con un turno cerrado a las 10:00). Primera confirmación firmada por Loren (pregunta 6, que esta versión reemplaza). Insumos de Claude Code sobre `runAutoNoShowJob`, el índice parcial y `cancelWithGroup`. |
+| 4 | Aporte personal | Emily definió los plazos (30, 40, 5, 15 y 60 minutos), el horario nuevo en lugar de reabrir el original y la tolerancia de reserva de 15 minutos. Pidió regenerar el Word y dejar el código para después. |
+| 5 | Desacuerdo y resolución | Claude había interpretado mal los 5 minutos y la liberación del horario original; Emily lo corrigió. Claude agregó por su cuenta que el horario nuevo solo se reserva si el servicio termina antes del siguiente turno, y que marcar entre los 40 y los 60 minutos no abre horario nuevo: ambas decisiones quedan para que Emily las confirme. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: regeneración del Word con la biblioteca docx y actualización de dos tarjetas. No se tocó código. Revisión final por Emily pendiente: leer las preguntas 3, 4 y 5, enviar el Word a Loren y guardar el PDF firmado. |
+
+## Entrada 78: reglas de cancelación equiparadas a «No asistió» (Word v3 para Loren)
+
+**Fecha:** 2026-10-30 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Regenerar `Confirmacion2_Loren_Nexa_v3.docx` (14 preguntas Sí y No) con las reglas de cancelación equiparadas a las de «No asistió»: la clienta que cancela desde la aplicación con 12 horas o más recibe toda la seña y con menos no la recibe; en ambos casos el sistema vuelve a abrir el horario. Si el personal registra el aviso, se toma la hora que la clienta avisó. Si cancela el estudio, se devuelve siempre. Si el turno todavía no empezó, el horario queda libre enseguida; si ya empezó, se abre un horario nuevo desde la cancelación (hasta 5 minutos de demora), con los plazos de 40 y 60 minutos de «No asistió». Actualizar la tarjeta de Trello, borrar la v2 del Word. |
+| 2 | Alternativas y criterio de descarte | (a) Que la cancelación con menos de 12 horas no reabra el horario: descartado por la autora, el horario debe reabrirse siempre. (b) Reglas distintas para la profesional y para la clienta: descartado, la regla de las 12 horas es la misma y solo cambia qué hora se toma. |
+| 3 | Evidencia que la sostiene | Pedido de Emily del 30/10/2026. Regla R-02 validada por Loren en la primera confirmación (pregunta 5). Insumos de Claude Code: `cancelWithGroup` y `cancelForClient` usan la hora actual y marcan `refunded`. |
+| 4 | Aporte personal | Emily definió que cancelar debe funcionar igual que «No asistió» y que la regla vale cuando cancela la profesional en el sistema. |
+| 5 | Desacuerdo y resolución | Sin desacuerdos. Queda abierto si la clienta puede cancelar un turno que ya empezó desde la aplicación. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: regeneración del Word con la biblioteca docx y actualización de la tarjeta de Loren. No se tocó código. Revisión final por Emily pendiente: leer las preguntas 6 a 10, enviar el Word a Loren y guardar el PDF firmado. |
+
+## Entrada 79: cancelación de la clienta con el turno ya empezado (Word v4 para Loren)
+
+**Fecha:** 2026-10-30 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Regenerar `Confirmacion2_Loren_Nexa_v4.docx` (14 preguntas Sí y No) con la regla de que la clienta puede cancelar desde la aplicación también cuando el turno ya empezó: no se devuelve la seña (menos de 12 horas) y se abre un horario nuevo desde ese momento, con los plazos de 40 y 60 minutos de «No asistió». Desde la marca «No asistió (automático)» (30 minutos) la clienta ya no puede cancelar desde la aplicación y lo cierra el personal. Se amplía la pregunta 9 para incluir a la clienta, el personal y el estudio. Se borra la v3 y se actualiza la tarjeta de Trello. |
+| 2 | Alternativas y criterio de descarte | (a) Impedir que la clienta cancele un turno ya empezado: descartado por la autora, debe poder hacerlo. (b) Permitir cancelar también después de la marca automática: descartado por Claude para evitar dos cierres del mismo turno con reglas distintas de seña y de horario; queda a decisión de la autora. |
+| 3 | Evidencia que la sostiene | Respuesta de Emily del 30/10/2026 («si obvio que puede»). Regla R-02 validada por Loren (pregunta 5 de la primera confirmación). Insumos de Claude Code: `cancelForClient` y `rescheduleForClient` solo admiten estados `pending` o `confirmed`. |
+| 4 | Aporte personal | Emily definió que la clienta puede cancelar con el turno ya empezado. |
+| 5 | Desacuerdo y resolución | Claude había supuesto que no podía y se corrigió. Claude agregó la regla de que tras la marca automática la clienta ya no puede cancelar; Emily la confirma o la quita. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: regeneración del Word con la biblioteca docx y actualización de la tarjeta de Loren. No se tocó código. Revisión final por Emily pendiente: leer las preguntas 6 y 9, enviar el Word y guardar el PDF firmado. |
+
+## Entrada 80: segunda confirmación firmada y reducción del alcance (campañas, puntos y recordatorio)
+
+**Fecha:** 2026-10-30 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Registrar la segunda confirmación `Confirmacion2_Loren_Nexa_v4.pdf` firmada por Lorena Gonzalez con «Sí» en las 14 preguntas (reglas de inasistencia, cancelación, devolución, tienda, funciones extra y anonimización). Detectar que la fecha del PDF dice 30/11/2026 y pedir a Loren que la corrija. Sacar del sistema las campañas automáticas por mail, los puntos de fidelización con sus beneficios y el recordatorio de inactividad, manteniendo las promociones que carga el administrador y los mails por cancelación o reprogramación del personal. Crear la tarjeta P11 (backend y frontend), recortar P6, ajustar P1 y dejar el aviso para el libro v8. |
+| 2 | Alternativas y criterio de descarte | (a) Cargar en el libro la fecha del PDF tal como figura: descartado, es posterior a hoy y debilita la constancia. (b) Corregir a mano el PDF: descartado, no se edita un documento firmado. (c) Mantener campañas y puntos: descartado por la autora, que decidió sacarlos del sistema. (d) Anonimizar la fecha de nacimiento aunque ya no se use: pendiente; si solo servía a la campaña de cumpleaños, se prefiere dejar de pedirla por minimización de datos. |
+| 3 | Evidencia que la sostiene | PDF firmado de la segunda confirmación (preguntas 1 a 14 marcadas «Sí», con la frase de campañas eliminada de la pregunta 13). Insumos de Claude Code: campañas, fidelización y recordatorio de inactividad (`runAutoPromotionsJob`, `computeLoyalty`, `runInactivityReminderJob`) y la lista de mails (sección 4). Mensaje de Emily del 30/10/2026. |
+| 4 | Aporte personal | Emily decidió sacar campañas, puntos y beneficios, mantener las promociones que carga el administrador y que los mails a clientas se limiten a cancelaciones y reprogramaciones del personal. Editó el Word para quitar la frase de campañas antes de enviarlo. |
+| 5 | Desacuerdo y resolución | Claude agregó por su cuenta que el recordatorio de inactividad también queda fuera y que los mails de verificación de correo y de recuperación de contraseña se mantienen. Emily los confirma. La fecha equivocada de Loren se resuelve con una copia corregida. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: lectura del PDF firmado, redacción de los prompts P11 y P11b y actualización de cuatro tarjetas. No se tocó código ni se cambió el libro v7 en este paso. Revisión final por Emily: pedir la fecha corregida a Loren, guardar ambas copias del PDF y probar P11 en Claude Code. |
+
+## Entrada 81: constancia final de Loren y prompt maestro para Claude Code
+
+**Fecha:** 2026-10-30 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Dar por válida la segunda confirmación `Confirmacion2_Loren_Nexa_v4` (copia corregida): 14 respuestas «Sí», fecha 30/10/2026, firma de Lorena Gonzalez. Consolidar en un prompt maestro para el backend (fases 0 a 9) y otro para el frontend todo lo decidido: eliminar campañas automáticas, puntos de fidelización, recordatorio de inactividad y fecha de nacimiento; mantener promociones del administrador, reseñas y los mails de cuenta y de cancelación o reprogramación del personal; reglas de «No asistió (automático)», horario reabierto, reserva tardía y cancelación con hora de aviso; tienda sin productos inactivos o sin stock; anonimización ampliada; brechas, pruebas y deuda técnica del libro v7; y los informes de cobertura, cambios y horas. Cerrar la tarjeta de Loren y crear la tarjeta maestra. |
+| 2 | Alternativas y criterio de descarte | (a) Enviar los prompts P1 a P11 por separado: descartado, se superponían y generaban confusión; ninguno se había enviado. (b) Pedir a Claude Code que implemente todo de una vez: descartado, se exige una Fase 0 de solo lectura y una rama por fase para poder revisar. (c) Anonimizar la fecha de nacimiento: descartado por la autora, se deja de pedir (minimización de datos). (d) Mantener alergias, observaciones y notas al anonimizar: se mantiene como límite declarado y confirmado por la propietaria en la pregunta 14. |
+| 3 | Evidencia que la sostiene | PDF firmado del 30/10/2026 (copia corregida) y libro v7 (hoja «Código y pruebas»: 10 requisitos sin prueba, 19 con prueba parcial, 32 brechas abiertas, hoja «Funciones de apoyo y deuda»). Insumos de Claude Code del 30/10/2026. Decisiones de Emily del mismo día. |
+| 4 | Aporte personal | Emily decidió mantener las reseñas, los mails de verificación y de recuperación de contraseña, dejar de pedir la fecha de nacimiento, pidió un único prompt completo y señaló que no había enviado ningún prompt anterior. |
+| 5 | Desacuerdo y resolución | Claude agregó por su cuenta al prompt: vaciar los datos de contacto de los pedidos y el texto de las reseñas al anonimizar, registrar una salida de inventario en cada pedido pagado y restringir refundPolicy a full o none. Emily los confirma o los quita antes de ejecutar la Fase 0. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: redacción de los prompts maestros, lectura del PDF firmado y actualización del tablero. Claude no ejecutó ni verificó ningún cambio de código. Revisión final por Emily pendiente: ejecutar la Fase 0 en Claude Code, aprobar el plan y revisar cada rama antes de mergear. |
+
+## Entrada 82: revisión de la Fase 0 de Claude Code y respuestas a sus preguntas
+
+**Fecha:** 2026-10-30 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Aprobar la Fase 0 con ajustes. Mergear primero el PR #13 en `main`, crear en cada repositorio la rama `integracion-ae4` y cortar las fases desde ahí, para no desplegar cambios parciales a la clienta real. Responder las 11 preguntas del informe: no imponer la grilla de 120 minutos; el caso María es una corrección manual; la liberación por falta de pago genera horario reabierto como cualquier vía; no se puede marcar «No asistió» antes de la hora de inicio; valen las dos condiciones de las 17:00 y la tolerancia de 15 minutos aplica al horario reabierto; el servicio no debe pisarse con ningún turno ni salir de la franja; `cancelledBy` es obligatorio; se usa `cancellationHours` de la configuración; el personal también queda bloqueado en el horario original; las visitas cuentan solo turnos finalizados; la tienda pública devuelve `available` y un tope de cantidad. Excluir de esta ronda todo lo de Mercado Pago. Pedir las consultas previas de solo lectura y prohibir a Claude Code tocar la base de producción. |
+| 2 | Alternativas y criterio de descarte | (a) Cortar las fases desde `main`: descartado, `main` despliega a la clienta real. (b) Cortar desde la rama del PR #13: descartado, mezcla trabajos y genera conflictos de numeración en la bitácora. (c) Imponer en el backend la grilla de 120 minutos: descartado, rompe pruebas y turnos manuales y no es necesaria. (d) Un valor por defecto «el estudio cancela» en `cancelledBy`: descartado, devolvería la seña por error. (e) Incluir en esta ronda las pruebas de la firma del webhook y la cuenta real de Mercado Pago: descartado por la autora, se hace después de la AE4. |
+| 3 | Evidencia que la sostiene | Informe de la Fase 0 de Claude Code del 30/10/2026: cada 120 minutos genera los horarios el frontend; el backend no rechaza horarios pasados; `cancelForClient` solo rechaza turnos ya cancelados; el reembolso se marca sin mirar si la seña estaba paga; `GET /store/products` también lo usa el panel; ningún endpoint escribe `Client.allergies`. Confirmación firmada de Loren del 30/10/2026. |
+| 4 | Aporte personal | Emily decidió terminar primero el código y las confirmaciones de Loren, excluir lo de Mercado Pago y dar el OK con las respuestas de este registro. |
+| 5 | Desacuerdo y resolución | Claude agregó por su cuenta al mensaje: la columna `appointment_id` en el registro de actividad, tratar `no_show_auto` como inasistencia en las estadísticas, validación con zod del PATCH de la profesional y de la configuración de pagos, y la rama de integración. Emily los confirma al enviar el mensaje. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: revisión del informe de la Fase 0, redacción de las respuestas y actualización del tablero. Claude no ejecutó ni verificó ningún cambio de código. Revisión final por Emily pendiente: mergear el PR #13, tomar el respaldo, mandar el mensaje y revisar cada rama de fase. |
+
+## Entrada 83: AE4, fase 1 — se eliminan campañas automáticas, puntos, recordatorio de inactividad y fecha de nacimiento (rama `refactor/quitar-campanas-puntos-recordatorio-nacimiento`)
 
 **Fecha:** 2026-10-30, de 23:15 a 23:50 (hora de la máquina, UTC-3)
 
@@ -920,7 +1159,21 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 5 | Desacuerdo y resolución | Ninguno. **Pendiente de Emily:** correr `docs/consultas-previas-produccion.sql` en Supabase y guardar la salida (cuántas clientas pierden fecha de nacimiento o puntos); respaldo; aplicar la migración **después** de desplegar. **Frontend a adaptar en el mismo despliegue** (nexa-frontend, no se editó): `src/pages/admin/clients/` (`types.ts`, `ClientDetail.tsx`, `ClientDetail.test.tsx`, `ClientList.tsx`, `CreateClientModal.tsx`, `tabs/InfoTab.tsx`, `tabs/LoyaltyTab.tsx` — se va, la ficha pasa a leer `visits`), `src/pages/admin/promotions/AutoPromotionsSection.tsx` y `PromotionsPage.tsx`, y `src/app/data/admin/promotions/autoPromotionTypes.ts`. Mientras el frontend no se adapte, el panel pedirá rutas que ahora devuelven 404. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): todo el cambio de código, las pruebas, el SQL y esta entrada. Revisión de Emily pendiente. |
 
-## Entrada 71: AE4, fase 1 — el test de llegada fallaba en CI entre las 23:50 y las 00:00 de Argentina (rama `refactor/quitar-campanas-puntos-recordatorio-nacimiento`)
+
+## Entrada 84: revisión de la Fase 1 del backend (eliminaciones)
+
+**Fecha:** 2026-10-30 (hora aproximada, Argentina; cerca de las 23:50, después de los commits de la fase)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Aceptar la Fase 1 del backend (rama `refactor/quitar-campanas-puntos-recordatorio-nacimiento`, commits `b30e849`, `8955406`, `308bb0a` y `9cf57f0`; 34 archivos y 318 tests en verde): eliminación de campañas automáticas, puntos de fidelización, recordatorio de inactividad y fecha de nacimiento, con el contador de visitas renombrado a `visits` y contando solo turnos finalizados. Integrar la rama en `integracion-ae4` tras revisarla. Ajustar el plan de despliegue: las migraciones que agregan columnas o tablas (fases 2, 3 y 5) se aplican antes de desplegar el código y la que borra (Fase 1) después, con una fecha de migración posterior a todas las demás. Pedir el plan de despliegue completo al terminar la Fase 5. Crear el prompt del frontend de la Fase 1. |
+| 2 | Alternativas y criterio de descarte | (a) Aplicar la migración de la Fase 1 antes del despliegue: descartado, el código viejo falla en cada consulta a clientas mientras Render redespliega. (b) Mantener la fecha original de la migración de la Fase 1: descartado, Prisma las aplica por orden de fecha y la que borra debe ir última. (c) Calcular el porcentaje de trabajo con IA con la línea de coautoría: descartado, los commits van sin esa línea; se usa la lista de la sección 8.3 del README y de la bitácora. |
+| 3 | Evidencia que la sostiene | Informe de Fase 1 de Claude Code del 30/10/2026: `typecheck:all` sin errores; 34 archivos y 318 tests en verde (antes 32 y 310); migración `20261030150000_quitar_campanas_puntos_recordatorio_nacimiento` aplicada solo a la base de pruebas; scheduler con `release-unpaid` y `auto-no-show`; `docs/consultas-previas-produccion.sql` de solo lectura. |
+| 4 | Aporte personal | Emily aprobó la Fase 0 el mismo día, decidió mergear la rama a `integracion-ae4` y le corresponde correr las consultas previas en Supabase y tomar el respaldo antes de aplicar la migración. |
+| 5 | Desacuerdo y resolución | Claude advirtió que el orden de despliegue invertido de la Fase 1 choca con la regla general de aplicar migraciones primero y propuso separar migraciones que agregan de las que borran y reordenar por fecha. Queda pendiente confirmar cómo se aplican las migraciones hoy en producción (`prisma migrate deploy` o SQL manual). |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: revisión del informe de la Fase 1, redacción del prompt del frontend y del mensaje a Claude Code, y actualización del tablero. Claude no ejecutó ni verificó el código. Revisión final por Emily pendiente: revisar el PR de la Fase 1, correr las consultas previas, tomar el respaldo y probar el frontend de la Fase 1. |
+
+## Entrada 85: AE4, fase 1 — el test de llegada fallaba en CI entre las 23:50 y las 00:00 de Argentina (rama `refactor/quitar-campanas-puntos-recordatorio-nacimiento`)
 
 **Fecha:** 2026-10-31, 00:00 a 00:08 (hora de la máquina, UTC-3)
 
@@ -934,7 +1187,21 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): diagnóstico, corrección, pruebas y esta entrada. Revisión de Emily pendiente. |
 
 
-## Entrada 72: AE4, fase 2 — inasistencia automática, horario original bloqueado, horario reabierto y reserva tardía (rama `feat/inasistencia-horario-reabierto`)
+
+## Entrada 86: revisión de la Fase 1 del frontend y decisión sobre la fecha de nacimiento de profesionales
+
+**Fecha:** 2026-10-31 (hora aproximada, Argentina; de madrugada, después de los commits del frontend de las 00:17)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Aceptar la Fase 1 del frontend (rama `refactor/quitar-campanas-puntos-nacimiento`, cortada de `integracion-ae4`, commits `dd1b050`, `55fa408`, `1f54677` y `52397c8`; lint y tipos sin errores, 17 archivos y 80 tests en verde, build correcto). Mantener el commit `1f54677`, que quita la fecha de nacimiento del alta de profesionales. Pedir una línea final en la sección 8.3 del README que explique que el último commit de cada fase se identifica en la bitácora. Dejar el commit `52397c8` declarado en esta entrada, porque no puede figurar en 8.3. Subir las dos ramas, abrir el pull request con base `integracion-ae4` y mergearlo. Probar a mano un alta de profesional con invitación de prueba al desplegar. |
+| 2 | Alternativas y criterio de descarte | (a) Revertir `1f54677`: descartado, el backend no tiene ningún campo de fecha de nacimiento (ni de clientas ni de profesionales), así que el formulario pedía un dato que no se guardaba, contrario a la minimización de datos de la Ley N.º 25.326. (b) Citar `52397c8` dentro de 8.3: imposible, un commit no puede citar su propio hash. |
+| 3 | Evidencia que la sostiene | Informe de Claude Code del 31/10/2026: lectura del backend en solo lectura sin ningún campo de nacimiento en el esquema ni en `src`; `npm run lint` sin errores, `typecheck:all` sin errores, 80 tests en verde, build correcto; el resumen de visitas tiene un valor por defecto en cero por si llega `loyalty`. Informe de Fase 1 del backend del 30/10/2026. |
+| 4 | Aporte personal | Emily decidió dejar el commit de las profesionales y le toca subir las ramas, abrir y mergear el PR, y probar el alta de profesionales al desplegar. |
+| 5 | Desacuerdo y resolución | Sin desacuerdos. Claude Code fue más allá de lo pedido al quitar la fecha de nacimiento del alta de profesionales y lo informó con un commit independiente; Emily lo aprobó. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: evaluación del informe, redacción del mensaje para Claude Code y un comentario en la tarjeta «FRONTEND Fase 1». Claude no ejecutó ni verificó el código. Revisión final por Emily pendiente: subir y mergear las ramas del frontend y probar el alta de profesionales. |
+
+## Entrada 87: AE4, fase 2 — inasistencia automática, horario original bloqueado, horario reabierto y reserva tardía (rama `feat/inasistencia-horario-reabierto`)
 
 **Fecha:** 2026-10-31, de 00:20 a 04:55 (hora de la máquina, UTC-3)
 
@@ -948,7 +1215,8 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): todo el cambio de código, las pruebas, la documentación y esta entrada. Revisión de Emily pendiente. |
 
 
-## Entrada 73: AE4, push de la fase 2, pull request 15 y borrado de ramas ya mergeadas
+
+## Entrada 88: AE4, push de la fase 2, pull request 15 y borrado de ramas ya mergeadas
 
 **Fecha:** 2026-10-31, 04:50 a 04:57 (hora de la máquina, UTC-3)
 
@@ -962,7 +1230,21 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con `git` y la CLI `gh`. Revisión de Emily pendiente. |
 
 
-## Entrada 74: AE4, fase 3 — cancelación y devolución de la seña con hora de aviso (rama `feat/cancelacion-devolucion-hora-de-aviso`)
+
+## Entrada 89: revisión de la Fase 2 del backend, reorganización del tablero y recordatorio por mail
+
+**Fecha:** 2026-10-31 (hora aproximada, Argentina; después del commit de la Fase 2 de las 04:47)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Aprobar la Fase 2 del backend (rama `feat/inasistencia-horario-reabierto`, commits `1bfdf67`, `76fe8a3`, `3ccdf53` y `b064453`; 367 tests en verde) con sus seis decisiones: registrar la llegada al corregir a confirmado, no cancelar ni reprogramar un turno marcado sin corregirlo, siete códigos de error nuevos, no pisar patas finalizadas al cancelar combos o liberar impagos, 409 en lugar de 500 y etiqueta de estado en las vistas. Declarar como límite que una solicitud directa con una hora fuera del horario reabierto pero dentro de la franja se acepta como turno normal. Reorganizar el tablero de Trello por temas (libro, código, informe, instrumentos y bitácora, demo y entrega, después de la AE4) y crear las tarjetas del frontend de la Fase 2, de la Fase 3b y de la tercera confirmación. Incorporar el recordatorio de turno por mail 5 horas antes (RF-35), con enlaces que llevan a la web y piden iniciar sesión, y exigir una constancia escrita nueva de la propietaria. |
+| 2 | Alternativas y criterio de descarte | (a) Botones del mail que cancelan directamente: descartado, los antivirus de los correos abren los enlaces y cancelarían turnos solos. (b) Implementar el recordatorio sin nueva constancia: descartado, la pregunta 11 firmada dice que no se envían recordatorios y dos documentos contradictorios debilitan la evidencia; se implementa pero no se despliega sin la firma. (c) Aplicar ahora las migraciones de la Fase 2 en producción: descartado, se aplican juntas en el despliegue final con el plan de despliegue. (d) Crear listas nuevas en Trello: descartado, se renombraron las existentes para no duplicar tarjetas. |
+| 3 | Evidencia que la sostiene | Informe de Fase 2 de Claude Code del 31/10/2026 (typecheck limpio, 367 tests en verde, tres migraciones solo aplicadas a la base de pruebas). Segunda confirmación firmada de la propietaria del 30/10/2026 (preguntas 1 a 14, entre ellas la 11 sobre recordatorios). Tablero reorganizado con 17 tarjetas movidas, 6 listas renombradas y 4 tarjetas nuevas. |
+| 4 | Aporte personal | Emily pidió el recordatorio por mail con los datos del turno, botones de cancelar y reprogramar y envío 5 horas antes, afirmó que la propietaria lo aprobó y pidió reorganizar el tablero por temas, conservando las listas de lo posterior a la presentación, del código fuera de alcance y de terminados. |
+| 5 | Desacuerdo y resolución | Claude señaló que el recordatorio contradice la pregunta 11 firmada y que cancelar desde el recordatorio ya cae dentro de las 12 horas sin devolución de la seña; se resuelve con una tercera confirmación escrita y el aviso en el mail. La aprobación verbal de la propietaria no se considera constancia. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: revisión del informe de la Fase 2, redacción de los prompts del frontend de la Fase 2 y de la Fase 3b, y reorganización del tablero. Claude no ejecutó ni verificó ningún cambio de código. Revisión final por Emily pendiente: subir y mergear la Fase 2, correr las consultas 2 y 3 en Supabase y pedir a Loren la firma de la tercera confirmación. |
+
+## Entrada 90: AE4, fase 3 — cancelación y devolución de la seña con hora de aviso (rama `feat/cancelacion-devolucion-hora-de-aviso`)
 
 **Fecha:** 2026-10-31, de 15:05 a 16:05 (hora de la máquina, UTC-3)
 
@@ -976,7 +1258,21 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): todo el cambio de código, las pruebas, la documentación y esta entrada. Revisión de Emily pendiente. |
 
 
-## Entrada 75: AE4, fase 3b — recordatorio de turno por mail (rama `feat/recordatorio-turno-mail`)
+
+## Entrada 91: fase 3 del backend aprobada y decisión sobre las confirmaciones de Loren
+
+**Fecha:** 2026-10-31 (hora aproximada, Argentina; después del pull request 16 de la Fase 3)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Aprobar la Fase 3 del backend (PR #16 hacia `integracion-ae4`; 36 archivos y 404 tests en verde): regla única de devolución de la seña para la clienta, el personal y los combos; cancelación del personal con `cancelledBy`, hora de aviso, medio y nota, con límite de 48 horas para la profesional; horario reabierto al cancelar un turno ya empezado dentro de los 40 minutos; política de devolución limitada a `full` o `none`. Aceptar las tres decisiones de Claude Code (el estudio devuelve siempre, un turno finalizado no se cancela por el PATCH del personal y validaciones de la configuración de pagos). Registrar los resultados de las consultas previas en producción: 0 clientas con fecha de nacimiento, puntos o recordatorio, 0 campañas y 0 turnos. Decidir que los cambios nuevos los aprueba Emily como autora del sistema, sin constancias adicionales de la propietaria; se archiva la tarjeta de la tercera confirmación y el recordatorio por mail (RF-35) entra en la entrega como decisión de la autora. |
+| 2 | Alternativas y criterio de descarte | (a) Pedir una tercera confirmación escrita a la propietaria por los recordatorios: descartado por Emily, que decide los cambios desde ahora. (b) Mantener la condición «no se despliega sin constancia» en la Fase 3b: descartado por la misma razón. (c) Aplicar las migraciones de la Fase 3 en producción ahora: descartado, se aplican juntas en el despliegue final. |
+| 3 | Evidencia que la sostiene | Informe de Fase 3 de Claude Code del 31/10/2026 (typecheck sin errores, 36 archivos y 404 tests, migraciones `20261031130000` que agrega columnas y `20261031131000` solo de datos). Resultados de Supabase del 31/10/2026: consultas de turnos por estado y de duplicados sin filas; consultas 4 a 7 en cero. Segunda confirmación firmada del 30/10/2026. |
+| 4 | Aporte personal | Emily aprobó las decisiones de la Fase 3, dio la instrucción de que los cambios desde ahora se aprueban por ella y no por la propietaria, y corrió las consultas de producción. |
+| 5 | Desacuerdo y resolución | Claude había recomendado una constancia escrita nueva por el recordatorio, porque la pregunta 11 firmada decía lo contrario. Emily resolvió que no se pide: la decisión es de la autora y en el libro v8 el recordatorio figura como decisión de la autora, sin marca de validación de la propietaria. Queda pendiente confirmar que la base de Supabase consultada es la de producción (la tabla de turnos está vacía). |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: revisión del informe de la Fase 3, redacción del mensaje para Claude Code y del prompt de frontend de la Fase 3, y actualización del tablero. Claude no ejecutó ni verificó ningún cambio de código. Revisión final por Emily pendiente: mergear el PR #16, confirmar el proyecto de Supabase y ejecutar los frontends de las fases 2 y 3. |
+
+## Entrada 92: AE4, fase 3b — recordatorio de turno por mail (rama `feat/recordatorio-turno-mail`)
 
 **Fecha:** 2026-10-31, de 16:10 a 23:00 (hora de la máquina, UTC-3)
 
@@ -990,7 +1286,8 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): todo el cambio de código, las pruebas, la documentación y esta entrada. Documentación de `node-cron` 4.6 (opción `noOverlap`) consultada con Context7. Revisión de Emily pendiente. |
 
 
-## Entrada 76: AE4, push de la fase 3b y pull request 17
+
+## Entrada 93: AE4, push de la fase 3b y pull request 17
 
 **Fecha:** 2026-10-31, de 23:00 a 23:10 (hora de la máquina, UTC-3)
 
@@ -1004,7 +1301,21 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con `git` y la CLI `gh`. Revisión de Emily pendiente. |
 
 
-## Entrada 77: AE4, fase 3b, correcciones pedidas por Emily (reprogramación y política de privacidad)
+
+## Entrada 94: revisión de las fases 2 y 3 del frontend y de la Fase 3b del backend
+
+**Fecha:** 2026-10-31 (hora aproximada, Argentina; noche, después de abrir el pull request 17 y antes de la entrada 95). La entrada original decía 2026-11-01; se corrigió con la fecha de los pull requests (ver la entrada 144).
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Aceptar la Fase 2 del frontend (PR #13; 156 tests en 23 archivos; horarios del servidor, mensajes de error, estados y acciones «Marcar No asistió» y «Corregir: la clienta vino»), la Fase 3 del frontend (PR #14; 200 tests en 25 archivos; diálogo de cancelación del personal con hora de aviso y resultado de la seña, política de devolución sin la opción «parcial») y la Fase 3b del backend (PR #17; 37 archivos y 438 tests; recordatorio de turno por mail 5 horas antes con tope de 1 hora, un mail por combo y marca `reminder_sent_at`). Pedir a Claude Code que limpie `reminder_sent_at` al reprogramar y que agregue a la política de privacidad la línea del recordatorio subiendo su versión. Crear la Fase 3b del frontend (alias `/mis-turnos`, fechas en hora de Argentina y confirmación al cancelar un servicio de un combo). Registrar que la base de producción tiene 2 usuarias, 0 clientas y 0 turnos. Marcar como terminada la tarjeta de la Fase 2 del backend. |
+| 2 | Alternativas y criterio de descarte | (a) Mantener `reminder_sent_at` al reprogramar: descartado, la clienta no recibiría recordatorio del nuevo horario. (b) No tocar la política de privacidad: descartado, el sistema pasa a enviar un mail por su cuenta y conviene declararlo; con 0 clientas no hay costo de volver a pedir aceptación. (c) Dejar las fechas con `toISOString()` sin corregir: descartado, fallan pasadas las 21:00 de Argentina. |
+| 3 | Evidencia que la sostiene | Informes de Claude Code del 31/10/2026 y 1/11/2026 (PR #13, #14 y #17; lint, tipos, pruebas y build en verde). Resultados de Supabase: 2 usuarias, 0 clientas y 0 turnos. |
+| 4 | Aporte personal | Emily aprobó las decisiones, corrió las consultas de producción y debe mergear los pull requests y hacer la prueba manual contra una base de pruebas. |
+| 5 | Desacuerdo y resolución | Claude Code subió las ramas y abrió los pull requests por su cuenta aunque el prompt decía «sin push ni merge»; lo hizo siguiendo la indicación anterior de Emily de abrir siempre el PR con base `integracion-ae4`, y no hizo merge. Claude Code borró ramas ya mergeadas, comprobadas con `git branch --merged`. Las fases 2 y 3 del frontend no se probaron a mano: la prueba manual queda a cargo de Emily. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: revisión de los informes, redacción del mensaje para Claude Code y del prompt del frontend de la Fase 3b, y actualización de cinco tarjetas. Claude no ejecutó ni verificó ningún cambio de código. Revisión final por Emily pendiente: mergear los PR #13, #14 y #17, y probar a mano el flujo de cancelación y de recordatorio. |
+
+## Entrada 95: AE4, fase 3b, correcciones pedidas por Emily (reprogramación y política de privacidad)
 
 **Fecha:** 2026-10-31, de 23:10 a 23:40 (hora de la máquina, UTC-3)
 
@@ -1013,12 +1324,13 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 1 | Qué se decidió | **Hecho por Claude Code**, a pedido de Emily al aprobar la fase 3b. (a) Reprogramar un turno vuelve `appointments.reminder_sent_at` a `null` en los tres caminos: `rescheduleForClient` (la clienta) y `updateForProfessional`/`updateForAdmin` (solo cuando cambia la fecha o la hora, la misma condición `rescheduling` que ya activa el aviso de reprogramación). (b) Cuatro pruebas nuevas en `tests/integration/appointments.reminder.test.ts` (clienta, profesional, administrador, y una que verifica que un cambio de notas sin mover el horario NO limpia la marca) más una que verifica que el nuevo horario sigue sujeto a la ventana de 5 horas. (c) `PRIVACY_POLICY_VERSION` pasa de `2026-09` a `2026-11` en el backend. (d) `CLAUDE.md` y `docs/cambios-y-decisiones.md` actualizados. (e) Va en el mismo pull request 17, en la rama `feat/recordatorio-turno-mail`: es la misma fase y ya estaba abierto. **Frontend (no se tocó, queda para Emily):** `nexa-frontend/src/app/config/legal.ts` (`PRIVACY_POLICY_VERSION = '2026-09'` a `'2026-11'`) y `nexa-frontend/src/pages/public/PrivacyPolicyPage.tsx` (agregar «Te enviamos por correo un recordatorio de tus turnos», por ejemplo en la sección 2 «Propósitos»). La prueba `PrivacyPolicyPage.test.tsx` lee la constante, no hace falta cambiarla. El frontend no pide volver a aceptar: nadie lee `termsVersion` ni `termsAcceptedAt` para bloquear nada, solo se graban al registrarse y al confirmar una reserva. |
 | 2 | Alternativas y criterio de descarte | Limpiar la marca solo en el camino de la clienta: descartado, Emily pidió ambos. Limpiarla ante cualquier PATCH del personal: descartado, reenviaría el mail por cambiar una nota. Un commit aparte en la rama de la fase 4: descartado, esa rama no existe todavía y mezclaría la fase 4 con una corrección de la 3b. Exigir volver a aceptar la política: no hace falta, hay 0 clientas y la aceptación se regraba en cada reserva. |
 | 3 | Evidencia que la sostiene | Sin el cambio en el servicio, las cuatro pruebas de reprogramación fallan; con el cambio pasan (se probó quitando y devolviendo el cambio). `terms-version.test.ts` compara con la constante, sigue verde. `npm run typecheck:all` sin errores. |
-| 4 | Aporte personal | Emily decidió limpiar la marca al reprogramar (que era la decisión pendiente del límite conocido de la entrada 75), pidió la prueba, y decidió agregar la línea a la política y subir la versión. |
+| 4 | Aporte personal | Emily decidió limpiar la marca al reprogramar (que era la decisión pendiente del límite conocido de la entrada 92), pidió la prueba, y decidió agregar la línea a la política y subir la versión. |
 | 5 | Desacuerdo y resolución | Observación de Claude Code: `createdAt` no cambia al reprogramar, así que la regla de las 5 horas se mide desde la reserva original hasta el nuevo inicio. Un turno reservado hace días y movido para dentro de pocas horas recibe el recordatorio apenas corre el job, aunque la clienta acaba de reprogramar. Se dejó así porque es lo que Emily describió («más de 5 horas desde la reserva»); queda anotado en `docs/cambios-y-decisiones.md`. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5): el cambio, las pruebas y esta entrada. Sin librerías nuevas, no hizo falta Context7. Revisión de Emily pendiente. |
 
 
-## Entrada 78: AE4, fase 4 — tienda: lista pública solo con disponibles, lista del administrador y libro de inventario (rama `fix/tienda-publica-solo-disponibles`)
+
+## Entrada 96: AE4, fase 4 — tienda: lista pública solo con disponibles, lista del administrador y libro de inventario (rama `fix/tienda-publica-solo-disponibles`)
 
 **Fecha:** 2026-11-01 (hora de la máquina, UTC-3)
 
@@ -1028,7 +1340,7 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 2 | Alternativas y criterio de descarte | **Devolver `stock` en la lista pública:** descartado, el frontend solo lo usa para esconder agotados (`StoreSection`, `PromotionsPage`), no para limitar el carrito. **Reservar el stock al crear el pedido:** descartado, un checkout abandonado dejaría productos bloqueados; queda como límite conocido. **Columna `orderId` en `inventory_movements`:** descartada, exige una migración en Supabase y no la pidió la fase; la relación queda en la nota. **Ruta de administrador con otro nombre o dentro de `/store`:** descartado, `/admin/store/products` aprovecha el `requireRole('admin')` del router de `admin/`. |
 | 3 | Evidencia que la sostiene | `tests/integration/store.availability.test.ts` (19 casos). Sin el cambio en `src`, fallan los 8 casos de lista pública, lista del administrador y libro de inventario; los de rechazo del pedido pasan igual, porque esa regla ya existía. `npm run typecheck:all` limpio y `npm test` con 38 archivos y 457 pruebas verdes. |
 | 4 | Aporte personal | Emily definió el alcance de la fase (qué ve el público, la ruta del administrador, la validación del pedido y la salida de inventario) y la rama. |
-| 5 | Desacuerdo y resolución | Ninguno. Hallazgo: la corrección de la fase 3b (`reminder_sent_at` al reprogramar y versión de la política de privacidad, commit `031e319` en `origin/feat/recordatorio-turno-mail`, entrada 77) se subió después del merge del pull request 17 y **no está en `integracion-ae4`**; esta rama sale de `integracion-ae4` y no la incluye. Hace falta un pull request propio para esa corrección. Por eso esta entrada es la 78 y no la 77. |
+| 5 | Desacuerdo y resolución | Ninguno. Hallazgo: la corrección de la fase 3b (`reminder_sent_at` al reprogramar y versión de la política de privacidad, commit `031e319` en `origin/feat/recordatorio-turno-mail`, entrada 95) se subió después del merge del pull request 17 y **no está en `integracion-ae4`**; esta rama sale de `integracion-ae4` y no la incluye. Hace falta un pull request propio para esa corrección. Por eso esta entrada es la 78 y no la 77. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). La documentación de Prisma consultada con Context7 correspondía a otra versión mayor que la del proyecto (6); se siguió el patrón de `$transaction` ya usado en `applyPaymentResult`. Revisión de Emily pendiente. |
 
 **Impacto en el frontend (no se hizo, lista de archivos de `../nexa-frontend/src`):**
@@ -1039,35 +1351,38 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 - Backend y frontend tienen que salir juntos.
 
 
-## Entrada 79: AE4, fase 3b, texto de la política de privacidad en `00-gestion` (versión 2026-11)
+
+## Entrada 97: AE4, fase 3b, texto de la política de privacidad en `00-gestion` (versión 2026-11)
 
 **Fecha:** 2026-11-01, de 03:35 a 03:55 (hora de la máquina, UTC-3)
 
 | # | Elemento | Registro |
 |---|---|---|
-| 1 | Qué se decidió | **Hecho por Claude Code**, a pedido de Emily. `00-gestion/POLITICA_PRIVACIDAD.md` suma, en la sección 3, el párrafo que ya muestra la web: «Usamos tu correo electrónico para enviarte recordatorios de tus turnos (unas 5 horas antes), avisos cuando tu turno se cancela o se reprograma, y los mensajes de tu cuenta (verificación de correo y recuperación de contraseña). No lo usamos para campañas ni publicidad.» La fecha pasa a «1 de noviembre de 2026 (versión 2026-11)». Así el documento de la entrega coincide con la página del frontend y con `PRIVACY_POLICY_VERSION = '2026-11'` del backend, que ya había subido la entrada 77. El commit va en la rama `fix/recordatorio-reprogramacion-politica-privacidad`, de la entrada 77, que no estaba pusheada. |
-| 2 | Alternativas y criterio de descarte | Una rama aparte desde `integracion-ae4`: descartado, tocaría el mismo tramo de la bitácora y de `docs/` que la entrada 77 y habría conflicto entre los dos pull requests. Cambiar el texto de la web o la versión: no hizo falta, ya estaban en `2026-11`. Copiar la redacción del frontend palabra por palabra en vez de reescribirla: elegido, para que las dos versiones no diverjan. |
-| 3 | Evidencia que la sostiene | El texto agregado coincide con la constante `EMAIL_USE` de `nexa-frontend/src/pages/public/PrivacyPolicyPage.tsx`. La versión del backend (`src/app/constants/legal.ts`) y la del frontend (`src/app/config/legal.ts`) son ambas `2026-11`. Resultados de `typecheck:all` y `npm test` en la entrada 80. |
+| 1 | Qué se decidió | **Hecho por Claude Code**, a pedido de Emily. `00-gestion/POLITICA_PRIVACIDAD.md` suma, en la sección 3, el párrafo que ya muestra la web: «Usamos tu correo electrónico para enviarte recordatorios de tus turnos (unas 5 horas antes), avisos cuando tu turno se cancela o se reprograma, y los mensajes de tu cuenta (verificación de correo y recuperación de contraseña). No lo usamos para campañas ni publicidad.» La fecha pasa a «1 de noviembre de 2026 (versión 2026-11)». Así el documento de la entrega coincide con la página del frontend y con `PRIVACY_POLICY_VERSION = '2026-11'` del backend, que ya había subido la entrada 95. El commit va en la rama `fix/recordatorio-reprogramacion-politica-privacidad`, de la entrada 95, que no estaba pusheada. |
+| 2 | Alternativas y criterio de descarte | Una rama aparte desde `integracion-ae4`: descartado, tocaría el mismo tramo de la bitácora y de `docs/` que la entrada 95 y habría conflicto entre los dos pull requests. Cambiar el texto de la web o la versión: no hizo falta, ya estaban en `2026-11`. Copiar la redacción del frontend palabra por palabra en vez de reescribirla: elegido, para que las dos versiones no diverjan. |
+| 3 | Evidencia que la sostiene | El texto agregado coincide con la constante `EMAIL_USE` de `nexa-frontend/src/pages/public/PrivacyPolicyPage.tsx`. La versión del backend (`src/app/constants/legal.ts`) y la del frontend (`src/app/config/legal.ts`) son ambas `2026-11`. Resultados de `typecheck:all` y `npm test` en la entrada 98. |
 | 4 | Aporte personal | Emily eligió agregar la línea a la política y subir la versión, y pidió sumar el texto a la rama que ya tenía la subida de versión. |
-| 5 | Desacuerdo y resolución | Ninguno. Aclaración de la entrada 75, punto 5 (6): subir la versión no vuelve a pedir la aceptación; `termsVersion` y `termsAcceptedAt` solo se regraban al registrarse y al confirmar una reserva. El documento no menciona la sección 5 de WhatsApp: se dejó como estaba. |
+| 5 | Desacuerdo y resolución | Ninguno. Aclaración de la entrada 92, punto 5 (6): subir la versión no vuelve a pedir la aceptación; `termsVersion` y `termsAcceptedAt` solo se regraban al registrarse y al confirmar una reserva. El documento no menciona la sección 5 de WhatsApp: se dejó como estaba. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). Sin librerías nuevas, no hizo falta Context7. Revisión de Emily pendiente. |
 
 
-## Entrada 80: AE4, push de las correcciones de la fase 3b (reprogramación y política de privacidad) y pull request
+
+## Entrada 98: AE4, push de las correcciones de la fase 3b (reprogramación y política de privacidad) y pull request
 
 **Fecha:** 2026-11-01, de 03:55 a 04:10 (hora de la máquina, UTC-3)
 
 | # | Elemento | Registro |
 |---|---|---|
-| 1 | Qué se decidió | **Hecho por Claude Code**, a pedido de Emily. Push de `fix/recordatorio-reprogramacion-politica-privacidad` y pull request con base `integracion-ae4`; el merge lo hace Emily. La rama junta el commit de la entrada 77 (limpiar `reminder_sent_at` al reprogramar y subir `PRIVACY_POLICY_VERSION` a `2026-11`), el de la entrada 79 (texto de la política en `00-gestion`) y un merge de `integracion-ae4` (fase 4) para que el pull request no tenga conflictos. Esas correcciones de la entrada 77 estaban hechas por otra sesión de Claude Code y sin pushear; el pull request 17 ya se había mergeado antes, por eso van en un pull request nuevo. Se esperó a que la suite pasara limpia antes de pushear, como pidió Emily. |
-| 2 | Alternativas y criterio de descarte | Pushear sin la suite en verde: descartado, la primera corrida dio 125 fallas por una causa ajena al código (ver elemento 3) y Emily pidió esperar. Rehacer las entradas 77 y 79 en una rama nueva desde `integracion-ae4`: descartado, habría duplicado el trabajo de la otra sesión. Resolver el conflicto de la bitácora con el orden 77, 78, 79 (por número) en vez de dejar la de la fase 4 antes de la 77. |
+| 1 | Qué se decidió | **Hecho por Claude Code**, a pedido de Emily. Push de `fix/recordatorio-reprogramacion-politica-privacidad` y pull request con base `integracion-ae4`; el merge lo hace Emily. La rama junta el commit de la entrada 95 (limpiar `reminder_sent_at` al reprogramar y subir `PRIVACY_POLICY_VERSION` a `2026-11`), el de la entrada 97 (texto de la política en `00-gestion`) y un merge de `integracion-ae4` (fase 4) para que el pull request no tenga conflictos. Esas correcciones de la entrada 95 estaban hechas por otra sesión de Claude Code y sin pushear; el pull request 17 ya se había mergeado antes, por eso van en un pull request nuevo. Se esperó a que la suite pasara limpia antes de pushear, como pidió Emily. |
+| 2 | Alternativas y criterio de descarte | Pushear sin la suite en verde: descartado, la primera corrida dio 125 fallas por una causa ajena al código (ver elemento 3) y Emily pidió esperar. Rehacer las entradas 95 y 97 en una rama nueva desde `integracion-ae4`: descartado, habría duplicado el trabajo de la otra sesión. Resolver el conflicto de la bitácora con el orden 77, 78, 79 (por número) en vez de dejar la de la fase 4 antes de la 77. |
 | 3 | Evidencia que la sostiene | `npm run typecheck:all` sin errores. `npm test` (corrida limpia, sin otra sesión usando la base de pruebas): 38 archivos y 462 pruebas en verde (antes 37 y 443 en la rama, 38 y 457 en `integracion-ae4`). La corrida anterior dio 125 fallas en 24 archivos con `findUniqueOrThrow` sin filas y un deadlock `40P01`, porque otra sesión corría `vitest` al mismo tiempo contra la misma base de pruebas, que se trunca antes de cada caso; no tenía relación con los cambios. Lección: no correr `npm test` mientras otra sesión lo corre. |
 | 4 | Aporte personal | Emily eligió sumar el texto de la política a esa rama, y después pidió pushear y abrir el pull request cuando la suite pasara. |
 | 5 | Desacuerdo y resolución | Ninguno. El conteo de tests del README se dejó en 462, el de la corrida limpia. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con `git` y la CLI `gh`. Revisión de Emily pendiente. |
 
 
-## Entrada 81: AE4, fase 5, anonimización completa y alergias (RNF-03)
+
+## Entrada 99: AE4, fase 5, anonimización completa y alergias (RNF-03)
 
 **Fecha:** 2026-11-01, de 04:00 a 04:25 (hora de la máquina, UTC-3)
 
@@ -1077,11 +1392,12 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 2 | Alternativas y criterio de descarte | Borrar los archivos antes que las filas: descartado, un fallo de la base dejaría fotos borradas de un cliente que sigue con su galería. Cortar la anonimización si falla un archivo: descartado, lo pidió Emily. Pasar `status` de las reseñas con texto vaciado a `approved`: no se hizo, no estaba pedido. Contar en el aviso todos los pedidos de la clienta: se cuentan solo los que tenían algún dato por vaciar. |
 | 3 | Evidencia que la sostiene | Supabase `remove` devuelve en `data` solo lo que borró (consulta a Context7 sobre supabase-js), así que un bucket sin permiso de borrado no da error: se cuenta como fallido lo que no vuelve en `data`. Pruebas nuevas: `admin.anonymize-personal-data.test.ts` (9), `uploads.delete-images.test.ts` (5) y 10 casos en `allergies.consent-visibility.test.ts` (agenda y respuesta del PATCH incluidas; finalizado sí; cancelado, no asistió, no asistió automático, confirmado futuro y pendiente no; finalizado con otra profesional no; alergia del turno propio sí; sin `RefreshSession` tras anonimizar). `npm run typecheck:all` sin errores. `npm test`: 40 archivos y 486 pruebas en verde. |
 | 4 | Aporte personal | Emily definió qué se borra, qué se conserva y la regla de visibilidad de la alergia, y pidió informar antes de tocar `toProfessionalView`. |
-| 5 | Desacuerdo y resolución | La rama se cortó del tip de `fix/recordatorio-reprogramacion-politica-privacidad` (el pull request 19 todavía estaba abierto) y no de `integracion-ae4`, para no pisar las entradas 77 a 80 de esta bitácora. Emily mergeó el pull request 19 el 2026-11-01 a las 07:10 UTC, antes del push, así que el pull request de esta fase contra `integracion-ae4` trae solo los commits de la fase 5. Push y pull request hechos a pedido de Emily; el merge lo hace ella. Pendiente de Emily: que el bucket `images` permita borrar con la clave anónima. |
+| 5 | Desacuerdo y resolución | La rama se cortó del tip de `fix/recordatorio-reprogramacion-politica-privacidad` (el pull request 19 todavía estaba abierto) y no de `integracion-ae4`, para no pisar las entradas 95 a 98 de esta bitácora. Emily mergeó el pull request 19 el 2026-11-01 a las 07:10 UTC, antes del push, así que el pull request de esta fase contra `integracion-ae4` trae solo los commits de la fase 5. Push y pull request hechos a pedido de Emily; el merge lo hace ella. Pendiente de Emily: que el bucket `images` permita borrar con la clave anónima. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) y Context7 (supabase-js, `storage.remove`). Revisión de Emily pendiente. |
 
 
-## Entrada 82: AE4, fase 6, brechas de requisitos y revisión de las alertas de Sentry y UptimeRobot
+
+## Entrada 100: AE4, fase 6, brechas de requisitos y revisión de las alertas de Sentry y UptimeRobot
 
 **Fecha:** 2026-11-01, de 04:23 a 04:55 (hora de la máquina, UTC-3)
 
@@ -1102,7 +1418,8 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 - `features/client/notifications` y `features/professional/notifications`: sin los tipos que no se emiten, con ícono genérico para filas viejas. `index.html`: sin el script de Google ni `fb-root`.
 - La actividad de la liberación por seña impaga ya no trae la entrada con el total (`Turnos liberados por falta de pago: N`) sino una por turno (`Turno liberado por falta de pago`, módulo `appointments`, con `appointmentId`); ningún archivo del frontend dependía del texto anterior.
 
-## Entrada 83: AE4, fase 7, pruebas faltantes por requisito (rama `test/cobertura-completa`)
+
+## Entrada 101: AE4, fase 7, pruebas faltantes por requisito (rama `test/cobertura-completa`)
 
 **Fecha:** 2026-11-01, de 04:55 a 05:02 (consultas a Emily), 04:57 (rama cortada de `integracion-ae4` con el pull request 21 mergeado) y de 14:20 a 14:45 (pruebas, documentación y commits; entre medio la sesión se cortó por el límite de uso). Hora de la máquina, UTC-3.
 
@@ -1117,7 +1434,8 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 
 **Impacto en el frontend:** ninguno. No cambió ninguna ruta, método, código de error ni forma de respuesta.
 
-## Entrada 84: AE4, push de la fase 7 y pull request
+
+## Entrada 102: AE4, push de la fase 7 y pull request
 
 **Fecha:** 2026-11-01, 14:46 (hora de la máquina, UTC-3)
 
@@ -1125,12 +1443,13 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 |---|---|---|
 | 1 | Qué se decidió | **Hecho por Claude Code (Opus 5.5)**: `git push -u origin test/cobertura-completa` y pull request 22 con base `integracion-ae4` (https://github.com/emilykohler12/nexa-backend/pull/22), con la lista de pruebas por requisito y los siete hallazgos sin corregir. Sin merge. |
 | 2 | Alternativas y criterio de descarte | Merge directo o push a `main`: descartados, el flujo de la AE4 es que Emily revise y mergee cada fase en `integracion-ae4`, y `main` redespliega a la clienta real. |
-| 3 | Evidencia que la sostiene | Commits `a34749a`, `f5c2390`, `a4aa471`, `77fd1b8`, `6cc47d7`, `aa86b17`, `718e8e6` (pruebas) y `45d8401` (documentación, entrada 83); `npm test` con 631 pruebas en verde antes del push. |
+| 3 | Evidencia que la sostiene | Commits `a34749a`, `f5c2390`, `a4aa471`, `77fd1b8`, `6cc47d7`, `aa86b17`, `718e8e6` (pruebas) y `45d8401` (documentación, entrada 101); `npm test` con 631 pruebas en verde antes del push. |
 | 4 | Aporte personal | Emily definió el flujo (push y pull request por fase, ella mergea). |
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Opus 5.5) y `gh`. |
 
-## Entrada 85: AE4, fase 8, deuda técnica (rama `chore/deuda-tecnica`)
+
+## Entrada 103: AE4, fase 8, deuda técnica (rama `chore/deuda-tecnica`)
 
 **Fecha:** 2026-11-01, de 14:42 a 14:46 (relevamiento, consultas a Emily y rama cortada de `integracion-ae4` con el pull request 22 mergeado) y de 14:47 a 14:57 (cambios, pruebas, documentación y commits). Hora de la máquina, UTC-3.
 
@@ -1145,7 +1464,8 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 
 **Impacto en el frontend:** ninguno. No cambió ninguna ruta, método, código de error ni forma de respuesta.
 
-## Entrada 86: AE4, push de la fase 8 y pull request
+
+## Entrada 104: AE4, push de la fase 8 y pull request
 
 **Fecha:** 2026-11-01, 14:58 (hora de la máquina, UTC-3)
 
@@ -1153,12 +1473,13 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 |---|---|---|
 | 1 | Qué se decidió | **Hecho por Claude Code (Opus 5.5)**: `git push -u origin chore/deuda-tecnica` y pull request 23 con base `integracion-ae4` (https://github.com/emilykohler12/nexa-backend/pull/23). Sin merge. Antes se borró la rama `test/cobertura-completa`, local y remota, verificada como mergeada con `git merge-base --is-ancestor`. Las ramas locales `feat/fase-4-tienda` y `feat/recordatorio-turno-mail` no se borraron: tienen commits que no están en `integracion-ae4` con el mismo contenido (`ac0ba11`, y `41cd6c0`/`031e319` con un equivalente ya integrado según `git cherry`); decide Emily. |
 | 2 | Alternativas y criterio de descarte | Merge directo o push a `main`: descartados, el flujo de la AE4 es que Emily revise y mergee cada fase en `integracion-ae4`, y `main` redespliega a la clienta real. |
-| 3 | Evidencia que la sostiene | Commits `a687dfb`, `a4812d7`, `fc9df24` y `8443f1f` (documentación, entrada 85); `npm run typecheck:all` limpio y `npm test` con 638 pruebas en verde antes del push. |
+| 3 | Evidencia que la sostiene | Commits `a687dfb`, `a4812d7`, `fc9df24` y `8443f1f` (documentación, entrada 103); `npm run typecheck:all` limpio y `npm test` con 638 pruebas en verde antes del push. |
 | 4 | Aporte personal | Emily definió el flujo (push y pull request por fase, ella mergea). |
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Opus 5.5) y `gh`. |
 
-## Entrada 87: AE4, fase 9, informes de cobertura y de cambios (rama `docs/informes-v8`)
+
+## Entrada 105: AE4, fase 9, informes de cobertura y de cambios (rama `docs/informes-v8`)
 
 **Fecha:** 2026-11-01, 15:06 (pull request 23 mergeado, rama `chore/deuda-tecnica` borrada y rama cortada de `integracion-ae4`), de 15:07 a 15:11 (corrida de la suite con el reporte JSON y lectura del libro v7) y de 15:11 a 15:18 (informes, README y commits). Hora de la máquina, UTC-3.
 
@@ -1166,14 +1487,15 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 |---|---|---|
 | 1 | Qué se decidió | **Hecho por Claude Code (modelo Opus 5.5)**, a pedido de Emily, sin tocar `src/` ni `tests/`. (a) `docs/cobertura-por-requisito.md` (`8974ed1`): los 42 requisitos del libro v7 (RF-01 a RF-34 y RNF-01 a RNF-10, sin RF-22, RF-30 ni la fidelización de RF-28), cada uno con su enunciado y criterio, el archivo y el nombre completo de cada prueba, el resultado de la última corrida y la cobertura: **29 completos, 11 parciales y 2 sin prueba** (RNF-01 y RNF-02). (b) `docs/cambios-y-decisiones.md` (`d484c3e`): tabla por fase (0 a 9) con qué cambió, por qué y qué pruebas lo verifican; límites conocidos generales, entre ellos el que pidió Emily (una hora fuera del horario reabierto pero dentro de la franja se acepta como turno normal); secciones de las fases 8 y 9; se quitó una línea vieja de la fase 3b que decía que la política de privacidad todavía no mencionaba el recordatorio. (c) README: catálogo vigente v7 y los tres documentos de `docs/` en la sección 1.5, fila de la fase 9 en 8.3 (cantidad de pruebas, índice parcial y scheduler sin cambios). (d) La estimación de horas (9.3) queda para después de que Emily integre todo en `main`. |
 | 2 | Alternativas y criterio de descarte | **Clasificar con el criterio «en espíritu»:** descartado; se clasificó contra el texto del criterio del v7, y cuando el criterio choca con una regla vigente se marca parcial y se dice por qué (RF-05, RF-20, RF-28). **Corregir esos criterios en el libro:** descartado, el libro es documentación académica de Emily; quedan listados para que ella decida. **Agregar las pruebas que faltan (invitación vencida, `HttpOnly` de `access_token`, turno manual confirmado y sin seña, moneda en pedidos, mail a la profesional):** descartado, la fase 9 es solo de informes; quedan anotadas en cada requisito. **Contar como cubierto lo que prueba el frontend:** descartado, no se revisó `nexa-frontend` (queda como no determinado). |
-| 3 | Evidencia que la sostiene | Corrida de `npm test` con `--reporter=json` el 01/11/2026 a las 15:07 sobre `d04ad34` (igual a `integracion-ae4`): **57 archivos y 638 pruebas, 638 pasaron y 0 fallaron**; el informe toma de ese reporte el resultado de cada prueba. El libro v7 se leyó descomprimiendo el `.xlsx` en el directorio temporal (hojas «Catálogo» y «Cambios v7»), sin modificarlo. Cada clasificación parcial se apoyó en una lectura del código o de la prueba: no hay prueba del monto de la preferencia de Mercado Pago (simulada en `tests/setup.ts`), la única marca `HttpOnly` comprobada es la de `refresh_token` (`auth.minor-fixes`), ninguna prueba de invitación vencida, el mail `Nuevo turno agendado — Nexa` solo aparece en la lista de envíos de `notifications.inbox-and-client-mail`, `rechaza una promoción vencida` en `appointments.booking`, y las visitas cuentan solo `finished` desde la fase 1. Al final, `npm run typecheck:all` y `npm test` otra vez (resultado en la entrada 88). |
+| 3 | Evidencia que la sostiene | Corrida de `npm test` con `--reporter=json` el 01/11/2026 a las 15:07 sobre `d04ad34` (igual a `integracion-ae4`): **57 archivos y 638 pruebas, 638 pasaron y 0 fallaron**; el informe toma de ese reporte el resultado de cada prueba. El libro v7 se leyó descomprimiendo el `.xlsx` en el directorio temporal (hojas «Catálogo» y «Cambios v7»), sin modificarlo. Cada clasificación parcial se apoyó en una lectura del código o de la prueba: no hay prueba del monto de la preferencia de Mercado Pago (simulada en `tests/setup.ts`), la única marca `HttpOnly` comprobada es la de `refresh_token` (`auth.minor-fixes`), ninguna prueba de invitación vencida, el mail `Nuevo turno agendado — Nexa` solo aparece en la lista de envíos de `notifications.inbox-and-client-mail`, `rechaza una promoción vencida` en `appointments.booking`, y las visitas cuentan solo `finished` desde la fase 1. Al final, `npm run typecheck:all` y `npm test` otra vez (resultado en la entrada 106). |
 | 4 | Aporte personal | Emily pidió los informes, eligió usar el libro v7 (lo agregó a `03-requisitos/`), dejó la estimación de horas para después de integrar todo en `main` y había pedido declarar el límite del horario reabierto. |
-| 5 | Desacuerdo y resolución | **Error de Claude Code en la fase 8:** el libro v7 entró al repositorio dentro del commit `a687dfb` («renombrar RF-06.01…»), porque ese commit se hizo con `git add -A` cuando Emily ya había puesto el archivo en la carpeta, y la entrada 85 dice que el libro «se va a agregar». El commit ya está mergeado en `integracion-ae4` (pull request 23); no se reescribió la historia. El archivo es el que Emily quería en el repositorio, pero su commit no lo nombra. Desde ahora los commits agregan los archivos por nombre. **Criterios del v7 que no coinciden con el código:** RF-05, RF-20, RF-28 y RNF-10 en el criterio, y RF-01, RF-21 y RNF-08 en el enunciado; RF-17 y RNF-09 figuran sin prueba y ya la tienen. **No determinado:** qué cubren las pruebas del frontend. |
+| 5 | Desacuerdo y resolución | **Error de Claude Code en la fase 8:** el libro v7 entró al repositorio dentro del commit `a687dfb` («renombrar RF-06.01…»), porque ese commit se hizo con `git add -A` cuando Emily ya había puesto el archivo en la carpeta, y la entrada 103 dice que el libro «se va a agregar». El commit ya está mergeado en `integracion-ae4` (pull request 23); no se reescribió la historia. El archivo es el que Emily quería en el repositorio, pero su commit no lo nombra. Desde ahora los commits agregan los archivos por nombre. **Criterios del v7 que no coinciden con el código:** RF-05, RF-20, RF-28 y RNF-10 en el criterio, y RF-01, RF-21 y RNF-08 en el enunciado; RF-17 y RNF-09 figuran sin prueba y ya la tienen. **No determinado:** qué cubren las pruebas del frontend. |
 | 6 | Herramienta auxiliar | Claude Code (Opus 5.5) con un script descartable de Node para leer el `.xlsx` y armar el informe desde el reporte JSON de Vitest (no queda en el repositorio). Context7 no se usó: no se escribió código que dependa de una librería del proyecto. Commits sin la línea de coautoría, como pidió Emily. Revisión de Emily pendiente. |
 
 **Impacto en el frontend:** ninguno.
 
-## Entrada 88: AE4, verificación final de la fase 9, push y pull request
+
+## Entrada 106: AE4, verificación final de la fase 9, push y pull request
 
 **Fecha:** 2026-11-01, de 15:16 a 15:22 (hora de la máquina, UTC-3)
 
@@ -1181,16 +1503,17 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 |---|---|---|
 | 1 | Qué se decidió | **Hecho por Claude Code (Opus 5.5)**: `git push -u origin docs/informes-v8` y pull request 24 con base `integracion-ae4` (https://github.com/emilykohler12/nexa-backend/pull/24). Sin merge. |
 | 2 | Alternativas y criterio de descarte | Merge directo o push a `main`: descartados, el flujo de la AE4 es que Emily revise y mergee cada fase en `integracion-ae4`, y `main` redespliega a la clienta real. |
-| 3 | Evidencia que la sostiene | `npm run typecheck:all` sin errores (salida 0) y `npm test` con **57 archivos y 638 pruebas en verde** (15:20), después de los commits `8974ed1`, `d484c3e` y `4051bba` (documentación, entrada 87). |
+| 3 | Evidencia que la sostiene | `npm run typecheck:all` sin errores (salida 0) y `npm test` con **57 archivos y 638 pruebas en verde** (15:20), después de los commits `8974ed1`, `d484c3e` y `4051bba` (documentación, entrada 105). |
 | 4 | Aporte personal | Emily definió el flujo (push y pull request por fase, ella mergea). |
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Opus 5.5) y `gh`. |
 
 ---
 
-**Nota de la entrada 89 a la 93.** Estas cinco entradas son las del frontend de la AE4 (fases 1, 2, 3, 3b y la sincronización con `main`). Estaban en `00-gestion/BITACORA.md` de `nexa-frontend`; el 05/11/2026 se pasaron acá con el texto tal cual (solo se les dio el formato de tabla de esta bitácora y se escaparon las barras verticales) y ese archivo se quitó del frontend: las bitácoras viven solo en `nexa-backend`. Las referencias a `00-gestion/BITACORA.md` o a «esta bitácora» que quedan dentro del texto son de entonces.
+**Nota de la entrada 107 a la 93.** Estas cinco entradas son las del frontend de la AE4 (fases 1, 2, 3, 3b y la sincronización con `main`). Estaban en `00-gestion/BITACORA.md` de `nexa-frontend`; el 05/11/2026 se pasaron acá con el texto tal cual (solo se les dio el formato de tabla de esta bitácora y se escaparon las barras verticales) y ese archivo se quitó del frontend: las bitácoras viven solo en `nexa-backend`. Las referencias a `00-gestion/BITACORA.md` o a «esta bitácora» que quedan dentro del texto son de entonces.
 
-## Entrada 89: AE4, frontend, fase 1 — se eliminan campañas, puntos y fecha de nacimiento (rama `refactor/quitar-campanas-puntos-nacimiento`)
+
+## Entrada 107: AE4, frontend, fase 1 — se eliminan campañas, puntos y fecha de nacimiento (rama `refactor/quitar-campanas-puntos-nacimiento`)
 
 **Fecha:** 2026-10-31 (hora de la máquina, UTC-3)
 
@@ -1205,7 +1528,8 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 
 **Impacto en el backend:** ninguno. Se leyó sin editar.
 
-## Entrada 90: AE4, frontend, fase 2 — horarios reabiertos, reserva tardía y estados de inasistencia (rama `feat/horarios-reabiertos-y-estados`)
+
+## Entrada 108: AE4, frontend, fase 2 — horarios reabiertos, reserva tardía y estados de inasistencia (rama `feat/horarios-reabiertos-y-estados`)
 
 **Fecha:** 2026-10-31 (hora de la máquina, UTC-3)
 
@@ -1220,7 +1544,8 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 
 **Impacto en el backend:** ninguno. Se leyó sin editar.
 
-## Entrada 91: AE4, frontend, fase 3 — cancelación con hora de aviso y devolución de la seña (rama `feat/cancelacion-con-hora-de-aviso`)
+
+## Entrada 109: AE4, frontend, fase 3 — cancelación con hora de aviso y devolución de la seña (rama `feat/cancelacion-con-hora-de-aviso`)
 
 **Fecha:** 2026-10-31 (hora de la máquina, UTC-3)
 
@@ -1235,7 +1560,8 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 
 **Impacto en el backend:** ninguno. Se leyó sin editar.
 
-## Entrada 92: AE4, frontend, fase 3b — enlaces del recordatorio de turno, fechas en hora de Argentina y política de privacidad (rama `feat/enlaces-recordatorio-y-fechas`)
+
+## Entrada 110: AE4, frontend, fase 3b — enlaces del recordatorio de turno, fechas en hora de Argentina y política de privacidad (rama `feat/enlaces-recordatorio-y-fechas`)
 
 **Fecha:** 2026-11-01 (hora de la máquina, UTC-3)
 
@@ -1243,14 +1569,54 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 |---|---|---|
 | 1 | Qué se decidió | Acompañar en el frontend la Fase 3b del backend (recordatorio de turno por mail, pull request 17): que los botones del mail, que apuntan a `/mis-turnos?turno=<id>&accion=ver|reprogramar|cancelar`, abran el turno en «Mis turnos» sin ejecutar nada por sí solos; que las fechas de «hoy» se calculen en hora de Argentina; que cancelar un servicio suelto de un combo pida confirmación, y que la política de privacidad diga para qué se usa el correo (recordatorios, avisos de turno y mensajes de la cuenta, sin campañas) con la versión `2026-11`. **Lo hizo Claude Code (Claude Sonnet 5.5), no yo**, por una instrucción mía. |
 | 2 | Alternativas y criterio de descarte | (a) El enlace lleva a una ruta alias `/mis-turnos` que redirige a `/client/appointments` y no a una segunda pantalla de turnos, para no duplicar lógica. (b) Para volver tras el login se guarda el enlace en `sessionStorage` (como el carrito y la preselección de reserva) y no en el estado del router, porque el ingreso puede recargar la página; la marca vence a la hora y se borra siempre al entrar, incluso si entra una profesional o un administrador (a ellos no se les abre el turno). (c) «Turno inexistente» y «turno de otra clienta» dicen lo mismo: el servidor solo devuelve los turnos propios y distinguirlos revelaría si un id existe. (d) El enlace espera a que se cierren los avisos que ya salen al entrar (turno reprogramado, reseña pendiente) para no apilar diálogos. (e) Se resuelve durante el render y no en un efecto, porque la regla de lint `react-hooks/set-state-in-effect` lo rechaza. (f) Las fechas usan `Intl` con `America/Argentina/Buenos_Aires` y no una resta fija de 3 horas. |
-| 3 | Evidencia que la sostiene | Pull request 17 del backend leído sin editar (`src/modules/appointments/reminder.ts`, entrada 75 de su bitácora): el enlace es `FRONTEND_URL/mis-turnos?turno=<id>&accion=ver|reprogramar|cancelar`, el id es el de la primera pata del combo, y la lista que el backend dejó para el frontend (alias, login y vuelta, abrir con confirmación, mensajes, quitar los parámetros, no abrir para personal). `GET /api/client/appointments` devuelve solo los turnos de la clienta, sin límite. Pruebas: lint sin errores, `typecheck:all` sin errores, 296 tests en 34 archivos y `build` correcto; las pruebas de fecha fallan con el código anterior (`toISOString`) y pasan con el nuevo. Además se comprobó en el navegador, en ancho de celular, que sin sesión `/mis-turnos?...` lleva a `/login` y deja el enlace guardado. Commits (README 8.3): `0aeb530` (fechas), `b05d8d0` (servicio suelto de un combo), `aeaac72` (enlaces del recordatorio) y `f78f8aa` (política de privacidad). |
+| 3 | Evidencia que la sostiene | Pull request 17 del backend leído sin editar (`src/modules/appointments/reminder.ts`, entrada 92 de su bitácora): el enlace es `FRONTEND_URL/mis-turnos?turno=<id>&accion=ver|reprogramar|cancelar`, el id es el de la primera pata del combo, y la lista que el backend dejó para el frontend (alias, login y vuelta, abrir con confirmación, mensajes, quitar los parámetros, no abrir para personal). `GET /api/client/appointments` devuelve solo los turnos de la clienta, sin límite. Pruebas: lint sin errores, `typecheck:all` sin errores, 296 tests en 34 archivos y `build` correcto; las pruebas de fecha fallan con el código anterior (`toISOString`) y pasan con el nuevo. Además se comprobó en el navegador, en ancho de celular, que sin sesión `/mis-turnos?...` lleva a `/login` y deja el enlace guardado. Commits (README 8.3): `0aeb530` (fechas), `b05d8d0` (servicio suelto de un combo), `aeaac72` (enlaces del recordatorio) y `f78f8aa` (política de privacidad). |
 | 4 | Aporte personal | Di la instrucción y las reglas (alias que conserva `turno` y `accion`, login y vuelta, confirmación siempre, mensajes para los casos de borde, fechas en hora de Argentina). El código, las pruebas, el README (sección 8.3) y esta entrada los hizo Claude Code, en la rama `feat/enlaces-recordatorio-y-fechas`, cortada de `integracion-ae4` con las fases 2 y 3 ya integradas. Se sube con pull request a `integracion-ae4`; la revisión y el merge quedan de mi lado. |
-| 5 | Desacuerdo y resolución | No hubo. Puntos para que revise: (a) la instrucción pide un mensaje si el turno «ya empezó», y se aplicó a las tres acciones; como la Fase 3 permite cancelar un turno ya empezado desde la lista, el enlace `cancelar` de un turno empezado dice «ya empezó» pero la clienta todavía puede cancelarlo desde «Historial»; (b) fechas calculadas con `toISOString()` que **no se tocaron** por estar fuera del pedido: `PromotionsPage.tsx` (`todayISO`, vigencia de promociones), `shared/utils/promotionWindow.ts` (`isPromotionLive`, con su prueba), `InviteModal.tsx` (fecha mínima), `InventoryTab.tsx` (fecha por defecto) y `AppointmentModal.tsx` del administrador (`editDate`, que toma la fecha de un instante en UTC); `Agenda.tsx` de la profesional usa la fecha del dispositivo, no `toISOString()`: es correcta en un dispositivo en Argentina y no se cambió; (c) en el flujo de reprogramación, por lo que se lee en el código, el botón de guardar queda habilitado con el mismo horario ya elegido; no se verificó en pantalla y no se cambió; (d) `PRIVACY_POLICY_VERSION` del frontend (`src/app/config/legal.ts`) pasó de `2026-09` a `2026-11` y tiene que coincidir con la del backend (`nexa-backend/src/app/constants/legal.ts`), que sigue en `2026-09`: hasta que se cambie allá, la página muestra una versión y al aceptar se graba otra, y subirla allá vuelve a pedir la aceptación a las clientas; (e) del lado del backend siguen a tu decisión los puntos que dejó su entrada 75 (tope de 1 hora, `reminder_sent_at` al reprogramar, política de privacidad); (f) fuera de la comprobación del login en el navegador, el resto se verificó con pruebas de componente y no contra el backend real. |
+| 5 | Desacuerdo y resolución | No hubo. Puntos para que revise: (a) la instrucción pide un mensaje si el turno «ya empezó», y se aplicó a las tres acciones; como la Fase 3 permite cancelar un turno ya empezado desde la lista, el enlace `cancelar` de un turno empezado dice «ya empezó» pero la clienta todavía puede cancelarlo desde «Historial»; (b) fechas calculadas con `toISOString()` que **no se tocaron** por estar fuera del pedido: `PromotionsPage.tsx` (`todayISO`, vigencia de promociones), `shared/utils/promotionWindow.ts` (`isPromotionLive`, con su prueba), `InviteModal.tsx` (fecha mínima), `InventoryTab.tsx` (fecha por defecto) y `AppointmentModal.tsx` del administrador (`editDate`, que toma la fecha de un instante en UTC); `Agenda.tsx` de la profesional usa la fecha del dispositivo, no `toISOString()`: es correcta en un dispositivo en Argentina y no se cambió; (c) en el flujo de reprogramación, por lo que se lee en el código, el botón de guardar queda habilitado con el mismo horario ya elegido; no se verificó en pantalla y no se cambió; (d) `PRIVACY_POLICY_VERSION` del frontend (`src/app/config/legal.ts`) pasó de `2026-09` a `2026-11` y tiene que coincidir con la del backend (`nexa-backend/src/app/constants/legal.ts`), que sigue en `2026-09`: hasta que se cambie allá, la página muestra una versión y al aceptar se graba otra, y subirla allá vuelve a pedir la aceptación a las clientas; (e) del lado del backend siguen a tu decisión los puntos que dejó su entrada 92 (tope de 1 hora, `reminder_sent_at` al reprogramar, política de privacidad); (f) fuera de la comprobación del login en el navegador, el resto se verificó con pruebas de componente y no contra el backend real. |
 | 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5). Los commits llevan la línea `Co-Authored-By: Claude Sonnet 5.5`. Último commit de la Fase 3 (README y bitácora): `7811400`. Último commit de esta fase (README y bitácora): el de esta misma entrada, que no puede citar su propio hash; se ve con `git log -1 -- 00-gestion/BITACORA.md` en la rama de la Fase 3b. |
 
 **Impacto en el backend:** ninguno. Se leyó sin editar.
 
-## Entrada 93: AE4, frontend — sincronización de `main` en `integracion-ae4` (rama `chore/sincronizar-main-en-integracion`)
+
+## Entrada 111: cierre de las fases 0 a 9 y plan de la última tanda de código
+
+**Fecha:** 2026-11-01 (hora aproximada, Argentina; después del pull request 26 de las 15:38)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Dar por terminadas las fases 0 a 9 del backend (fases 4 a 9 con sus PR #18 a #26: tienda con lista pública solo de productos disponibles y salida de inventario al pagar; anonimización ampliada y alergia del perfil solo para quien atendió; brechas de requisitos con validador de celular argentino, categorías de servicio acotadas, servicio especial con pago pendiente, fecha de ingreso de la profesional y limpieza de avisos y de restos de Google; 86 pruebas nuevas de cobertura; deuda técnica y seed de demostración; informes de cobertura y estimación de horas) y la Fase 6 del frontend (PR #16). Marcar como terminadas y mover a TERMINADOS once tarjetas de Trello de la lista de código. Definir la última tanda de código: backend Fase 10 (validación del perfil y las franjas, 404 en lugar de 500, PUT parcial, stock negativo, postulaciones, galería, clave de servicio para borrar archivos, indicador pendingBalance, limpieza de ramas y plan de despliegue) y frontend Fase 7 (tienda, alergias, fechas en hora de Argentina, reprogramación, enlace de cancelar y PR final hacia `main`). Escribir el procedimiento para Supabase, Render y Vercel y la etiqueta v2.0.0 de la versión congelada. |
+| 2 | Alternativas y criterio de descarte | (a) Abrir la política del bucket de Supabase para que la clave anónima pueda borrar: descartado, permitiría borrar archivos a cualquiera con esa clave; se usa la clave de servicio solo en el backend. (b) Aplicar las migraciones a producción fase por fase: descartado, se aplican juntas una sola vez, con respaldo, y la que borra columnas va última. (c) Fusionar `integracion-ae4` con `main` sin migrar antes la base: descartado, el redespliegue del backend fallaría. (d) Dejar sin corregir los hallazgos de la Fase 7: descartado para los que afectan datos (franjas inválidas, stock negativo, datos personales en el registro de actividad); los demás se declaran. (e) Dar RNF-01 por cumplido con la evidencia del 28/10: descartado, midió una base de pruebas local con red simulada; el criterio exige un celular real contra producción. |
+| 3 | Evidencia que la sostiene | Informes de Claude Code de las fases 4 a 9 (typecheck sin errores; backend 638 pruebas en las fases 8 y 9; frontend 326 pruebas en la Fase 6). Cobertura: 29 requisitos completos, 11 parciales y 2 sin prueba (RNF-01 y RNF-02). Estimación de horas: 266 commits, 43,3 a 45,5 horas de desarrollo, 21,6 a 22,8 % de las 200 planificadas (cifra reemplazada el 10/11/2026 por la de 424 horas, ver la entrada 144). Evidencia parcial de RNF-01 del 28/10/2026 (Lighthouse y recorrido medido en base local). |
+| 4 | Aporte personal | Emily eligió las opciones de las consultas de Claude Code (validador de celular, categorías 4 más combo, liberar el horario del servicio especial al cancelar, pruebas de firma y de reserva tardía, excepciones de mails en RF-24, prueba del caso de postulaciones), mergeó los PR de las fases, hizo la medición de RNF-01 en local y debe aplicar migraciones, variables y la prueba manual. |
+| 5 | Desacuerdo y resolución | La Fase 7 incluyó pruebas de la firma del webhook de Mercado Pago aunque Emily había dejado Mercado Pago para después de la AE4: se aceptó porque no toca `src/` ni llama a Mercado Pago. Claude Code incluyó por error un archivo en un commit de la Fase 8 (`git add -A`) y lo registró en la entrada 105. Las fases 2, 3 y 3b del frontend no se probaron a mano contra el backend real. Queda abierto el dato de qué variables hay hoy en Render. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: revisión de los informes de las fases 4 a 9, redacción de los prompts de la Fase 10 del backend y de la Fase 7 del frontend y del procedimiento de despliegue, y actualización del tablero (once tarjetas terminadas, tres tarjetas nuevas y comentarios en las abiertas). Claude no ejecutó ni verificó ningún cambio de código ni de base de datos. Revisión final por Emily pendiente: mergear los PR abiertos, aplicar migraciones, cargar las variables, probar a mano y etiquetar la versión. |
+
+## Entrada 112: corrección del procedimiento de despliegue y limpieza del tablero de código
+
+**Fecha:** 2026-11-02 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Corregir el procedimiento de despliegue según `docs/plan-de-despliegue.md` de Claude Code: las migraciones se aplican a mano en el SQL Editor de Supabase y se registran con `scripts/migration-checksums.mjs`, no con `prisma migrate deploy`. Aplicar primero las siete migraciones que agregan columnas y tablas, reiniciar el backend con las variables de entorno y dejar para el final la migración que borra columnas (`20261030150000`). Marcar como urgente la migración de la base: según el documento de horas, el PR 25 del backend (`integracion-ae4` hacia `main`) ya está mergeado, por lo que el backend nuevo puede estar desplegado en Render sobre una base sin migrar y con el frontend viejo. Cerrar cinco tarjetas de Trello (código maestro, P4, P9, Fase 3b y el paraguas de las fases), mover a la lista de instrumentos el plan de implantación y dejar ocho tarjetas de código abiertas con motivo. Posponer el libro v8 hasta terminar las fases 10 (backend) y 7 (frontend). |
+| 2 | Alternativas y criterio de descarte | (a) Usar `prisma migrate deploy` como indicó Claude por error: descartado, no registra los checksums que verifica el plan del proyecto. (b) Aplicar la migración que borra columnas primero, como figura en el plan: descartado por Claude para esta ejecución, porque el backend nuevo ya no usa esas columnas y el orden agrega, despliega y borra es el más seguro; con 0 clientas el riesgo es bajo en ambos casos. (c) Dar por cerradas las fases solo porque los PR están mergeados: descartado, quedan la prueba manual, el frontend de la tienda y de las alergias, y la etiqueta de versión. |
+| 3 | Evidencia que la sostiene | `docs/plan-de-despliegue.md`, `docs/cobertura-por-requisito.md` (42 requisitos: 29 completos, 11 parciales, 2 sin prueba; 638 pruebas en verde), `docs/cambios-y-decisiones.md`, `docs/estimacion-horas.md` (266 commits; el backend se estima a partir de `main` en `4aa87d1`, después del PR 25), `docs/consultas-previas-produccion.sql` con la consulta 8 nueva y `docs/evidencias/fase-7-typecheck.txt`. |
+| 4 | Aporte personal | Emily subió los documentos generados por Claude Code, detectó que faltaba el libro v8 y pidió una lista por pasos de lo que debe hacer en Supabase, Vercel y en el código. Debe verificar el estado de Render y de la base, aplicar las migraciones, cargar las variables, publicar el frontend, correr las fases 10 y 7 y hacer la prueba manual. |
+| 5 | Desacuerdo y resolución | El procedimiento de despliegue que Claude indicó en la entrada anterior contradecía el plan del repositorio; se corrige en esta entrada. Claude tampoco había advertido que el PR 25 podía estar mergeado: lo advirtió al leer el documento de horas. Queda por confirmar en Render y Supabase si el despliegue ya ocurrió. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: lectura de los documentos de Claude Code, redacción de los pasos de despliegue y de los prompts de la Fase 10 y de la Fase 7, y actualización del tablero (cinco tarjetas cerradas, una movida, una actualizada con el procedimiento real y un comentario). Claude no ejecutó ni verificó ningún cambio de código ni de base de datos. Revisión final por Emily pendiente: verificar Render y Supabase hoy, aplicar las migraciones y cargar las variables. |
+
+## Entrada 113: base migrada y frontend con conflictos para integrar
+
+**Fecha:** 2026-11-02 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Registrar que la base de Supabase quedó migrada: las siete migraciones que agregan columnas y tablas y la que borra campañas, puntos, recordatorio de inactividad y fecha de nacimiento (`20261030150000`) se aplicaron a mano en el SQL Editor y el control de migraciones da OK en 62 de 62. Confirmar que el backend nuevo (PR 25, commit `4aa87d1`) está desplegado en Render con las variables en orden. Resolver la integración del frontend con un PR de sincronización: `integracion-ae4` hacia `main` da «Can't automatically merge» (33 commits, 108 archivos) por conflictos con `main`. Después de integrarlo, quitar `VITE_GOOGLE_CLIENT_ID` de Vercel, probar en producción y etiquetar la versión. |
+| 2 | Alternativas y criterio de descarte | (a) Resolver los conflictos a mano en la pantalla de GitHub: descartado, el riesgo de perder cambios de la AE4 en README y bitácora es alto. (b) Forzar el merge: descartado, pisaría cambios de `main`. (c) Esperar a terminar la Fase 7 del frontend para integrar: descartado, producción tiene backend nuevo y frontend viejo; se integra primero y la tienda se completa después. |
+| 3 | Evidencia que la sostiene | Captura del SQL Editor con la última migración registrada del 28/10 (antes de aplicar). Resultado del control de checksums: 62 de 62 en OK después de la parte 3. Respaldo diario del 2/11 a las 11:00. Captura de GitHub: comparación `main` contra `integracion-ae4`, «Can't automatically merge», 33 commits, 108 archivos. `docs/plan-de-despliegue.md`. |
+| 4 | Aporte personal | Emily aplicó las migraciones en Supabase siguiendo el procedimiento, comprobó Render y mergeó en `integracion-ae4` los PR 15 y 16 del frontend. Le toca mergear el PR de sincronización, el PR final a `main`, ajustar Vercel y probar. |
+| 5 | Desacuerdo y resolución | Claude había indicado antes `prisma migrate deploy`, que no coincide con el plan del repositorio; se corrigió el 2/11 y se aplicó el procedimiento correcto del plan. Queda abierto que la tienda puede verse vacía en producción hasta la Fase 7 del frontend. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: procedimiento paso a paso para copiar y pegar en PowerShell y Supabase, prompt de sincronización para Claude Code y comentario en la tarjeta de despliegue. Claude no ejecutó ni verificó nada en la base ni en el repositorio. Revisión final por Emily pendiente: PR de sincronización, merge final a `main`, Vercel y prueba en producción. |
+
+## Entrada 114: AE4, frontend — sincronización de `main` en `integracion-ae4` (rama `chore/sincronizar-main-en-integracion`)
 
 **Fecha:** 2026-11-05 (hora de la máquina, UTC-3)
 
@@ -1265,24 +1631,39 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 
 **Impacto en el backend:** ninguno. Se leyó sin editar.
 
-## Entrada 94: AE4, frontend — `/mis-turnos` con `noindex`, la fase 6 en el README del frontend y las bitácoras solo en el backend (rama `docs/bitacora-en-backend-y-noindex-mis-turnos`)
+
+## Entrada 115: AE4, frontend — `/mis-turnos` con `noindex`, la fase 6 en el README del frontend y las bitácoras solo en el backend (rama `docs/bitacora-en-backend-y-noindex-mis-turnos`)
 
 **Fecha:** 2026-11-05 (hora de la máquina, UTC-3)
 
 | # | Elemento | Registro |
 |---|---|---|
-| 1 | Qué se decidió | **Hecho por Claude Code (Sonnet 5.5)**, a pedido de Emily, en una rama cortada de `chore/sincronizar-main-en-integracion`. **(a)** La ruta `/mis-turnos` (fase 3b) no se indexa: `X-Robots-Tag: noindex, nofollow` en `vercel.json`, `usePageMeta({ title: 'Mis turnos', noindex: true })` en `MyAppointmentsLinkPage` y una prueba que comprueba la etiqueta `robots`. **(b)** El README del frontend suma la **fase 6** a la tabla 8.3 (rama `fix/brechas-requisitos`, commits `2f15ec1`, `88cfa58`, `6cd805d`, `a1f092b` y `6d46fbb`) con su párrafo, y aclara que esos commits no llevan la línea `Co-Authored-By`. **(c)** Las bitácoras viven solo en `nexa-backend` (`BITACORA.md` hasta el 03/09/2026, `20261006_BitacoraIndividual_KohlerAE2_v5.docx` del 10/09 al 06/10/2026 y este archivo desde el 23/10/2026, con lo que se haga en noviembre y diciembre de 2026): las entradas 89 a 93 son las del frontend, pasadas desde `00-gestion/BITACORA.md` de `nexa-frontend`, y se quitaron del frontend ese archivo y la copia del `.docx` de la AE2. El README y `CLAUDE.md` del frontend se actualizaron. |
-| 2 | Alternativas y criterio de descarte | **`Disallow: /mis-turnos` en `robots.txt`:** descartado, si el rastreador no puede entrar nunca ve el `noindex`; es el mismo criterio que ya explica el comentario de `robots.txt` para `/login`, `/registro-profesional` y `/pago/`. **Agregarla al `sitemap.xml`:** no, es una ruta personal. **Corregir con `--amend` o reescribir los commits de la fase 6 para sumarles la línea de coautoría:** descartado, ya están mergeados; se declaró la excepción en el README. **Dejar las bitácoras duplicadas en el frontend:** descartado por Emily. **Cambiar el texto de las entradas 89 a 93 al pasarlas:** no, solo formato. |
+| 1 | Qué se decidió | **Hecho por Claude Code (Sonnet 5.5)**, a pedido de Emily, en una rama cortada de `chore/sincronizar-main-en-integracion`. **(a)** La ruta `/mis-turnos` (fase 3b) no se indexa: `X-Robots-Tag: noindex, nofollow` en `vercel.json`, `usePageMeta({ title: 'Mis turnos', noindex: true })` en `MyAppointmentsLinkPage` y una prueba que comprueba la etiqueta `robots`. **(b)** El README del frontend suma la **fase 6** a la tabla 8.3 (rama `fix/brechas-requisitos`, commits `2f15ec1`, `88cfa58`, `6cd805d`, `a1f092b` y `6d46fbb`) con su párrafo, y aclara que esos commits no llevan la línea `Co-Authored-By`. **(c)** Las bitácoras viven solo en `nexa-backend` (`BITACORA.md` hasta el 03/09/2026, `20261006_BitacoraIndividual_KohlerAE2_v5.docx` del 10/09 al 06/10/2026 y este archivo desde el 23/10/2026, con lo que se haga en noviembre y diciembre de 2026): las entradas 107 a 110 y 114 son las del frontend, pasadas desde `00-gestion/BITACORA.md` de `nexa-frontend`, y se quitaron del frontend ese archivo y la copia del `.docx` de la AE2. El README y `CLAUDE.md` del frontend se actualizaron. |
+| 2 | Alternativas y criterio de descarte | **`Disallow: /mis-turnos` en `robots.txt`:** descartado, si el rastreador no puede entrar nunca ve el `noindex`; es el mismo criterio que ya explica el comentario de `robots.txt` para `/login`, `/registro-profesional` y `/pago/`. **Agregarla al `sitemap.xml`:** no, es una ruta personal. **Corregir con `--amend` o reescribir los commits de la fase 6 para sumarles la línea de coautoría:** descartado, ya están mergeados; se declaró la excepción en el README. **Dejar las bitácoras duplicadas en el frontend:** descartado por Emily. **Cambiar el texto de las entradas 107 a 110 y 114 al pasarlas:** no, solo formato. |
 | 3 | Evidencia que la sostiene | `00-gestion/BITACORA.md` del frontend, hasta la línea 485, era igual a la `BITACORA.md` del backend salvo el separador final, y el `.docx` de la AE2 tiene el mismo SHA-256 en los dos repositorios (`d8a05dd2…`); por eso no se perdió nada al quitarlos, y ambos siguen en el historial de git del frontend. El archivo `20261028_BitacoraIndividual_KohlerAE3_v1.md` de la tabla 1.5 del README siempre estuvo en `nexa-backend` (la tabla dice que esa documentación vive allá), no faltaba. Resultado en la rama: `npm run lint` sin errores, `typecheck:all` sin errores, **333 tests en 37 archivos** y `build` correcto. |
 | 4 | Aporte personal | Emily detectó los tres huecos (noindex de `/mis-turnos`, fase 6 sin documentar, referencia a la bitácora de la AE3) y definió el criterio: todo cambio desde el 23/10/2026 va en la bitácora de la AE3 del backend y el frontend no lleva archivos de bitácora. |
-| 5 | Desacuerdo y resolución | Los tres puntos de la entrada 93 (c, d, e) quedan resueltos con esta entrada. **Hallazgo, sin resolver:** la entrada 78 (fase 4, tienda) deja la adaptación del frontend como «no se hizo» y el código sigue igual: `StoreSection.tsx` filtra `p.status === 'active' && p.stock > 0` sobre `/api/store/products`, `PromotionsPage.tsx` (línea 230) y `StorePage.tsx` (línea 27) piden `/api/store/products` en vez de `/api/admin/store/products`. Con el backend de la fase 4 desplegado, la tienda pública quedaría vacía y el administrador dejaría de ver inactivos y agotados (la entrada 78 pide que backend y frontend salgan juntos). No se tocó porque no estaba en el pedido. Los commits de la fase 6 quedaron a nombre de Emily y sin la línea de coautoría, aunque la entrada 82 dice que los hizo Claude Code: figura en el README. |
+| 5 | Desacuerdo y resolución | Los tres puntos de la entrada 114 (c, d, e) quedan resueltos con esta entrada. **Hallazgo, sin resolver:** la entrada 96 (fase 4, tienda) deja la adaptación del frontend como «no se hizo» y el código sigue igual: `StoreSection.tsx` filtra `p.status === 'active' && p.stock > 0` sobre `/api/store/products`, `PromotionsPage.tsx` (línea 230) y `StorePage.tsx` (línea 27) piden `/api/store/products` en vez de `/api/admin/store/products`. Con el backend de la fase 4 desplegado, la tienda pública quedaría vacía y el administrador dejaría de ver inactivos y agotados (la entrada 96 pide que backend y frontend salgan juntos). No se tocó porque no estaba en el pedido. Los commits de la fase 6 quedaron a nombre de Emily y sin la línea de coautoría, aunque la entrada 100 dice que los hizo Claude Code: figura en el README. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con un script descartable de Node para convertir las entradas al formato de tabla (no queda en el repositorio). Context7 no se usó: no se escribió código que dependa de una librería del proyecto. Revisión de Emily pendiente. Sin commits todavía: se hacen cuando Emily lo pida. |
 
 **Impacto en el backend:** ninguno. Se leyó sin editar, salvo esta bitácora, que Emily pidió que reciba estas entradas.
 
 ---
 
-## Entrada 95: AE4, fase 10 — corrección de los hallazgos de la fase 7 y cierre del código (rama `fix/fase-10-cierre-codigo`)
+
+## Entrada 116: merges del frontend y del backend registrados, quedan dos fases de código
+
+**Fecha:** 2026-11-05 (hora aproximada, Argentina; después de los merges de las 17:26 y las 17:28)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Registrar que Emily mergeó en GitHub el PR #19 del frontend (noindex en /mis-turnos, Fase 6 en el README, bitácoras fuera del frontend) y el PR #27 del backend (entradas 107 a 110 y 114 y 115 en la bitácora de la AE3). Dejar un comentario de avance en las tarjetas «URGENTE: migrar la base…» y «FRONTEND Fase 7». No marcar ninguna tarjeta como completada: ninguna terminó. Lo que queda de código, sin Mercado Pago, son la Fase 7 del frontend y la Fase 10 del backend. |
+| 2 | Alternativas y criterio de descarte | (a) Marcar como completada la tarjeta URGENTE: descartado, faltan la prueba en producción, la etiqueta v2.0.0 y la regla de Sentry. (b) Marcar completada «Subir al código»: descartado, el libro v8 todavía no existe y la bitácora de Claude (chat) de la entrada 68 en adelante no consta como subida. (c) Dejar la tienda para después de la entrega: descartado, con el backend de la Fase 4 desplegado la tienda pública se ve vacía hoy. |
+| 3 | Evidencia que la sostiene | Mensajes de Claude Code con los PR #19 y #27 y el aviso de la tienda sin adaptar (entrada 96 del backend). Lectura del tablero Nexa AE4 PIF del 5/11. Comentarios agregados en las tarjetas 77 y 76. |
+| 4 | Aporte personal | Emily mergeó los dos PR y confirmó que VITE_GOOGLE_CLIENT_ID no estaba en Vercel. Le toca revisar que Vercel publicó, probar en producción, etiquetar y correr los dos prompts de abajo. |
+| 5 | Desacuerdo y resolución | Claude no puede ver GitHub ni Vercel: supone que main del frontend ya contiene todo integracion-ae4, porque el PR #19 salió de la rama de sincronización. El primer paso del prompt del frontend lo comprueba con un comando. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: lectura del tablero y dos comentarios. No ejecutó ni verificó nada en el código, la base ni los despliegues. Revisión final por Emily pendiente. |
+
+## Entrada 117: AE4, fase 10 — corrección de los hallazgos de la fase 7 y cierre del código (rama `fix/fase-10-cierre-codigo`)
 
 **Fecha:** 2026-11-05 (hora de la máquina, UTC-3)
 
@@ -1297,7 +1678,21 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 
 **Impacto en el frontend (contrato):** `POST /api/contact/job-interest` ahora responde `400` con cuerpo vacío o inválido y `429` al pasar el límite (`JoinUsSection.tsx` ya muestra el mensaje de error, pero hoy permite enviar con un solo campo cualquiera y un teléfono mal escrito ahora se rechaza); `PATCH /api/professional/profile`, `PATCH /api/professional/schedule` y `POST /api/professional/onboarding` responden `400` con franjas invertidas u horas inválidas; `PUT|PATCH|DELETE` de servicios, promociones y eventos especiales con id inexistente responden `404 NOT_FOUND` en vez de 500; `DELETE /api/store/movements/:id` puede responder `400 INSUFFICIENT_STOCK`; `GET /api/admin/dashboard` devuelve un `pendingBalance` menor. Sin migraciones y sin tocar Mercado Pago.
 
-## Entrada 96: Frontend, fase 7 — tienda, alergias, fechas en hora de Argentina y anonimización (rama `fix/fase-7-tienda-alergias-fechas` de `nexa-frontend`, PR nexa-frontend#20)
+
+## Entrada 118: fase 7 del frontend y Fase 10 del backend abiertas en PR, sin merge
+
+**Fecha:** 2026-11-05 (hora aproximada, Argentina; entre la apertura del PR 28 de las 22:38 y el merge del PR #20 de las 22:49)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Registrar el PR #20 del frontend (Fase 7, commits b234004, 4b14174, ad28510) y el PR 28 del backend (Fase 10, nueve commits, 650 pruebas en verde) con un comentario en las tarjetas 76 y 75. No marcar ninguna como completada: los dos PR siguen sin merge y quedan pendientes el contacto de postulaciones (RF-33), el PR de la Fase 9.3 y la adaptación del frontend a los cambios de respuesta. Cerrar todo con dos prompts para Claude Code. |
+| 2 | Alternativas y criterio de descarte | (a) Marcar 75 y 76 como completadas ahora: descartado, la propia tarjeta 5 dice que solo va a TERMINADOS lo que de verdad terminé, y un PR abierto no es código integrado. (b) Guardar las postulaciones en una tabla nueva: descartado como opción recomendada, exige otra migración a mano en Supabase y guarda datos personales más tiempo. (c) Dejar el frontend sin adaptar y confiar en el backend: descartado, el frontend recibiría 400, 404 y 429 donde antes recibía 500 o 201. |
+| 3 | Evidencia que la sostiene | Informes de Claude Code con los resultados de lint, typecheck, pruebas y build de cada PR. Comentarios agregados en las tarjetas 76 y 75. |
+| 4 | Aporte personal | Emily aprobó el plan de la Fase 10 (incluida la definición de pendingBalance) y decide ahora la opción de postulaciones. Le toca cargar variables en Render, correr las consultas en Supabase y mergear. |
+| 5 | Desacuerdo y resolución | Claude propone avisar por mail al estudio en vez de guardar la postulación; es una recomendación, no una decisión de Claude, y Emily puede elegir la tabla. Además, el texto del frontend declara «Claude Code (Sonnet 5.5)» y la entrada de la sincronización decía «Opus 5.5»: hay que confirmar qué modelo se usó en cada sesión antes de dejar la declaración de IA. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: dos comentarios y los prompts. No ejecutó ni verificó nada en el código, la base ni los despliegues. Revisión final por Emily pendiente. |
+
+## Entrada 119: Frontend, fase 7 — tienda, alergias, fechas en hora de Argentina y anonimización (rama `fix/fase-7-tienda-alergias-fechas` de `nexa-frontend`, PR nexa-frontend#20)
 
 **Fecha:** 2026-11-05, 22:55 (hora de la máquina, UTC-3). Se copia acá el texto que Emily pasó del frontend; no es un cambio de este repositorio.
 
@@ -1307,27 +1702,42 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 2 | Alternativas y criterio de descarte | Re-consultar la disponibilidad al abrir el carrito: descartado, alcanza con la carga de página y el backend valida el pedido. Reconocer ventas por `orderId`: descartado, el backend no lo tiene y se usa la nota. |
 | 3 | Evidencia que la sostiene | Lint y typecheck sin errores, 343 pruebas en verde, build correcto. |
 | 4 | Aporte personal | Emily definió el alcance y las reglas de la fase. |
-| 5 | Desacuerdo y resolución | Resuelve el hallazgo sin resolver de la entrada 78. Revisión de Emily pendiente. |
+| 5 | Desacuerdo y resolución | Resuelve el hallazgo sin resolver de la entrada 96. Revisión de Emily pendiente. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5). |
 
 **Impacto en el frontend:** es el propio cambio del frontend; no toca este repositorio.
 
-## Entrada 97: AE4, RF-33 — las postulaciones se avisan por mail al estudio; fase 9.3 a `main`; ramas locales (ramas `feat/postulaciones-por-mail` y `docs/fase-9-3-a-main`)
+
+## Entrada 120: AE4, RF-33 — las postulaciones se avisan por mail al estudio; fase 9.3 a `main`; ramas locales (ramas `feat/postulaciones-por-mail` y `docs/fase-9-3-a-main`)
 
 **Fecha:** 2026-11-05, 22:30 a 23:05 (hora de la máquina, UTC-3)
 
 | # | Elemento | Registro |
 |---|---|---|
-| 1 | Qué se decidió | **Hecho por Claude Code (Sonnet 5.5), no por Emily**, a pedido de ella, sin merge. (a) **RF-33 por mail** (decisión de Emily: avisar al estudio por mail y no guardar nada en la base): `contact.service.ts` manda nombre, correo, teléfono y mensaje por `mailProvider`, con todo el texto escapado; el destino es `BusinessSettings.email` y, si está vacío o no es un correo válido, `ADMIN_EMAIL`. No se creó ninguna variable de entorno ni migración. Si el mail falla responde `500 JOB_INTEREST_MAIL_FAILED` («No pudimos enviar tu postulación…») y deja una entrada de actividad de nivel `error` con solo los campos que llegaron. La actividad ya no guarda tampoco el mensaje (antes sí). Commit `905f149`, más el commit `bdb0896`, que suma el aviso a la lista cerrada de envíos permitidos de la prueba de RF-24 (asunto «Nueva postulación — Nexa»; sin eso fallaba la suite completa). (b) **Fase 9.3 a `main`:** `git log origin/main..origin/integracion-ae4` traía solo los 4 commits de la 9.3 (`5cffa20`, `fe8198f`, `6db83e8` y el merge `13e5270` del PR 26). El merge de `integracion-ae4` a `main` choca en esta bitácora (allá las entradas 89 y 90 son de la 9.3; en `main` esos números ya son del frontend), así que se armó `docs/fase-9-3-a-main` desde `origin/main` con los cuatro archivos de la 9.3 y esas dos entradas renumeradas 98 y 99: commit `a78cc8b`, PR 29. (c) **Ramas locales:** se borró `feat/recordatorio-turno-mail` (era `031e319`); `feat/fase-4-tienda`, `docs/informes-v8` e `integracion-ae4` se conservan. |
+| 1 | Qué se decidió | **Hecho por Claude Code (Sonnet 5.5), no por Emily**, a pedido de ella, sin merge. (a) **RF-33 por mail** (decisión de Emily: avisar al estudio por mail y no guardar nada en la base): `contact.service.ts` manda nombre, correo, teléfono y mensaje por `mailProvider`, con todo el texto escapado; el destino es `BusinessSettings.email` y, si está vacío o no es un correo válido, `ADMIN_EMAIL`. No se creó ninguna variable de entorno ni migración. Si el mail falla responde `500 JOB_INTEREST_MAIL_FAILED` («No pudimos enviar tu postulación…») y deja una entrada de actividad de nivel `error` con solo los campos que llegaron. La actividad ya no guarda tampoco el mensaje (antes sí). Commit `905f149`, más el commit `bdb0896`, que suma el aviso a la lista cerrada de envíos permitidos de la prueba de RF-24 (asunto «Nueva postulación — Nexa»; sin eso fallaba la suite completa). (b) **Fase 9.3 a `main`:** `git log origin/main..origin/integracion-ae4` traía solo los 4 commits de la 9.3 (`5cffa20`, `fe8198f`, `6db83e8` y el merge `13e5270` del PR 26). El merge de `integracion-ae4` a `main` choca en esta bitácora (allá las entradas 107 y 108 son de la 9.3; en `main` esos números ya son del frontend), así que se armó `docs/fase-9-3-a-main` desde `origin/main` con los cuatro archivos de la 9.3 y esas dos entradas renumeradas 98 y 99: commit `a78cc8b`, PR 29. (c) **Ramas locales:** se borró `feat/recordatorio-turno-mail` (era `031e319`); `feat/fase-4-tienda`, `docs/informes-v8` e `integracion-ae4` se conservan. |
 | 2 | Alternativas y criterio de descarte | **Variable nueva para el correo del estudio:** descartada, ya existe `BusinessSettings.email` (la carga el administrador en Configuración) y `ADMIN_EMAIL` (obligatoria en `env.ts`). **PR directo de `integracion-ae4` a `main`:** descartado, no se podía mergear limpio por la numeración de la bitácora. **Responder 201 aunque el mail falle:** descartado por pedido de Emily (se perdería la postulación sin que nadie se entere). |
 | 3 | Evidencia que la sostiene | `npm run typecheck:all` sin errores; 23 pruebas de los dos archivos tocados en verde (mail enviado, destino por defecto `ADMIN_EMAIL`, mail fallido, sin datos personales en la actividad). **Ramas:** `feat/recordatorio-turno-mail`: PR #17 mergeado (base `integracion-ae4`, llegó a `main` por el PR #25), `git cherry origin/main` marca su único commit como equivalente (`-`) y las cinco pruebas que agrega están en `origin/main`. `feat/fase-4-tienda`: `git cherry` marca `ac0ba11` como NO equivalente (`+`) y cuatro de sus pruebas (`terms-version.test.ts`) no están en `main`, sin PR mergeado con esa rama: no se borra. `docs/informes-v8`: sus 3 commits de la 9.3 todavía no están en `main` (PR 29 abierto). `integracion-ae4`: ya es ancestro de `origin/main`, pero se conserva hasta que la 9.3 llegue a `main`, por pedido de Emily. |
 | 4 | Aporte personal | Emily decidió que la postulación va por mail y sin guardarse, que se reuse el correo del estudio si existe, que el mail fallido no puede dar 201, el criterio para armar el PR de la 9.3 y para borrar ramas, y que no se toque Mercado Pago. |
-| 5 | Desacuerdo y resolución | El PR 28 (`fix/fase-10-cierre-codigo`) se mergeó mientras se trabajaba y el commit del mail todavía no se había subido: se pasó a una rama nueva desde `main` (cherry-pick de `9fa9656`). Esta entrada y la 96 podrían chocar con la 98 y la 99 del PR 29 al mergear el segundo (los dos agregan al final del archivo); se resuelve conservando las cuatro. Resuelve la duda (a) de la entrada 95. `docs/cobertura-por-requisito.md` es un informe generado y quedó desactualizado en RF-33: no se tocó. |
+| 5 | Desacuerdo y resolución | El PR 28 (`fix/fase-10-cierre-codigo`) se mergeó mientras se trabajaba y el commit del mail todavía no se había subido: se pasó a una rama nueva desde `main` (cherry-pick de `9fa9656`). Esta entrada y la 96 podrían chocar con la 98 y la 99 del PR 29 al mergear el segundo (los dos agregan al final del archivo); se resuelve conservando las cuatro. Resuelve la duda (a) de la entrada 117. `docs/cobertura-por-requisito.md` es un informe generado y quedó desactualizado en RF-33: no se tocó. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con `gh` y `git`. Context7 no se consultó: no se usó ninguna API nueva de una librería (se reutilizan `mailProvider`, Prisma y zod como ya estaban). |
 
-**Impacto en el frontend (contrato):** `POST /api/contact/job-interest` suma una respuesta de error: `500` con `code: 'JOB_INTEREST_MAIL_FAILED'` y `error` en español cuando el mail al estudio falla. `JoinUsSection.tsx` ya muestra el mensaje de error de la respuesta (entrada 95); el `201` no cambia. Hay que cargar en Render nada nuevo, pero conviene que Configuración > Negocio tenga el correo del estudio cargado (si no, llega a `ADMIN_EMAIL`).
+**Impacto en el frontend (contrato):** `POST /api/contact/job-interest` suma una respuesta de error: `500` con `code: 'JOB_INTEREST_MAIL_FAILED'` y `error` en español cuando el mail al estudio falla. `JoinUsSection.tsx` ya muestra el mensaje de error de la respuesta (entrada 117); el `201` no cambia. Hay que cargar en Render nada nuevo, pero conviene que Configuración > Negocio tenga el correo del estudio cargado (si no, llega a `ADMIN_EMAIL`).
 
-## Entrada 98: AE4, fase 9.3, estimación de horas a partir de los commits (rama `docs/informes-v8`)
+
+## Entrada 121: fase 10 del backend y Fase 7 del frontend pasadas a TERMINADOS
+
+**Fecha:** 2026-11-05 (hora aproximada, Argentina; noche, después del merge del PR 30 de las 23:06)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Marcar como completadas y mover a TERMINADOS las tarjetas «BACKEND Fase 10» (75) y «FRONTEND Fase 7» (76), porque Emily informó que mergeó el PR 28 y el #20, y el PR 30 (postulaciones por mail) también está mergeado. Dejar sin marcar la tarjeta URGENTE (77) y «Subir al código» (74). Cerrar lo que queda de código con un prompt para cada repositorio. |
+| 2 | Alternativas y criterio de descarte | (a) Esperar a que mergee también el PR 29 antes de marcar la 75: descartado, la tarjeta no incluye la estimación de horas. (b) Marcar la 77: descartado, faltan la prueba en producción y la etiqueta. (c) Pedirle otra vez a Claude Code el texto de la bitácora para pegarlo a mano: descartado por Emily, pierde tiempo; ahora el frontend la escribe directo en el repo del backend. |
+| 3 | Evidencia que la sostiene | Informe de Claude Code: PR 28 mergeado con CI verde, PR 29 y 30 abiertos, 652 pruebas en la rama del PR 30. Mensaje de Emily: «listo» para el PR 28 y el #20, y el PR 30 mergeado. Pendiente de comprobar: que los commits de la Fase 10 del frontend (386aa48 a b172e82) hayan entrado a main, porque se subieron a la rama del PR #20 y puede haberse mergeado antes. El prompt del frontend lo verifica primero. |
+| 4 | Aporte personal | Emily mergeó los PR y decidió que la etiqueta v2.0.0 se pone recién con todo el código cerrado, incluido Mercado Pago. |
+| 5 | Desacuerdo y resolución | Mercado Pago: tu tablero (tarjetas 49 y 10) declara la cuenta real de Loren como pendiente de puesta en producción, fuera de la entrega. Si querés incluirla antes de v2.0.0, hay que decidirlo; el prompt cubre solo la parte en modo prueba. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello: dos tarjetas marcadas y movidas. No ejecutó ni verificó nada en el código, la base ni los despliegues. Revisión final por Emily pendiente. |
+
+## Entrada 122: AE4, fase 9.3, estimación de horas a partir de los commits (rama `docs/informes-v8`)
 
 **Fecha:** 2026-11-01, 15:24 (Emily confirmó el merge del pull request 24 y de `integracion-ae4` en `main`, pull request 25), 15:25 a 15:26 (consulta del alcance a Emily) y de 15:26 a 15:35 (cálculo, documentos, verificación y commits). Hora de la máquina, UTC-3.
 
@@ -1342,7 +1752,8 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 
 **Impacto en el frontend:** ninguno.
 
-## Entrada 99: AE4, push de la fase 9.3 y pull request
+
+## Entrada 123: AE4, push de la fase 9.3 y pull request
 
 **Fecha:** 2026-11-01, 15:36 (hora de la máquina, UTC-3)
 
@@ -1350,29 +1761,31 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 |---|---|---|
 | 1 | Qué se decidió | **Hecho por Claude Code (Opus 5.5)**: `git push -u origin docs/informes-v8` y pull request 26 con base `integracion-ae4` (https://github.com/emilykohler12/nexa-backend/pull/26). Sin merge. Antes se borró la rama `docs/informes-v8` anterior (local y remota), ya mergeada por el pull request 24. |
 | 2 | Alternativas y criterio de descarte | Merge directo o push a `main`: descartados, el flujo de la AE4 es que Emily revise y mergee cada fase, y `main` redespliega a la clienta real. |
-| 3 | Evidencia que la sostiene | Commits `5cffa20` (estimación) y `fe8198f` (documentación, entrada 89); `npm test` con 638 pruebas en verde antes del push. |
+| 3 | Evidencia que la sostiene | Commits `5cffa20` (estimación) y `fe8198f` (documentación, entrada 107); `npm test` con 638 pruebas en verde antes del push. |
 | 4 | Aporte personal | Emily definió el flujo (push y pull request por fase, ella mergea). |
 | 5 | Desacuerdo y resolución | Ninguno. |
 | 6 | Herramienta auxiliar | Claude Code (Opus 5.5) y `gh`. |
 
-## Entrada 100: Frontend, fase 10 — errores nuevos del backend, franjas y saldo pendiente (rama `fix/fase-10-frontend` de `nexa-frontend`, PR nexa-frontend#21)
+
+## Entrada 124: Frontend, fase 10 — errores nuevos del backend, franjas y saldo pendiente (rama `fix/fase-10-frontend` de `nexa-frontend`, PR nexa-frontend#21)
 
 | Elemento | Contenido |
 |---|---|
-| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), no por Emily**, a pedido de ella, sin merge. Se adaptó el frontend a las respuestas nuevas de la fase 10 del backend. Los commits se hicieron primero sobre la rama del PR nexa-frontend#20 (`386aa48`, `805324d`, `81a353d`, `c894711`, `0953994`, `b172e82`); como ese PR se mergeó antes de que se subieran, se pasaron con `cherry-pick` a `fix/fase-10-frontend` (hashes vigentes: `2717a91`, `80b5381`, `4c8605d`, `ebc4698`, `d38a129`, `c8e3f70`; ver la entrada 101). (a) `errorMessage.ts`: mensajes para `400 VALIDATION_ERROR` (se le saca la ruta del campo), `404 NOT_FOUND`, `400 INSUFFICIENT_STOCK` y el `429` sin código; conservan el texto del servidor cuando es seguro y usan uno propio solo si falta. (b) `JoinUsSection`: distingue 400, 429 y error de envío; los campos opcionales vacíos siguen siendo válidos. (c) Franjas del onboarding y de Horarios: `validateAvailability` exige inicio menor al fin antes de enviar y se muestra el error del servidor (Horarios antes se tragaba el error). (d) Servicios, promociones, eventos, stock, galería y profesionales muestran el motivo del servidor en vez de un texto fijo. (e) La tarjeta «Saldo pendiente a cobrar en local» aclara que descuenta la seña y lo cobrado en el local. |
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), no por Emily**, a pedido de ella, sin merge. Se adaptó el frontend a las respuestas nuevas de la fase 10 del backend. Los commits se hicieron primero sobre la rama del PR nexa-frontend#20 (`386aa48`, `805324d`, `81a353d`, `c894711`, `0953994`, `b172e82`); como ese PR se mergeó antes de que se subieran, se pasaron con `cherry-pick` a `fix/fase-10-frontend` (hashes vigentes: `2717a91`, `80b5381`, `4c8605d`, `ebc4698`, `d38a129`, `c8e3f70`; ver la entrada 125). (a) `errorMessage.ts`: mensajes para `400 VALIDATION_ERROR` (se le saca la ruta del campo), `404 NOT_FOUND`, `400 INSUFFICIENT_STOCK` y el `429` sin código; conservan el texto del servidor cuando es seguro y usan uno propio solo si falta. (b) `JoinUsSection`: distingue 400, 429 y error de envío; los campos opcionales vacíos siguen siendo válidos. (c) Franjas del onboarding y de Horarios: `validateAvailability` exige inicio menor al fin antes de enviar y se muestra el error del servidor (Horarios antes se tragaba el error). (d) Servicios, promociones, eventos, stock, galería y profesionales muestran el motivo del servidor en vez de un texto fijo. (e) La tarjeta «Saldo pendiente a cobrar en local» aclara que descuenta la seña y lo cobrado en el local. |
 | 2 | Alternativas y criterio de descarte | **Pisar siempre el texto del servidor con uno fijo por código:** descartado, perdería datos útiles (el nombre del producto en `INSUFFICIENT_STOCK`, el motivo exacto en `VALIDATION_ERROR`); los mensajes propios son solo respaldo. **Dejar la validación de franjas solo en el servidor:** descartado, el cliente avisa antes de enviar y el servidor sigue siendo la validación real. **Cambiar el cálculo de `pendingBalance` en el frontend:** descartado, lo calcula el backend; solo se ajustó el texto. |
 | 3 | Evidencia que la sostiene | `npm run lint` y `npm run typecheck:all` sin errores; `npm test` 363 tests en verde en ese momento (eran 333); `npm run build` correcto. Pruebas nuevas por cada cambio: `errorMessage.fase10.test.ts`, `JoinUsSection.test.tsx`, `validateAvailability.test.ts`, `Schedule.test.tsx`, `OnboardingWizard.test.tsx`, `InventoryTab.errors.test.tsx`, `DashboardPage.pendingBalance.test.tsx`. El contrato se verificó en `nexa-backend/src/modules` (`contact`, `professionals/dto`, `products/inventoryMovement.model.ts`, `admin/dashboard.service.ts`). |
 | 4 | Aporte personal | Emily definió el alcance (relevar todos los usos de las rutas, mensajes, validación de franjas, etiqueta de `pendingBalance`, una prueba por cambio), que los commits se sumen al PR sin merge, que la bitácora no se toque en el frontend y que no se toque Mercado Pago. |
-| 5 | Desacuerdo y resolución | El `429` de postulaciones no trae `code`, así que se trata por status. Quedó abierto que el backend puede responder `500 JOB_INTEREST_MAIL_FAILED` con texto en español y `safeErrorMessage` descarta los 5xx; se resolvió en la entrada 101. |
+| 5 | Desacuerdo y resolución | El `429` de postulaciones no trae `code`, así que se trata por status. Quedó abierto que el backend puede responder `500 JOB_INTEREST_MAIL_FAILED` con texto en español y `safeErrorMessage` descarta los 5xx; se resolvió en la entrada 125. |
 | 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`) con `git`, `npm` y vitest. Context7 no se consultó: no se usó ninguna API nueva de una librería. |
 
 **Impacto en el frontend (contrato):** sin cambios de rutas ni de forma de respuesta; solo se interpretan mejor `400 VALIDATION_ERROR`, `404 NOT_FOUND`, `400 INSUFFICIENT_STOCK` y `429`.
 
-## Entrada 101: Frontend, fase 10 — cierre: verificación de commits, mensaje de postulaciones, README y `.env.example` (rama `fix/fase-10-frontend` de `nexa-frontend`, PR nexa-frontend#21)
+
+## Entrada 125: Frontend, fase 10 — cierre: verificación de commits, mensaje de postulaciones, README y `.env.example` (rama `fix/fase-10-frontend` de `nexa-frontend`, PR nexa-frontend#21)
 
 | Elemento | Contenido |
 |---|---|
-| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), no por Emily**, a pedido de ella, sin merge. (a) Se verificó con `git merge-base --is-ancestor` que los commits `386aa48`, `805324d`, `81a353d`, `c894711`, `0953994` y `b172e82` de la fase 10 del frontend NO estaban en `origin/main`: el PR nexa-frontend#20 se mergeó (`4cdc164`) antes de que se subieran. Se cortó `fix/fase-10-frontend` desde `origin/main`, se trajeron con `cherry-pick` sin conflictos (hashes nuevos: `2717a91`, `80b5381`, `4c8605d`, `ebc4698`, `d38a129`, `c8e3f70`) y se abrió el PR nexa-frontend#21. (b) `JoinUsSection` muestra el texto en español que manda el servidor solo cuando responde `500` con `code: 'JOB_INTEREST_MAIL_FAILED'` (commit `56ab518`); el resto de los 5xx sigue con el mensaje genérico. Cierra lo que quedó abierto en el elemento 5 de la entrada 100. (c) README 8.3: cada commit en su propia fila (`b234004`, `4b14174` y `ad28510` estaban pegados con `\|\|`) y hashes actualizados a los de la rama nueva (commit `205792a`). (d) `.env.example` con todas las variables `VITE_` que usa el código: `VITE_API_URL`, `VITE_SENTRY_DSN`, `VITE_TENANT_SLUG`, `VITE_LOCALE` y `VITE_CURRENCY`, con explicación y valores falsos (commit `9d1a696`). |
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), no por Emily**, a pedido de ella, sin merge. (a) Se verificó con `git merge-base --is-ancestor` que los commits `386aa48`, `805324d`, `81a353d`, `c894711`, `0953994` y `b172e82` de la fase 10 del frontend NO estaban en `origin/main`: el PR nexa-frontend#20 se mergeó (`4cdc164`) antes de que se subieran. Se cortó `fix/fase-10-frontend` desde `origin/main`, se trajeron con `cherry-pick` sin conflictos (hashes nuevos: `2717a91`, `80b5381`, `4c8605d`, `ebc4698`, `d38a129`, `c8e3f70`) y se abrió el PR nexa-frontend#21. (b) `JoinUsSection` muestra el texto en español que manda el servidor solo cuando responde `500` con `code: 'JOB_INTEREST_MAIL_FAILED'` (commit `56ab518`); el resto de los 5xx sigue con el mensaje genérico. Cierra lo que quedó abierto en el elemento 5 de la entrada 124. (c) README 8.3: cada commit en su propia fila (`b234004`, `4b14174` y `ad28510` estaban pegados con `\|\|`) y hashes actualizados a los de la rama nueva (commit `205792a`). (d) `.env.example` con todas las variables `VITE_` que usa el código: `VITE_API_URL`, `VITE_SENTRY_DSN`, `VITE_TENANT_SLUG`, `VITE_LOCALE` y `VITE_CURRENCY`, con explicación y valores falsos (commit `9d1a696`). |
 | 2 | Alternativas y criterio de descarte | **Mostrar el texto de cualquier 5xx:** descartado, `safeErrorMessage` los descarta a propósito porque pueden traer mensajes técnicos; solo se habilita ese código, cuyo texto el backend escribe en español. **Rehacer el PR 20:** descartado, ya estaba mergeado; se usó una rama nueva con `cherry-pick` para no reescribir historia. **Borrar `VITE_GOOGLE_CLIENT_ID` del `.env` local:** descartado, no se editan archivos `.env*`; ver elemento 5. |
 | 3 | Evidencia que la sostiene | `npm run lint` y `npm run typecheck:all` sin errores; `npm test` 365 tests en 46 archivos en verde (dos pruebas nuevas en `JoinUsSection.test.tsx`: el 500 con ese código y el 500 con otro código); `npm run build` correcto. `git grep VITE_GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT` no encuentran nada en archivos versionados. `.gitignore` no excluye `.env.example` ni `package-lock.json` (`git check-ignore` vacío) y ambos están versionados. Contrato leído en `nexa-backend` (`origin/main`, `contact.controller.ts`): `500` con el texto «No pudimos enviar tu postulación. Probá de nuevo en un rato.» y `JOB_INTEREST_MAIL_FAILED`. |
 | 4 | Aporte personal | Emily pidió cerrar todo lo pendiente de `nexa-frontend` sin confirmaciones, la verificación de los commits, el tratamiento de ese código de error, separar las filas del README, completar `.env.example` y que esta entrada la escribiera Claude Code directo en el backend; sin merge. |
@@ -1381,26 +1794,28 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 
 **Impacto en el backend:** ninguno; en este repositorio solo se agrega esta entrada. **Impacto en el frontend (contrato):** sin cambios de rutas ni de forma de respuesta.
 
-## Entrada 78 bis (recuperada de la rama local `feat/fase-4-tienda`, commit `ac0ba11`; en `main` el número 78 ya lo usa otra entrada): AE4, fase 4 (rama), correcciones de la fase 3b y política de privacidad
+
+## Entrada 96 bis (recuperada de la rama local `feat/fase-4-tienda`, commit `ac0ba11`; en `main` el número 96 ya lo usa otra entrada): AE4, fase 4 (rama), correcciones de la fase 3b y política de privacidad
 
 **Fecha:** 2026-11-01, de 00:05 a 00:25 (hora de la máquina, UTC-3)
 
 | # | Elemento | Registro |
 |---|---|---|
-| 1 | Qué se decidió | **Hecho por Claude Code**, a pedido de Emily. (a) El pull request 17 ya estaba mergeado (`c707180`) cuando se subió el commit `031e319` (entrada 77), que por eso no entró. Se actualizó `integracion-ae4`, se cortó `feat/fase-4-tienda` y se pasó ese commit con `cherry-pick` (`41cd6c0`), como commit aparte de la rama de la fase 4. (b) Antes de cambiar la versión se verificó su uso: `users.terms_version` solo se escribe (registro y confirmación de reserva), nada la lee ni la compara. Una clienta con `2026-09` no es bloqueada ni se le pide aceptar de nuevo al ingresar; al reservar se le regraba la versión nueva. Administradora y profesionales tienen `null` y siguen entrando. **No hay efecto sobre el personal.** (c) `PRIVACY_POLICY_VERSION = '2026-11'`. No quedaba ningún otro lugar con la versión `2026-09` (las otras coincidencias son fechas). (d) Pruebas nuevas en `terms-version.test.ts`: versión vigente fijada en `2026-11`, clienta con `2026-09` que ingresa sin cambios, la misma clienta que reserva y queda con `2026-11`, y administradora y profesional sin versión que ingresan y operan. (e) `docs/cambios-y-decisiones.md` deja la frase exacta que indicó Emily y dónde va (sección «2. Propósitos» de `PrivacyPolicyPage.tsx` del frontend, más la constante en `legal.ts`). Reemplaza la frase de una línea de la entrada 77. El frontend no se tocó. (f) La limpieza de `reminder_sent_at` al reprogramar y su prueba ya estaban hechas en `41cd6c0`. |
+| 1 | Qué se decidió | **Hecho por Claude Code**, a pedido de Emily. (a) El pull request 17 ya estaba mergeado (`c707180`) cuando se subió el commit `031e319` (entrada 95), que por eso no entró. Se actualizó `integracion-ae4`, se cortó `feat/fase-4-tienda` y se pasó ese commit con `cherry-pick` (`41cd6c0`), como commit aparte de la rama de la fase 4. (b) Antes de cambiar la versión se verificó su uso: `users.terms_version` solo se escribe (registro y confirmación de reserva), nada la lee ni la compara. Una clienta con `2026-09` no es bloqueada ni se le pide aceptar de nuevo al ingresar; al reservar se le regraba la versión nueva. Administradora y profesionales tienen `null` y siguen entrando. **No hay efecto sobre el personal.** (c) `PRIVACY_POLICY_VERSION = '2026-11'`. No quedaba ningún otro lugar con la versión `2026-09` (las otras coincidencias son fechas). (d) Pruebas nuevas en `terms-version.test.ts`: versión vigente fijada en `2026-11`, clienta con `2026-09` que ingresa sin cambios, la misma clienta que reserva y queda con `2026-11`, y administradora y profesional sin versión que ingresan y operan. (e) `docs/cambios-y-decisiones.md` deja la frase exacta que indicó Emily y dónde va (sección «2. Propósitos» de `PrivacyPolicyPage.tsx` del frontend, más la constante en `legal.ts`). Reemplaza la frase de una línea de la entrada 95. El frontend no se tocó. (f) La limpieza de `reminder_sent_at` al reprogramar y su prueba ya estaban hechas en `41cd6c0`. |
 | 2 | Alternativas y criterio de descarte | Cherry-pick a la rama de la fase 4 en vez de un pull request aparte: es lo que Emily pidió para el caso de pull request ya mergeado. Borrar `feat/recordatorio-turno-mail` (local y remota): descartado, el commit `031e319` no está mergeado; el contenido ya vive en la rama nueva y la rama vieja se puede borrar cuando Emily lo indique. |
 | 3 | Evidencia que la sostiene | `gh pr view 17`: estado `MERGED`, 2026-11-01 02:02 UTC. `git branch -r --contains 031e319` solo lista la rama de la fase. `grep` de `termsVersion` y `terms_version` en `src`: dos escrituras, ninguna lectura. `terms-version.test.ts`: 7 pruebas verdes. `typecheck:all` sin errores. |
 | 4 | Aporte personal | Emily pidió verificar el efecto de la versión antes de cambiarla (clientas y personal), actualizar las pruebas, no tocar el frontend y dejar la frase escrita; y que la limpieza de `reminder_sent_at` fuera con su prueba. |
 | 5 | Desacuerdo y resolución | Ninguno. Queda a la espera del enunciado de la fase 4. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con `git` y `gh`. Revisión de Emily pendiente. |
 
-## Entrada 102: AE4, cierre del backend — estimación de horas de los dos repositorios, Mercado Pago en modo prueba, `.env.example` completo y base vacía (rama `chore/cierre-final`)
+
+## Entrada 126: AE4, cierre del backend — estimación de horas de los dos repositorios, Mercado Pago en modo prueba, `.env.example` completo y base vacía (rama `chore/cierre-final`)
 
 **Fecha:** 2026-11-06, de 00:00 a 03:30 (hora de la máquina, UTC-3; sesión cortada por el límite de uso y retomada)
 
 | # | Elemento | Registro |
 |---|---|---|
-| 1 | Qué se decidió | **Hecho por Claude Code (Sonnet 5.5), no por Emily**, a pedido de ella, sin merge, en una rama cortada de `origin/main` (`090f0db`). (a) **PR 29:** el pedido era actualizarlo con `main`, pero los PR 29 y 30 ya estaban mergeados; se descartó el merge local (nunca se subió) y se trabajó en una rama nueva. (b) **Commit `3ec1f8b`:** trae a `main` las cuatro pruebas de `terms-version.test.ts` de `ac0ba11` (RF-08, versión de la política 2026-09 → 2026-11); pasan con el código de `main`. La entrada 78 de esa rama se recuperó como «78 bis» al final de este archivo y se borró la rama local `feat/fase-4-tienda`. (c) **Commit `d867e55`:** `tests/integration/payments.create-preference.test.ts` (5 pruebas de `createPreference` con el SDK de Mercado Pago mockeado, token falso); `.env.example` reescrito con todas las variables, qué significan y un ejemplo falso; sección «Instalación desde una base vacía» en `docs/plan-de-despliegue.md`; `docs/cobertura-por-requisito.md` corregido en la cabecera, RF-33 y RF-08. (d) **Estimación de horas** recalculada con `scripts/estimacion-horas.mjs` (nuevo, versionado) sobre los dos repositorios, con commit de corte por referencia; el commit de esa estimación y de esta entrada se identifica con `git log` de la rama (no puede citar su propio hash). |
+| 1 | Qué se decidió | **Hecho por Claude Code (Sonnet 5.5), no por Emily**, a pedido de ella, sin merge, en una rama cortada de `origin/main` (`090f0db`). (a) **PR 29:** el pedido era actualizarlo con `main`, pero los PR 29 y 30 ya estaban mergeados; se descartó el merge local (nunca se subió) y se trabajó en una rama nueva. (b) **Commit `3ec1f8b`:** trae a `main` las cuatro pruebas de `terms-version.test.ts` de `ac0ba11` (RF-08, versión de la política 2026-09 → 2026-11); pasan con el código de `main`. La entrada 78 de esa rama (numeración de entonces) se recuperó como «96 bis» al final de la serie de entradas 124 y 125 y se borró la rama local `feat/fase-4-tienda`. (c) **Commit `d867e55`:** `tests/integration/payments.create-preference.test.ts` (5 pruebas de `createPreference` con el SDK de Mercado Pago mockeado, token falso); `.env.example` reescrito con todas las variables, qué significan y un ejemplo falso; sección «Instalación desde una base vacía» en `docs/plan-de-despliegue.md`; `docs/cobertura-por-requisito.md` corregido en la cabecera, RF-33 y RF-08. (d) **Estimación de horas** recalculada con `scripts/estimacion-horas.mjs` (nuevo, versionado) sobre los dos repositorios, con commit de corte por referencia; el commit de esa estimación y de esta entrada se identifica con `git log` de la rama (no puede citar su propio hash). |
 | 2 | Alternativas y criterio de descarte | **Regenerar la cobertura con su script:** descartado, el script que la armó no está versionado (era descartable); se corrigió a mano lo que cambió (RF-33 y RF-08) y se dejó escrito en la cabecera que el resto del mapa no se rehízo. **Conservar el script de la estimación fuera del repositorio:** descartado, ahora es reproducible. **Probar la base vacía en la base de pruebas del proyecto:** descartado; se creó una base local nueva (`nexa_vacia_test`) y se borró. **Traer el párrafo de la política de `ac0ba11`:** innecesario, el frontend ya tiene esa frase (`PrivacyPolicyPage.tsx`) y la versión `2026-11`. |
 | 3 | Evidencia que la sostiene | **Mercado Pago, pruebas que ya existían (no se duplicaron):** `payments.webhook-signature.test.ts` (firma válida, inválida, sin cabecera y sin clave), `payments.webhook-idempotency.test.ts` (aviso repetido o simultáneo no duplica la seña ni el stock), `payments.webhook-amount.test.ts` (monto y moneda). **Falta que había:** `createPreference`; agregada. **Credenciales:** `git grep` de `APP_USR-…`, `TEST-…`, `sk_live` y JWT en todo el árbol versionado, y `git log -p` de los últimos 300 commits de todas las ramas: sin coincidencias; los únicos archivos de entorno versionados son `.env.example` y `.env.test.example`. **RNF-04:** en `prisma/schema.prisma` no hay columnas de tarjeta; la única mención de `card` es un comentario sobre el medio de cobro del saldo en el local. **Base vacía:** `prisma migrate deploy` aplicó todas las migraciones, `seed:demo` cargó el escenario y el servidor arrancó; el inicio de sesión de administradora, profesional y clienta respondió `200`; no falló ningún paso. **`.gitignore`:** no excluye `package-lock.json`, `.node-version`, `prisma/` ni los `.example`; `package-lock.json` está versionado. Suite completa: 661 pruebas en 59 archivos, todas pasan. |
 | 4 | Aporte personal | Emily definió el alcance, que no se toque ninguna cuenta ni credencial real de Mercado Pago, que no se pida confirmación y que el merge lo haga ella. |
@@ -1409,7 +1824,8 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 
 **Impacto en el frontend (contrato):** ninguno. No cambia ninguna ruta ni respuesta.
 
-## Entrada 103: AE4, CI en rojo en `main` (pull request 31) por un tiempo de espera de la base en las pruebas (rama `chore/cierre-final`)
+
+## Entrada 127: AE4, CI en rojo en `main` (pull request 31) por un tiempo de espera de la base en las pruebas (rama `chore/cierre-final`)
 
 **Fecha:** 2026-11-06 (hora de la máquina, UTC-3)
 
@@ -1424,13 +1840,14 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 
 **Impacto en el frontend (contrato):** ninguno.
 
-## Entrada 104: AE4, fase 6 (pendiente) — reglas de alerta de Sentry filtradas por `environment:production` (rama `chore/cierre-final`)
+
+## Entrada 128: AE4, fase 6 (pendiente) — reglas de alerta de Sentry filtradas por `environment:production` (rama `chore/cierre-final`)
 
 **Fecha:** 2026-11-06 04:36 (hora de la máquina, UTC-3)
 
 | # | Elemento | Registro |
 |---|----------|----------|
-| 1 | Qué se decidió | **Hecho por Claude Code**, a pedido de Emily, con la herramienta `update_alert_rule` del conector de Sentry (no hay cambio de código ni de GitHub). Las cuatro reglas «Send a notification for high priority issues» de la organización `kologic` (IDs 6064248, 6076334, 6064296 y 6064235) pasaron de `environment: null` a `environment: production`. Cumple el pendiente de la entrada 82. No se tocó la regla «Send a notification when pull requests are ready» (5913791). |
+| 1 | Qué se decidió | **Hecho por Claude Code**, a pedido de Emily, con la herramienta `update_alert_rule` del conector de Sentry (no hay cambio de código ni de GitHub). Las cuatro reglas «Send a notification for high priority issues» de la organización `kologic` (IDs 6064248, 6076334, 6064296 y 6064235) pasaron de `environment: null` a `environment: production`. Cumple el pendiente de la entrada 100. No se tocó la regla «Send a notification when pull requests are ready» (5913791). |
 | 2 | Alternativas y criterio de descarte | **Dejar las reglas sin filtro:** descartado, los avisos anteriores eran todos de `environment: test` (corridas de `npm test`). **Filtrar solo la regla del proyecto del backend:** descartado, las cuatro avisan por mail a los miembros activos y ninguna es de otro entorno que producción. |
 | 3 | Evidencia que la sostiene | `find_alert_rules` antes del cambio (las cinco reglas con `environment: null`) y la respuesta de cada `update_alert_rule` con `environment: "production"`. No se probó que una alerta de producción llegue: se verá con el próximo error real. |
 | 4 | Aporte personal | Emily indicó el pendiente y confirmó que se filtraran las reglas y se anotara el cambio. |
@@ -1439,7 +1856,34 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 
 **Impacto en el frontend (contrato):** ninguno.
 
-## Entrada 105: AE4, validación en el navegador de RF-13 a RF-35 y RNF-06 a RNF-10 (sin cambios de código; base local de pruebas cargada con datos y borrada al final)
+
+## Entrada 129: libro v8 armado sobre el v7, pendiente de entrega
+
+**Fecha:** 2026-11-06 (hora aproximada, Argentina; después del merge del PR 32 de las 04:26)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Armar 20261106_CatalogoRequisitos_Kohler_v8.xlsx editando el v7 del repositorio, sin pisarlo, con la segunda confirmación de Loren, los cambios de código de las fases 1 a 10 y las cifras del 06/11/2026. Dejar RF-35 como decisión de la autora, sin validación de la propietaria. No cargar valores de RNF-01 ni de RNF-02. |
+| 2 | Alternativas y criterio de descarte | (a) Rehacer desde la v6 del proyecto: descartado, el v7 real tenía fórmulas y listas. (b) Marcar todo «Validado» por la segunda confirmación: descartado, solo lo que ella marcó «Sí». (c) Poner valores medidos de RNF-01 y RNF-02: descartado, no hay medición. |
+| 3 | Evidencia que la sostiene | Segunda confirmación firmada (14 «Sí», 30/10/2026), leída en Drive. docs/cobertura-por-requisito.md, docs/cambios-y-decisiones.md y docs/estimacion-horas.md del backend en main (0ed2603). Frontend en main (ec35329): 46 archivos y 365 pruebas que corrí yo. Recalculo: 512 fórmulas, 0 errores; 43 requisitos, 12 «Must», 23 validados, 35 con prueba, 6 parciales, 2 sin prueba y 8 brechas abiertas. |
+| 4 | Aporte personal | Emily pidió el v8 completo, decidió el recordatorio (RF-35) y quitar campañas, puntos y recordatorio de inactividad, y confirmó los merges. Le toca revisar las decisiones marcadas arriba, medir RNF-01 y RNF-02 y subir el libro al repositorio. |
+| 5 | Desacuerdo y resolución | RF-35 contradice la pregunta 11 firmada: se declara y queda «Pendiente». La tarjeta P9 figura terminada sin la prueba del frontend: queda como brecha abierta de RF-02. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con los conectores de Trello y Google Drive, y lectura de los dos repositorios clonados. Corrió las pruebas del frontend, no las del backend. El archivo se generó con openpyxl y no está entregado todavía. Revisión final por Emily pendiente. |
+
+## Entrada 130: libro v8 entregado y tarjeta 73 completada
+
+**Fecha:** 2026-11-06 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Entregar 20261106_CatalogoRequisitos_Kohler_v8.xlsx (entrada 129). Marcar como completada la tarjeta «FRONTEND Fase 3b» y moverla a TERMINADOS. |
+| 2 | Alternativas y criterio de descarte | Marcar también las tarjetas 61 y 74: descartado, faltan las mediciones de RNF-01 y RNF-02 y subir el libro al repositorio. |
+| 3 | Evidencia que la sostiene | En main del frontend (ec35329) están reminderLink.ts, MyAppointmentsLinkPage.tsx y sus pruebas, y las 365 pruebas pasan. |
+| 4 | Aporte personal | Emily revisa el v8 y sube el libro a /03-requisitos. |
+| 5 | Desacuerdo y resolución | Ninguno. Siguen abiertas las decisiones de la entrada 129 (RF-35, RF-09, RNF-01 y RNF-02). |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Trello. Revisión final por Emily pendiente. |
+
+## Entrada 131: AE4, validación en el navegador de RF-13 a RF-35 y RNF-06 a RNF-10 (sin cambios de código; base local de pruebas cargada con datos y borrada al final)
 
 **Fecha:** 2026-11-08, de 19:25 a 20:10 aprox. (hora de la máquina, UTC-3). Esta entrada se escribió el 2026-11-09, después de la sesión: se omitió anotarla en el momento y Emily lo señaló.
 
@@ -1454,29 +1898,44 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 
 **Impacto en el frontend (contrato):** ninguno. No cambia ninguna ruta, método, código de error ni respuesta.
 
-## Entrada 106: AE4, complemento de las entradas 97, 102 y 103 — hashes y operaciones de GitHub que faltaban
+
+## Entrada 132: tercera confirmación de Loren y cambio de cinco reglas
+
+**Fecha:** 2026-11-08 (hora aproximada, Argentina; noche, antes de los cambios de código del 09/11 a las 02:19)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Crear Confirmacion3_Loren_Nexa.docx (19 preguntas) con lo que no estaba confirmado, y cambiar cinco reglas antes de mandarla: cambio de profesional en combos por el personal, la clienta no cambia de profesional, cobro del servicio completo por la administradora y las profesionales con la forma de pago, clienta bloqueada sin aviso, y recordatorio aunque el correo no esté verificado. Redactar dos prompts para Claude Code. La propietaria marcó «Sí» en todo el 8/11/2026. |
+| 2 | Alternativas y criterio de descarte | (a) Pedir confirmación de RNF-06 a RNF-10: descartado, son técnicos y no los puede validar. (b) Mandar el formulario sin cambiar las reglas: descartado, el código y el libro tenían que decir lo mismo. (c) Esperar un PR del backend para empezar el frontend: descartado, no existe y se trabaja directo sobre main. |
+| 3 | Evidencia que la sostiene | PDF Confirmacion3_Loren_Nexa.pdf con fecha 8/11/2026. En el texto extraído no se ven las casillas: Emily informó que marcó todo «Sí». Pruebas manuales de Emily de RF-13 a RF-18, RF-24, RF-26, RF-29 y RF-31 a RNF-10. Informe del frontend: origin/main sin los endpoints nuevos. |
+| 4 | Aporte personal | Emily definió las cinco reglas, probó los requisitos pendientes y obtuvo la firma. Le toca correr los dos prompts, verificar los mails en producción y medir RNF-01. |
+| 5 | Desacuerdo y resolución | Mi prompt del frontend dependía de un PR del backend inexistente. Se corrige: el frontend avanza solo con lo que no depende del backend. El código actual contradice las reglas 3, 4 y 5 (cobro solo del administrador, 403 CLIENT_BLOCKED visible y recordatorio con correo verificado): se cambia el código. Se omitió la entrada de las respuestas anteriores a esta. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5): formulario Word y prompts. No ejecutó ni verificó código. Revisión final por Emily pendiente. |
+
+## Entrada 133: AE4, complemento de las entradas 120, 126 y 127 — hashes y operaciones de GitHub que faltaban
 
 **Fecha:** 2026-11-09 (hora de la máquina, UTC-3). Cubre lo hecho entre el 2026-11-05 22:30 y el 2026-11-06 04:45.
 
 | # | Elemento | Registro |
 |---|---|---|
-| 1 | Qué se decidió | **Hecho por Claude Code (Sonnet 5.5), no por Emily**, a pedido de ella: completar la bitácora con lo que las entradas 97, 102 y 103 no nombraban. **Commits de esta sesión, en orden:** `905f149` (postulaciones por mail, RF-33), `f1db365` (bitácora 96 y 97 y plan de despliegue), `bdb0896` (prueba de RF-24: el aviso al estudio entra en la lista de envíos permitidos), `a78cc8b` (fase 9.3 a `main`, entradas 98 y 99), `3ec1f8b` (pruebas de `terms-version.test.ts` de `ac0ba11`, RF-08), `d867e55` (`createPreference` de Mercado Pago, `.env.example`, cobertura, base vacía), `ed8336a` (estimación de horas y entrada 102), `5158335` (más tiempo de espera de Vitest, entrada 103). **Merges para resolver conflictos de la bitácora:** `d4d3862` (PR 30: se conservaron las entradas 96 a 99) y `c088d90` (PR 32: `main` ya tenía las entradas 100 y 101 del frontend, así que mi entrada 100 pasó a ser la 102). **Pull requests abiertos por mí:** 29 (fase 9.3), 30 (postulaciones) y 32 (cierre del backend), sin merge: los mergeó Emily. **Otras operaciones:** `git branch -D feat/recordatorio-turno-mail` y `git branch -D feat/fase-4-tienda` (solo locales; la remota de ambas no se tocó), y `gh run rerun --failed` sobre la corrida 42179876142 del CI de `main`. Se creó y se borró la base local `nexa_vacia_test` para probar la instalación desde cero. |
-| 2 | Alternativas y criterio de descarte | Ya en las entradas 97, 98, 102 y 103. |
+| 1 | Qué se decidió | **Hecho por Claude Code (Sonnet 5.5), no por Emily**, a pedido de ella: completar la bitácora con lo que las entradas 120, 126 y 127 no nombraban. **Commits de esta sesión, en orden:** `905f149` (postulaciones por mail, RF-33), `f1db365` (bitácora 96 y 97 y plan de despliegue), `bdb0896` (prueba de RF-24: el aviso al estudio entra en la lista de envíos permitidos), `a78cc8b` (fase 9.3 a `main`, entradas 122 y 123), `3ec1f8b` (pruebas de `terms-version.test.ts` de `ac0ba11`, RF-08), `d867e55` (`createPreference` de Mercado Pago, `.env.example`, cobertura, base vacía), `ed8336a` (estimación de horas y entrada 126), `5158335` (más tiempo de espera de Vitest, entrada 127). **Merges para resolver conflictos de la bitácora:** `d4d3862` (PR 30: se conservaron las entradas 119, 120, 122 y 123) y `c088d90` (PR 32: `main` ya tenía las entradas 124 y 125 del frontend, así que mi entrada 124 pasó a ser la 102). **Pull requests abiertos por mí:** 29 (fase 9.3), 30 (postulaciones) y 32 (cierre del backend), sin merge: los mergeó Emily. **Otras operaciones:** `git branch -D feat/recordatorio-turno-mail` y `git branch -D feat/fase-4-tienda` (solo locales; la remota de ambas no se tocó), y `gh run rerun --failed` sobre la corrida 42179876142 del CI de `main`. Se creó y se borró la base local `nexa_vacia_test` para probar la instalación desde cero. |
+| 2 | Alternativas y criterio de descarte | Ya en las entradas 120, 122, 126 y 127. |
 | 3 | Evidencia que la sostiene | `git log` de `main` (los hashes de arriba) y `gh pr view` de los pull requests 29, 30 y 32 (estado MERGED). |
 | 4 | Aporte personal | Emily pidió que todo lo hecho quede anotado en esta bitácora y que no se suba ningún commit con ese cambio. |
-| 5 | Desacuerdo y resolución | La entrada 102 decía que el commit de la estimación «se identifica con `git log`»: es `ed8336a`. La entrada 103 no registraba el reintento del CI: figura arriba. Esta entrada queda **sin commitear**, a pedido de Emily. |
+| 5 | Desacuerdo y resolución | La entrada 126 decía que el commit de la estimación «se identifica con `git log`»: es `ed8336a`. La entrada 127 no registraba el reintento del CI: figura arriba. Esta entrada queda **sin commitear**, a pedido de Emily. |
 | 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con `git` y `gh`. Context7 no se consultó (solo documentación). |
 
 **Impacto en el frontend (contrato):** ninguno.
 
-## Entrada 107: AE4, cierre — subida de las entradas 103 y 104 por el pull request 33 y limpieza de ramas en los dos repositorios
+
+## Entrada 134: AE4, cierre — subida de las entradas 127 y 128 por el pull request 33 y limpieza de ramas en los dos repositorios
 
 **Fecha:** 2026-11-06, de 04:37 a 04:45 aprox. (hora de la máquina, UTC-3). Esta entrada se escribió el 2026-11-09, después de la sesión: se omitió anotarla en el momento.
 
 | # | Elemento | Registro |
 |---|---|---|
-| 1 | Qué se decidió | **Hecho por Claude Code (Sonnet 5.5), a pedido de Emily.** (A) Se commiteó la entrada 104 (`b408b52`) en `chore/cierre-final` y se pusheó; el pull request 32 de esa rama ya estaba mergeado a `main` (07:26 UTC), así que el commit no tenía pull request. (B) Se creó `docs/bitacora-104-sentry` cortada de `origin/main`, se pasó el commit con `cherry-pick` (conflicto en la bitácora: `main` no tenía la entrada 103, que quedó en la rama vieja; se resolvió quitando los marcadores y dejando 103 y 104), se sumó `vitest.config.mts` de la rama vieja (`hookTimeout` 60 s, `testTimeout` 30 s) porque la entrada 103 lo describe y `main` no lo tenía, y se abrió el pull request 33 (mergeado a las 07:44 UTC por Emily). (C) Se borraron las ramas innecesarias. **Backend:** 9 remotas (`chore/cierre-final`, `docs/bitacora-ae3-entradas-frontend`, `docs/bitacora-fase-10-frontend`, `docs/informes-v8`, `docs/fase-9-3-a-main`, `feat/postulaciones-por-mail`, `feat/recordatorio-turno-mail`, `fix/fase-10-cierre-codigo`, `integracion-ae4`) y todas las locales salvo `main`. **Frontend:** 9 remotas (`chore/sincronizar-main-en-integracion`, `docs/bitacora-en-backend-y-noindex-mis-turnos`, `feat/cancelacion-con-hora-de-aviso`, `feat/enlaces-recordatorio-y-fechas`, `feat/horarios-reabiertos-y-estados`, `fix/brechas-requisitos`, `fix/fase-10-frontend`, `fix/fase-7-tienda-alergias-fechas`, `integracion-ae4`) y todas las locales salvo `main`. |
-| 2 | Alternativas y criterio de descarte | **Pushear la entrada 104 directo a `main`:** descartado, `CLAUDE.md` pide no pushear a `main` sin pedido expreso y el flujo es rama y pull request que mergea Emily. **Reabrir `chore/cierre-final` con un pull request nuevo:** descartado, arrastraba commits ya mergeados; una rama nueva desde `main` dejó un diff de solo dos archivos. **Dejar `integracion-ae4`:** descartado, estaba contenida en `main` y el cierre terminó el flujo de ramas desde ella. **Borrar con `git branch -d`:** no alcanzó para `fix/fase-7-tienda-alergias-fechas` y las ramas locales, que figuraban como «sin mergear» por commits reescritos con otro hash; se usó `-D` después de comparar su contenido contra `main`. |
+| 1 | Qué se decidió | **Hecho por Claude Code (Sonnet 5.5), a pedido de Emily.** (A) Se commiteó la entrada 128 (`b408b52`) en `chore/cierre-final` y se pusheó; el pull request 32 de esa rama ya estaba mergeado a `main` (07:26 UTC), así que el commit no tenía pull request. (B) Se creó `docs/bitacora-104-sentry` cortada de `origin/main`, se pasó el commit con `cherry-pick` (conflicto en la bitácora: `main` no tenía la entrada 127, que quedó en la rama vieja; se resolvió quitando los marcadores y dejando 103 y 104), se sumó `vitest.config.mts` de la rama vieja (`hookTimeout` 60 s, `testTimeout` 30 s) porque la entrada 127 lo describe y `main` no lo tenía, y se abrió el pull request 33 (mergeado a las 07:44 UTC por Emily). (C) Se borraron las ramas innecesarias. **Backend:** 9 remotas (`chore/cierre-final`, `docs/bitacora-ae3-entradas-frontend`, `docs/bitacora-fase-10-frontend`, `docs/informes-v8`, `docs/fase-9-3-a-main`, `feat/postulaciones-por-mail`, `feat/recordatorio-turno-mail`, `fix/fase-10-cierre-codigo`, `integracion-ae4`) y todas las locales salvo `main`. **Frontend:** 9 remotas (`chore/sincronizar-main-en-integracion`, `docs/bitacora-en-backend-y-noindex-mis-turnos`, `feat/cancelacion-con-hora-de-aviso`, `feat/enlaces-recordatorio-y-fechas`, `feat/horarios-reabiertos-y-estados`, `fix/brechas-requisitos`, `fix/fase-10-frontend`, `fix/fase-7-tienda-alergias-fechas`, `integracion-ae4`) y todas las locales salvo `main`. |
+| 2 | Alternativas y criterio de descarte | **Pushear la entrada 128 directo a `main`:** descartado, `CLAUDE.md` pide no pushear a `main` sin pedido expreso y el flujo es rama y pull request que mergea Emily. **Reabrir `chore/cierre-final` con un pull request nuevo:** descartado, arrastraba commits ya mergeados; una rama nueva desde `main` dejó un diff de solo dos archivos. **Dejar `integracion-ae4`:** descartado, estaba contenida en `main` y el cierre terminó el flujo de ramas desde ella. **Borrar con `git branch -d`:** no alcanzó para `fix/fase-7-tienda-alergias-fechas` y las ramas locales, que figuraban como «sin mergear» por commits reescritos con otro hash; se usó `-D` después de comparar su contenido contra `main`. |
 | 3 | Evidencia que la sostiene | `gh pr list`: pull requests 28 a 32 mergeados; el 33 mergeado a las 07:44 UTC. `git diff origin/main` de la rama nueva: solo la bitácora (+30 líneas) y `vitest.config.mts`. Antes de borrar se comparó cada rama con `main` por archivos: las diferencias eran versiones más viejas que las de `main` (por ejemplo `estimacion-horas`, el asunto del mail de postulaciones), no trabajo propio. `git branch -a` posterior: backend con `main` y la rama del pull request 33; frontend solo `main`. No se verificó caso por caso que ninguna rama tuviera algo único: es una conclusión por comparación de archivos. |
 | 4 | Aporte personal | Emily pidió subir los cambios, avisó que no veía el commit para mergear, pidió abrir el pull request y borrar las ramas innecesarias de los dos repositorios, mergeó el pull request 33 y pidió esta anotación. |
 | 5 | Desacuerdo y resolución | La falta de pull request para el commit la señaló Emily; se resolvió con la rama nueva. Las ramas borradas siguen recuperables por su hash mientras GitHub los conserve. |
@@ -1484,7 +1943,8 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 
 **Impacto en el frontend (contrato):** ninguno.
 
-## Entrada 108: AE4, cambios de reglas del 06/11/2026 — backend (8 puntos, 10 commits, sin migración)
+
+## Entrada 135: AE4, cambios de reglas del 06/11/2026 — backend (8 puntos, 10 commits, sin migración)
 
 **Fecha:** 2026-11-09, hasta las 02:52 aprox. (hora de la máquina, UTC-3). Trabajo directo sobre `main`, sin rama ni pull request, a pedido de Emily.
 
@@ -1494,12 +1954,13 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 2 | Alternativas y criterio de descarte | **Dejar `403 CLIENT_BLOCKED` con otro texto:** descartado, el código ya delata el bloqueo. **Que el cobro nuevo pise el anterior (como antes):** descartado, dos cobros parciales perdían el primero. **Mail a la clienta al cambiar de profesional:** descartado, agrega un mail que la política de privacidad (`2026-11`) no lista. **Exigir el cambio solo al administrador:** descartado, la regla pide que la profesional también pueda. **Migración para guardar el motivo de cancelación:** no hizo falta, `cancelled_by` ya existía. |
 | 3 | Evidencia que la sostiene | `npm run typecheck:all` limpio y `npm test`: 61 archivos y 682 pruebas, 682 pasaron (antes 59 y 661). Pruebas nuevas: `appointments.combo-reassign.test.ts` (7), `professional.vacation.test.ts` (8), `appointments.balance-payment.test.ts` (+5), el combo de `notifications.investigation.test.ts`, `appointments.cancel-reschedule.test.ts`, `history-activity-dashboard.test.ts`; actualizadas las que decían lo contrario (`appointments.reminder`, `store.blocking-and-movements`, `appointments.booking`). La base de pruebas local no existía y se recreó con `npm run test:migrate`; una primera corrida dio fallas porque se lanzó a la vez que la del frontend sobre la misma base. |
 | 4 | Aporte personal | Emily definió las ocho reglas, el orden, que no hubiera migración y que se trabajara sobre `main`. |
-| 5 | Desacuerdo y resolución | **El push a `main` del backend no se hizo:** el hook del proyecto bloquea todo push a `main` («un push a `main` redespliega el backend en Render»). La instrucción de Emily lo pedía, pero no se esquivó el bloqueo; los 11 commits quedan locales y el push lo hace Emily desde su terminal (`git push origin main`; no hay migración que aplicar antes). Además, la bitácora tenía en el árbol de trabajo cambios sin commitear que no son de esta sesión (renumeración de las entradas 106 y 107); se incluyen en este commit tal como estaban. |
+| 5 | Desacuerdo y resolución | **El push a `main` del backend no se hizo:** el hook del proyecto bloquea todo push a `main` («un push a `main` redespliega el backend en Render»). La instrucción de Emily lo pedía, pero no se esquivó el bloqueo; los 11 commits quedan locales y el push lo hace Emily desde su terminal (`git push origin main`; no hay migración que aplicar antes). Además, la bitácora tenía en el árbol de trabajo cambios sin commitear que no son de esta sesión (renumeración de las entradas 133 y 134); se incluyen en este commit tal como estaban. |
 | 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5) con `git`, `npm` y Vitest. **Context7 no se consultó:** los cambios siguen patrones ya usados en el repositorio (Express, Prisma y zod), sin APIs nuevas de las librerías. |
 
-**Impacto en el frontend (contrato):** sí. `PATCH /api/professional/appointments/:id/balance-payment` es nueva; `PATCH /api/professional/appointments/:id` acepta `professionalId`; la vista del turno de la profesional suma `depositAmount` y `balancePayment`; `reschedule` responde `400 PROFESSIONAL_CHANGE_NOT_ALLOWED`; `CLIENT_BLOCKED` desaparece (ahora `400 OPERATION_FAILED`); `PATCH /api/professionals/profile` acepta `vacationFrom` y `vacationTo` y `GET /profile` los devuelve; el historial de la clienta suma `cancelledBy`. Archivos del frontend afectados: ver la entrada 109.
+**Impacto en el frontend (contrato):** sí. `PATCH /api/professional/appointments/:id/balance-payment` es nueva; `PATCH /api/professional/appointments/:id` acepta `professionalId`; la vista del turno de la profesional suma `depositAmount` y `balancePayment`; `reschedule` responde `400 PROFESSIONAL_CHANGE_NOT_ALLOWED`; `CLIENT_BLOCKED` desaparece (ahora `400 OPERATION_FAILED`); `PATCH /api/professionals/profile` acepta `vacationFrom` y `vacationTo` y `GET /profile` los devuelve; el historial de la clienta suma `cancelledBy`. Archivos del frontend afectados: ver la entrada 136.
 
-## Entrada 109: AE4, cambios de reglas del 06/11/2026 — frontend (`nexa-frontend`, 7 commits)
+
+## Entrada 136: AE4, cambios de reglas del 06/11/2026 — frontend (`nexa-frontend`, 7 commits)
 
 **Fecha:** 2026-11-09, hasta las 02:52 aprox. (hora de la máquina, UTC-3). Repositorio `nexa-frontend`, directo sobre `main`.
 
@@ -1514,17 +1975,111 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 
 **Impacto en el frontend (contrato):** es el propio frontend. Archivos tocados: `src/shared/ui/molecules/BalancePaymentForm.tsx`, `src/shared/ui/molecules/ChangeLegProfessional.tsx`, `src/shared/utils/balancePayment.ts`, `src/shared/utils/cancelReason.ts`, `src/shared/utils/errorMessage.ts`, `src/pages/admin/appointments/AppointmentModal.tsx`, `src/pages/admin/appointments/AppointmentsPage.tsx`, `src/pages/admin/clients/tabs/HistoryTab.tsx`, `src/pages/admin/clients/types.ts`, `src/features/professional/agenda/Agenda.tsx`, `src/features/professional/agenda/dialogs/AppointmentDialog.tsx`, `src/features/professional/types/appointment.ts`, `src/features/professional/settings/Settings.tsx`, `src/features/professional/settings/VacationSection.tsx`, `src/features/client/booking/RescheduleModal.tsx` y `README.md`.
 
-## Entrada 110: AE4, cambios de reglas del 06/11/2026 — subida por rama y pull requests 34 (backend) y 22 (frontend)
+
+## Entrada 137: AE4, cambios de reglas del 06/11/2026 — subida por rama y pull requests 34 (backend) y 22 (frontend)
 
 **Fecha:** 2026-11-09, 03:00 aprox. (hora de la máquina, UTC-3).
 
 | # | Elemento | Registro |
 |---|---|---|
-| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), a pedido de Emily** («subí todos los cambios y yo solo hago merge»). En cada repositorio se creó la rama `feat/cambios-de-reglas-06-11` desde el `main` local con los commits de las entradas 108 y 109 (backend: 12 sobre `origin/main`, incluida esta entrada; frontend: 7) y se pusheó. Se abrieron los pull requests [nexa-backend#34](https://github.com/emilykohler12/nexa-backend/pull/34) y [nexa-frontend#22](https://github.com/emilykohler12/nexa-frontend/pull/22). El de backend lleva además las entradas 105, 106 y 107 que Emily había escrito en otro chat y que estaban sin commitear en el árbol de trabajo (no estaban en `origin/main`). **Orden de merge: primero el backend, después el frontend** (el frontend ya espera `OPERATION_FAILED`, `cancelledBy` y la ruta de cobro de la profesional). |
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), a pedido de Emily** («subí todos los cambios y yo solo hago merge»). En cada repositorio se creó la rama `feat/cambios-de-reglas-06-11` desde el `main` local con los commits de las entradas 135 y 136 (backend: 12 sobre `origin/main`, incluida esta entrada; frontend: 7) y se pusheó. Se abrieron los pull requests [nexa-backend#34](https://github.com/emilykohler12/nexa-backend/pull/34) y [nexa-frontend#22](https://github.com/emilykohler12/nexa-frontend/pull/22). El de backend lleva además las entradas 131, 133 y 134 que Emily había escrito en otro chat y que estaban sin commitear en el árbol de trabajo (no estaban en `origin/main`). **Orden de merge: primero el backend, después el frontend** (el frontend ya espera `OPERATION_FAILED`, `cancelledBy` y la ruta de cobro de la profesional). |
 | 2 | Alternativas y criterio de descarte | **Push directo a `main`:** descartado, un hook del proyecto lo bloquea y redespliega Render/Vercel; el flujo acordado es rama y pull request que mergea Emily. **Un solo pull request para los dos repositorios:** imposible, son repositorios distintos. **Dejar el `main` local adelantado:** descartado, divergiría del `main` remoto tras el merge. |
-| 3 | Evidencia que la sostiene | `git push -u origin feat/cambios-de-reglas-06-11` en ambos (`new branch`); `gh pr create` devolvió las URL de los pull requests 34 y 22. `origin/main` no tenía ninguno de estos commits ni las entradas 105 a 107 antes de la subida. |
-| 4 | Aporte personal | Emily aclaró que ya había escrito las entradas 105 a 107, pidió subir todo y que ella solo hace el merge. |
+| 3 | Evidencia que la sostiene | `git push -u origin feat/cambios-de-reglas-06-11` en ambos (`new branch`); `gh pr create` devolvió las URL de los pull requests 34 y 22. `origin/main` no tenía ninguno de estos commits ni las entradas 131, 133 y 134 antes de la subida. |
+| 4 | Aporte personal | Emily aclaró que ya había escrito las entradas 131, 133 y 134, pidió subir todo y que ella solo hace el merge. |
 | 5 | Desacuerdo y resolución | Emily creía que los cambios ya estaban subidos; en realidad todo estaba solo en la máquina (el push a `main` estaba bloqueado). Se resolvió con la rama y los pull requests. Los chequeos de CI de cada pull request no se revisaron en esta sesión. |
 | 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5) con `git` y `gh`. Context7 no se consultó (sin código nuevo). |
 
-**Impacto en el frontend (contrato):** ninguno adicional; ver la entrada 108.
+**Impacto en el frontend (contrato):** ninguno adicional; ver la entrada 135.
+
+## Entrada 138: una sola cifra de horas de desarrollo y prompt unificado para el código
+
+**Fecha:** 2026-11-09 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Calcular las horas de desarrollo con un solo método: semanas por horas semanales declaradas, desde el 01/06/2026 hasta el 09/11/2026, sin el período del 07/10 al 22/10, y sin las 3 horas de reuniones. Resultado propuesto: unas 420 horas, con corte actualizable el 14/11. No tocar el libro hasta terminar el código. Registrar además el 08/11: prompt único para backend y frontend (cambio de profesional en combos, cobro por la profesional, clienta bloqueada sin aviso, recordatorio sin correo verificado, aviso por grupo en combos, vacaciones de la profesional y motivo de cancelación en el historial), y los resultados de las pruebas manuales de RF-13 a RNF-10. |
+| 2 | Alternativas y criterio de descarte | (a) Empezar en abril: descartado, la bitácora del AE1 entregada dice que la programación empezó en junio. (b) Estimar desde commits: descartado, hay commits en solo 30 días desde el 25/08 y nada antes. (c) Usar tres cifras (plan, estimada y mínima): descartado por Emily, una sola. (d) Separar horas con y sin Claude Code: descartado por Emily. |
+| 3 | Evidencia que la sostiene | Bitácora del AE1 (entradas de junio, julio y agosto), del AE2 (10/09 al 05/10) y del AE3 (sin entradas del 07/10 al 22/10). Hoja Recursos y Iteraciones del libro (25 horas semanales declaradas). Historial de los dos repositorios, leído por Claude. |
+| 4 | Aporte personal | Emily indicó qué meses fueron más intensos, que no tiene fecha exacta de abril ni registro de horas, y que no quiere separar lo hecho con Claude Code. Debe confirmar las 15 horas semanales de los meses livianos. |
+| 5 | Desacuerdo y resolución | Emily dijo que trabajó en el código desde abril, y su bitácora del AE1 dice junio. Se usa junio, que coincide con el documento entregado. Claude interpretó «junio y septiembre» como «julio y septiembre»; queda para que Emily lo confirme. No se registró antes la entrada de los mensajes del 08/11. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con el conector de Google Drive y lectura de los repositorios. El resultado es una estimación y no un registro de horas. No se modificó el libro ni el tablero. Revisión final por Emily pendiente. |
+
+## Entrada 139: método de estimación de horas por tres valores
+
+**Fecha:** 2026-11-09 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Estimar las horas de desarrollo con tres valores por tipo de mes (mínimo, probable y máximo), con intervalo del 95 %. Julio y agosto a 25 horas semanales probables, junio, septiembre y el 1 al 6 de octubre a 15, y 25 desde el 23/10. Resultado propuesto: 424 horas (394 a 454). No cambiar el libro hasta terminar el código. |
+| 2 | Alternativas y criterio de descarte | (a) COCOMO y puntos de función: descartados, miden el tamaño para un equipo sin asistencia de IA y dan miles de horas, lejos de la realidad. (b) Estimar desde commits: descartado, hay commits en solo 30 días. (c) Repartir el porcentaje por fase del desarrollo (10, 15, 50, 15, 10): descartado, es una regla general sin fuente. |
+| 3 | Evidencia que la sostiene | Bitácoras del AE1, AE2 y AE3 (inicio en junio y tramo sin actividad). Hoja Recursos (reuniones y 25 horas semanales). Búsqueda web del 09/11/2026 sobre las fórmulas de la estimación por tres valores. |
+| 4 | Aporte personal | Emily corrigió qué meses fueron más intensos y aprobó 15 horas para los livianos. Le toca confirmar las dos últimas semanas y los rangos. |
+| 5 | Desacuerdo y resolución | Claude había invertido los meses; Emily lo corrigió. Queda sin verificar el volumen y las páginas del artículo de 1959 y la sección del PMBOK. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con búsqueda web. Es una estimación a posteriori, no un registro de horas. No se modificó el libro. Revisión final por Emily pendiente. |
+
+## Entrada 140: libro v9, horas y tablero
+
+**Fecha:** 2026-11-09 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Armar 20261109_CatalogoRequisitos_Kohler_v9.xlsx sobre el v8, con la tercera confirmación de Loren (8/11/2026), las reglas del 06/11, la prueba manual de Emily y la cifra única de horas (424, intervalo de 394 a 454). Recalcular Recursos con el desarrollo del 01/06 al 09/11 (5,4 meses y 431 horas totales). Marcar tres tarjetas, crear dos y comentar tres. |
+| 2 | Alternativas y criterio de descarte | (a) Poner «Validado» a RNF-01 por la prueba de Emily: descartado, la validación es de la propietaria y falta la medición. (b) Cerrar las brechas de los PR 34 y 22: descartado, no están mergeados. (c) Conservar las 200 horas como ejecución: descartado, la cifra única es 424. (d) Dejar las 46 a 48 horas por commits: descartado, contradice la cifra única. |
+| 3 | Evidencia que la sostiene | PDF Confirmacion3_Loren_Nexa.pdf (19 «Sí», 8/11/2026). Ramas de los PR 34 y 22 leídas en GitHub (pruebas nuevas por requisito). Informe de Claude Code (682 y 395 pruebas) y prueba manual de Emily. Recalculo: 37 requisitos validados, 11 brechas abiertas, 424 horas, total de Recursos $15.793.053. |
+| 4 | Aporte personal | Emily corrigió los meses de mayor trabajo, decidió una sola cifra de horas, aprobó las reglas del 06/11, probó el sistema y obtuvo la respuesta de Loren. Le toca mergear los PR, medir RNF-01 y RNF-02 y confirmar la firma. |
+| 5 | Desacuerdo y resolución | Emily dijo que programó desde abril y su bitácora del AE1 dice junio: se usa junio. El PDF de Loren no muestra firma. Los 25 h por semana de las dos últimas semanas son supuesto de Claude, por confirmar. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con los conectores de Trello y Google Drive y lectura de los repositorios. No ejecutó las pruebas de los PR: las cifras salen del informe de Claude Code. Revisión final por Emily pendiente. |
+
+## Entrada 141: AE4, prueba de punta a punta en navegador sobre una base local nueva (09/11/2026, 20:20 a 20:50, hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Probar el flujo de registro, reserva, seña por WhatsApp y reprogramación desde el navegador, con backend y frontend locales apuntando a una base nueva `nexa_e2e_test` (creada, migrada con `prisma migrate deploy` y cargada con `seed:demo`); correr `typecheck:all` y las pruebas de los dos repositorios; consultar `/api/health` de producción; seguir el manual (README) en una copia limpia. No se tocó código ni configuración del proyecto. Cambios fuera del repositorio: bases `nexa_e2e_test`, `nexa_dev_test` y una copia limpia de los dos repos en la carpeta temporal de la sesión; los procesos locales (puertos 4000 y 5173) se frenaron al terminar esa parte. |
+| 2 | Alternativas y criterio de descarte | **Registrar una cuenta en producción y pagar con la tarjeta de prueba:** descartado, crear cuentas y cargar datos de tarjeta en un sitio real queda fuera de lo que se puede hacer sin que lo hagas vos; en producción solo se consultó `/api/health`. **Usar el `.env` del backend:** descartado, tiene credenciales reales; las variables se pasaron por proceso (con Brevo, Mercado Pago, Supabase y Sentry vacíos, así que no salió ningún mail ni cobro real). **Crear el `.env` de la copia limpia con `cp`/`sed`:** bloqueado por el hook del proyecto, no se esquivó; las variables se pasaron en línea y la base se llamó `nexa_dev_test` (el hook exige «test» en la URL) en vez de `nexa_dev`. |
+| 3 | Evidencia que la sostiene | Navegador: el formulario rechaza teléfono `12345` y bloquea el envío sin aceptar la política (no se mandó ningún POST); con teléfono válido responde `201` y en `users` quedan `terms_accepted_at` y `terms_version = 2026-11`; el asistente de reserva muestra seña de $5.000; con «Coordinar por WhatsApp» el turno queda `confirmed` con `payment_status = pending` y `deposit_amount = 5000`, y «Mis turnos» lo muestra como «Pendiente de seña»; reprogramado de 11:00 a 13:00 desde el modal (la base muestra 13:00). API: tres reservas seguidas respondieron `201` en 44, 36 y 29 ms (solo servidor, sin 4G); repetir un horario ocupado dio `409 PROFESSIONAL_SLOT_TAKEN`; registro con teléfono inválido o sin política da `422 VALIDATION_ERROR`. Producción: `/api/health` dio `200` tres veces (0,3 a 0,5 s, `database: up`) y el frontend de Vercel `200`. Backend: `typecheck:all` sin errores y 661 pruebas en 59 archivos pasaron. Frontend: `typecheck:all` sin errores y 365 pruebas pasaron. Esquema: ninguna columna con datos de tarjeta (solo la palabra `card` como valor posible de método de cobro en un comentario). Copia limpia: clonado, `git checkout v1.3`, `npm ci`, `migrate deploy`, `generate` y `seed:demo` funcionaron. |
+| 4 | Aporte personal | Emily pidió la prueba, el criterio de qué reportar (validado, pendiente y por qué) y que las bases de prueba se borren solo cuando ella lo diga. |
+| 5 | Desacuerdo y resolución | Hallazgos para corregir en el manual (no se corrigieron, no se pidió): el README manda a hacer `git checkout v1.3`, pero la salida esperada de `seed:demo` describe el código actual (profesional «Valeria», tres turnos, promoción) y el tag da otra («Loren (demo)», sin turnos); el README dice 62 migraciones y el tag trae 54. La working copy del backend estaba en `main` al terminar, no en la rama `feat/cambios-de-reglas-06-11` que indicaba el estado inicial: no se cambió de rama desde esta sesión. Esta entrada quedó sin commitear. Pendientes: pago real con la tarjeta de prueba de Mercado Pago, reserva y pago en producción, medición en 4G con celular, prueba en dos navegadores y en un celular, recordatorio por mail con envío real, y el manual en una máquina limpia de verdad. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con el navegador integrado y la terminal. Context7 no se consultó (no se escribió código que dependa de una librería). |
+
+**Impacto en el frontend (contrato):** ninguno.
+
+## Entrada 142: PR mergeados, v9 al día y documento de horas
+
+**Fecha:** 2026-11-09 (hora aproximada, Argentina; noche, después de los merges de las 20:23)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Actualizar el libro v9 con los PR 34 y 22 ya mergeados (6 brechas abiertas, cifras de main). Reescribir estimacion-horas.md con la cifra única de 424 horas y descartar la estimación por commits. Dejar la hoja Recursos sin cambios hasta que Emily pase los cobros de Claude Pro. |
+| 2 | Alternativas y criterio de descarte | (a) Poner las 48 horas por commits en el libro: descartado, vuelve a haber dos cifras y los commits empiezan el 25/08. (b) Suponer el importe de los meses nuevos de Claude Pro: descartado, el precio puede haber cambiado. (c) Dejar las brechas abiertas por precaución: descartado, el código ya está en main. |
+| 3 | Evidencia que la sostiene | Historial de GitHub: merges #34 y #22 del 09/11/2026 20:23. Pruebas del frontend corridas en main (53 archivos y 395). Informe de Claude Code (682 pruebas) y 61 archivos de prueba contados en el backend. Archivo estimacion-horas.md del repositorio. |
+| 4 | Aporte personal | Emily mergeó los PR, informó que Claude Pro se pagó de agosto a noviembre y que vence el 24/11, y pasó el documento de horas. Le toca pasar los importes, correr el prompt de Claude Code y probar en producción. |
+| 5 | Desacuerdo y resolución | Claude había dado los PR por abiertos y Emily lo corrigió. La frase «pongas lo que dice ahí» fue ambigua: se resolvió con la cifra única y queda para que Emily la confirme. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con GitHub clonado y el conector de Trello (un comentario). Corrió las pruebas del frontend; las del backend no. Revisión final por Emily pendiente. |
+
+## Entrada 143: AE4, baja de las bases y la copia limpia de la prueba de la entrada 141 (09/11/2026)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Eliminar las bases locales `nexa_e2e_test` y `nexa_dev_test` y la copia limpia de los dos repositorios creadas en la entrada 141. No se tocaron `nexa_db` ni `nexa_db_test`. |
+| 2 | Alternativas y criterio de descarte | **Dejarlas para repetir la prueba:** descartado, Emily pidió borrarlas cuando se lo dijera y lo dijo. |
+| 3 | Evidencia que la sostiene | Dos `DROP DATABASE` correctos; después, `pg_database` solo lista `nexa_db` y `nexa_db_test`. |
+| 4 | Aporte personal | Emily dio la orden de eliminar. |
+| 5 | Desacuerdo y resolución | Sin desacuerdos. |
+| 6 | Herramienta auxiliar | Claude Code (Sonnet 5.5) con `psql`. Context7 no se consultó. |
+
+**Impacto en el frontend (contrato):** ninguno.
+
+## Entrada 144: cifra única de horas (424), baja de la estimación por commits, entradas del chat intercaladas por fecha y renumeración de la bitácora
+
+**Fecha:** 2026-11-10, de 16:28 a 21:50 aprox. (hora de la máquina, UTC-3; la sesión se cortó y se retomó)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code, no por Emily**, a pedido de ella, directo sobre `main`. **(a) Horas:** `docs/estimacion-horas.md` se reemplazó por el archivo que pasó Emily (cifra única: 424 horas de desarrollo, intervalo del 95 % de 394 a 454, del 01/06 al 09/11/2026, método de tres valores); se borró `docs/estimacion-horas.csv`; `scripts/estimacion-horas.mjs` ya no calcula horas ni escribe archivos: solo imprime la cantidad de commits por repositorio y la tabla de commits con la línea `Co-Authored-By: Claude` (se quitó de las referencias por defecto la rama `origin/integracion-ae4`, que ya no existe). Se corrigieron el índice de documentos del README y `docs/cambios-y-decisiones.md` (fase 9 y el párrafo de las 43,3 a 45,5 horas por commits). En `CLAUDE.md` y `docs/cobertura-por-requisito.md` no había ninguna mención de esas horas. **(b) Bitácora:** se sumaron las 31 entradas de las sesiones de Claude (chat) que faltaban (letras E a AI; las A a D ya estaban como entradas 64 a 67, con el mismo texto), cada una en su lugar por fecha, y se renumeró lo que venía después. Entradas nuevas: 68, 69, 72 a 82, 84, 86, 89, 91, 94, 111 a 113, 116, 118, 121, 129, 130, 132, 138 a 140 y 142. **Equivalencia (número anterior → nuevo):** 68→70, 69→71, 70→83, 71→85, 72→87, 73→88, 74→90, 75→92, 76→93, 77→95, 78 a 88→96 a 106, 89 a 92→107 a 110, 93→114, 94→115, 95→117, 96→119, 97→120, 98 a 104→122 a 128, 78 bis→96 bis, 105→131, 106 a 110→133 a 137; las dos entradas del 09/11 que estaban sin commitear (prueba de punta a punta y baja de las bases) quedaron como 141 y 143. Las referencias entre entradas se actualizaron en la bitácora, en la tabla 8.3 del README, en `docs/cambios-y-decisiones.md`, en `docs/plan-de-despliegue.md` y en dos comentarios de `src/jobs/scheduler.ts` (solo comentarios, sin cambio de código). |
+| 2 | Alternativas y criterio de descarte | **Borrar el script:** descartado, la tabla de commits con la línea de coautoría sigue en el documento y así se puede regenerar. **Dejar las entradas del chat con letras al final:** descartado, Emily pidió orden cronológico y correr los números. **Reordenar también las entradas que ya estaban fuera de orden** (frontend 107 a 110, fase 9.3 en 122 y 123, y la 96 bis): descartado, obligaba a bajar números y Emily pidió solo correrlos hacia arriba; quedan donde estaban. **Cambiar los mensajes de los commits que citan los números viejos:** imposible sin reescribir el historial; se dejó la equivalencia acá y una nota en la sección 8.3 del README. |
+| 3 | Evidencia que la sostiene | `npm run typecheck:all` sin errores y `npm test` con 683 pruebas en 61 archivos, todas pasan. El script corrido hoy imprime 196 commits del backend y 125 del frontend (el documento conserva el corte del 06/11: 179 y 124). **Fechas cotejadas** con `git log` y con la fecha de creación y de merge de los pull requests de los dos repositorios (`gh pr list`): las 30 fechas restantes coinciden; se corrigió una, la entrada 94, que decía 2026-11-01 y pasa a 2026-10-31 de noche, porque revisa el pull request 17 (abierto el 31/10 a las 22:58) y pide las correcciones que la entrada 95 hace el 31/10 a las 23:10. Dentro de un mismo día el orden sale de los hechos que cada entrada cita: 68 y 69 van antes de la 70 (la 71 ya da por hecha la constancia de Loren y la 69 todavía cuenta 303 pruebas); 72 a 82 después del merge del pull request 13 y antes de la fase 1; 84 después de los commits de las 23:47; 116, 118 y 121 según los merges del 05/11. A las fechas de esas entradas se les agregó entre paréntesis el hecho que las ubica. |
+| 4 | Aporte personal | Emily decidió la cifra única, pasó el documento de horas y las entradas del chat, y pidió verificar las fechas, correr los números y subir directo a `main`. |
+| 5 | Desacuerdo y resolución | Sin resolver, para Emily: (a) la hora dentro del día de las entradas del chat es aproximada; la 142 se ubicó después de la 141 por los merges de las 20:23, sin otra prueba. (b) Las entradas 70 y 71 dicen «04:50 (hora de la máquina)», pero el pull request 13 se creó a las 01:50 de Argentina (04:50 UTC): no se tocó. (c) El README de `nexa-frontend` cita esta bitácora con los números anteriores (entradas 78, 82 y 89 a 94, hoy 96, 100 y 107 a 110, 114 y 115): no se cambió porque el pedido era solo el backend. (d) La entrada 73 habla de estimar las horas desde los commits y la 111 cita las 43,3 a 45,5 horas: son el registro de lo decidido entonces y se dejan, con la aclaración en la 111. No se tocó Mercado Pago ni ningún `.env`. |
+| 6 | Herramienta auxiliar | Claude Code: la sesión empezó con Claude Sonnet 5.5 (`claude-sonnet-5-5`) y se retomó con Claude Fable 5.2 (`claude-fable-5-2`). `git`, `gh` y Node. Context7 no se consultó (no cambió código que dependa de una librería). El hash del commit de este cambio va en la línea de abajo, agregada en un commit posterior porque un commit no puede citar su propio hash. |
+
+**Impacto en el frontend (contrato):** ninguno. No cambia ninguna ruta ni respuesta.

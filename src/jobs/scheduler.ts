@@ -9,8 +9,8 @@ import { ARGENTINA_TIME_ZONE } from '../app/utils/argentinaTime'
 const CRON_OPTIONS = { timezone: ARGENTINA_TIME_ZONE }
 
 // Los trabajos programados vigentes son tres. Las campañas automáticas y el recordatorio
-// de inactividad se eliminaron (ver bitácora, entrada 70). El único mail que el sistema manda
-// a las clientas por iniciativa propia es el recordatorio del turno (Fase 3b, entrada 75).
+// de inactividad se eliminaron (ver bitácora, entrada 83). El único mail que el sistema manda
+// a las clientas por iniciativa propia es el recordatorio del turno (Fase 3b, entrada 92).
 export function startScheduledJobs(): void {
   // Cada 5 minutos — libera turnos cuya seña nunca se pagó (checkout de Mercado
   // Pago abandonado). Barato: la mayoría de las corridas no encuentra nada.

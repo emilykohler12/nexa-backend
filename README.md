@@ -67,7 +67,7 @@ Vive en el repositorio **nexa-backend**:
 | Cobertura de cada requisito con pruebas automatizadas | `docs/cobertura-por-requisito.md` |
 | Cambios y decisiones de la AE4, por fase | `docs/cambios-y-decisiones.md` |
 | Plan de despliegue de la AE4 | `docs/plan-de-despliegue.md` |
-| Estimación de horas de desarrollo a partir de los commits | `docs/estimacion-horas.md` y `docs/estimacion-horas.csv` |
+| Estimación de horas de desarrollo (cifra única: 424 horas, de 394 a 454 al 95 %; método de tres valores, no por commits) | `docs/estimacion-horas.md` |
 | ADR-001: estrategia de multi-tenancy | `04-diseno/adr-001-multi-tenancy.md` |
 | ADR-002: integridad de la reserva (índice único parcial y `OUT_OF_HOURS`) | `04-diseno/adr-002-validacion-antes-persistencia.md` |
 | ADR-003: JWT para autenticación | `04-diseno/adr-003-jwt-auth.md` |
@@ -406,20 +406,20 @@ Los commits `54933ca` y `ec976da` son los del README v1.1; `ce550a9` y `2e7734f`
 
 ### 8.3 Cambios de la AE4 hechos con Claude Code (rama `integracion-ae4`)
 
-Las cifras de 8.1 y 8.2 están cortadas en `6e7d8c0`. Desde ahí, cada fase de la AE4 la hace Claude Code (modelo Sonnet 5.5 hasta la fase 6 y Opus 5.5 desde la fase 7) sobre su propia rama, a pedido de la autora, con el nombre de ella como autor y sin la línea de coautoría. Cada commit cita solo los anteriores, nunca el suyo ni el del propio README.
+Las cifras de 8.1 y 8.2 están cortadas en `6e7d8c0`. Desde ahí, cada fase de la AE4 la hace Claude Code (modelo Sonnet 5.5 hasta la fase 6 y Opus 5.5 desde la fase 7) sobre su propia rama, a pedido de la autora, con el nombre de ella como autor y sin la línea de coautoría. Cada commit cita solo los anteriores, nunca el suyo ni el del propio README. El 10/11/2026 la bitácora se renumeró para intercalar por fecha las entradas de las sesiones de Claude (chat): la tabla usa los números nuevos, los mensajes de los commits conservan los anteriores y la equivalencia está en la entrada 144 de la bitácora.
 
 | Fase | Rama | Commits |
 |---|---|---|
-| 1 — eliminaciones | `refactor/quitar-campanas-puntos-recordatorio-nacimiento` | `b30e849`, `8955406`, `308bb0a` (bitácora, entrada 70), `3139d13` (bitácora, entrada 71) |
-| 2 — inasistencia, horario reabierto y reserva tardía | `feat/inasistencia-horario-reabierto` | `1bfdf67`, `76fe8a3`, `3ccdf53` (bitácora, entrada 72), `924564f` (bitácora, entrada 73) |
-| 3 — cancelación y devolución | `feat/cancelacion-devolucion-hora-de-aviso` | `7e8a16e`, `60e56b1`, `d41644e` (bitácora, entrada 74) |
-| 3b — recordatorio de turno por mail | `feat/recordatorio-turno-mail` | `7cd9a6e`, `2125736`, `9553863`, `9102940` (bitácora, entrada 75) |
-| 4 — tienda | `fix/tienda-publica-solo-disponibles` | `ff25797`, `3fc9b79` (bitácora, entrada 78) |
-| 5 — anonimización y alergias | `fix/anonimizacion-y-alergias` | `87a7146`, `08d0945`, `e415b02` (bitácora, entrada 81) |
-| 6 — brechas de requisitos | `fix/brechas-requisitos` | `8a1c006`, `7a16248`, `f437d34`, `e565249`, `4554e2d`, `c9cdc61`, `b87a817` (bitácora, entrada 82) |
-| 7 — pruebas faltantes (Claude Code con el modelo Opus 5.5) | `test/cobertura-completa` | `a34749a`, `f5c2390`, `a4aa471`, `77fd1b8`, `6cc47d7`, `aa86b17`, `718e8e6`, `45d8401` (bitácora, entrada 83), `3cd1199` (bitácora, entrada 84) |
-| 8 — deuda técnica (Claude Code con el modelo Opus 5.5) | `chore/deuda-tecnica` | `a687dfb` (RF-06.0x renombrados), `a4812d7` (seed de demostración), `fc9df24` (`.env.example`), `8443f1f` (bitácora, entrada 85), `bd692e9` (bitácora, entrada 86) |
-| 9 — informes (Claude Code con el modelo Opus 5.5) | `docs/informes-v8` | `8974ed1` (cobertura por requisito), `d484c3e` (cambios y decisiones), `4051bba` (bitácora, entrada 87), `55d8e68` (bitácora, entrada 88) y, después de integrar todo en `main`, `5cffa20` (estimación de horas); la documentación va en el último (bitácora, entrada 98) |
+| 1 — eliminaciones | `refactor/quitar-campanas-puntos-recordatorio-nacimiento` | `b30e849`, `8955406`, `308bb0a` (bitácora, entrada 83), `3139d13` (bitácora, entrada 85) |
+| 2 — inasistencia, horario reabierto y reserva tardía | `feat/inasistencia-horario-reabierto` | `1bfdf67`, `76fe8a3`, `3ccdf53` (bitácora, entrada 87), `924564f` (bitácora, entrada 88) |
+| 3 — cancelación y devolución | `feat/cancelacion-devolucion-hora-de-aviso` | `7e8a16e`, `60e56b1`, `d41644e` (bitácora, entrada 90) |
+| 3b — recordatorio de turno por mail | `feat/recordatorio-turno-mail` | `7cd9a6e`, `2125736`, `9553863`, `9102940` (bitácora, entrada 92) |
+| 4 — tienda | `fix/tienda-publica-solo-disponibles` | `ff25797`, `3fc9b79` (bitácora, entrada 96) |
+| 5 — anonimización y alergias | `fix/anonimizacion-y-alergias` | `87a7146`, `08d0945`, `e415b02` (bitácora, entrada 99) |
+| 6 — brechas de requisitos | `fix/brechas-requisitos` | `8a1c006`, `7a16248`, `f437d34`, `e565249`, `4554e2d`, `c9cdc61`, `b87a817` (bitácora, entrada 100) |
+| 7 — pruebas faltantes (Claude Code con el modelo Opus 5.5) | `test/cobertura-completa` | `a34749a`, `f5c2390`, `a4aa471`, `77fd1b8`, `6cc47d7`, `aa86b17`, `718e8e6`, `45d8401` (bitácora, entrada 101), `3cd1199` (bitácora, entrada 102) |
+| 8 — deuda técnica (Claude Code con el modelo Opus 5.5) | `chore/deuda-tecnica` | `a687dfb` (RF-06.0x renombrados), `a4812d7` (seed de demostración), `fc9df24` (`.env.example`), `8443f1f` (bitácora, entrada 103), `bd692e9` (bitácora, entrada 104) |
+| 9 — informes (Claude Code con el modelo Opus 5.5) | `docs/informes-v8` | `8974ed1` (cobertura por requisito), `d484c3e` (cambios y decisiones), `4051bba` (bitácora, entrada 105), `55d8e68` (bitácora, entrada 106) y, después de integrar todo en `main`, `5cffa20` (estimación de horas); la documentación va en el último (bitácora, entrada 122) |
 
 ---
 

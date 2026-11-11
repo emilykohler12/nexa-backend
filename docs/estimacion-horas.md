@@ -1,47 +1,52 @@
 # Estimación de horas de desarrollo
 
-Estimación **a partir de los commits**, hecha solo con lectura de los dos repositorios (`git log`), sin cambiar nada del historial. No es un registro de horas: la autora no llevó registro de horas por función (libro de requisitos v7, hoja «Iteraciones»). La tabla de sesiones está en `docs/estimacion-horas.csv`. Se regenera con `node scripts/estimacion-horas.mjs` (versionado) después de un `git fetch` en los dos repositorios.
+Cifra única del proyecto: **424 horas de desarrollo**, con un intervalo del 95 % de **394 a 454 horas**, del 01/06/2026 al 09/11/2026. Es una estimación a posteriori y no un registro de horas: la autora no llevó un registro horario. La misma cifra figura en el informe, en el libro de requisitos (hoja «Horas de desarrollo», celda B16) y en la bitácora. Las 200 horas del Capítulo V son lo planificado y se muestran aparte como tal. La cifra se actualiza en el corte del congelamiento de la versión.
 
-## Corte de los datos
+## Por qué no se estima con los commits
 
-Calculado el **2026-11-06** (hora de Argentina). Entran los commits alcanzables desde estas referencias, que incluyen lo mergeado **y** el trabajo que todavía está en ramas o pull requests abiertos:
-
-| Repositorio | Referencia | Commit de corte (hash abreviado y fecha del commit) |
-|---|---|---|
-| backend | `origin/main` | `090f0db` 2026-11-05T23:06:13-03:00 |
-| backend | `HEAD` | `d867e55` 2026-11-06T03:12:04-03:00 |
-| frontend | `origin/main` | `ec35329` 2026-11-05T23:29:34-03:00 |
-| frontend | `origin/integracion-ae4` | `703484f` 2026-11-05T17:05:35-03:00 |
-| frontend | `origin/fix/fase-7-tienda-alergias-fechas` | `b172e82` 2026-11-05T22:56:16-03:00 |
-
-- **Backend** (`nexa-backend`): **179 commits** sin merges. `HEAD` es la rama `chore/cierre-final` (el pull request abierto que trae esta misma estimación): su propio commit de estimación no se cuenta.
-- **Frontend** (`nexa-frontend`): **124 commits** sin merges. Incluye `integracion-ae4` y las ramas remotas que todavía no están en `main`. Los pull requests 28, 29 y 30 del backend y el 20 del frontend ya están mergeados y por eso entran vía `main`.
-- **Sin merges ni bots.** Se sacaron los merges (`--no-merges`). No hay commits de bots: todos tienen como autora a Emily Kohler; los que registró GitHub (ediciones del README desde la web) se cuentan como trabajo de la autora.
-- **Afuera:** lo que no está en ninguna de esas referencias (por ejemplo ramas locales borradas), porque contarlo duplicaría trabajo que entró a `main` por otros commits.
-- **Hora:** la fecha de **autor** de cada commit, pasada a hora de Argentina (UTC-3, sin horario de verano). Primer commit: 2026-08-25 16:43; último: 2026-11-06 03:12.
-- Los commits de los dos repositorios van en **una sola línea de tiempo**, así una sesión en la que se trabajó en los dos a la vez cuenta una sola vez.
+Los repositorios `nexa-backend` y `nexa-frontend` empiezan el 25/08/2026, cuando el sistema ya estaba avanzado: la programación empezó en junio de 2026 (bitácora del AE1, entrada de junio, semana 1) y los commits se subieron recién en agosto. Además, desde esa fecha hay commits en solo 30 días distintos y varios son del mismo trabajo. Una estimación solo con commits deja afuera todo lo anterior y no mide el tiempo real, por eso no se usa para la cifra de horas. Una versión anterior de este documento calculaba horas por sesiones de commits; se reemplaza por este método.
 
 ## Método
 
-1. Se ordenan los 303 commits por fecha de autor.
-2. Dos commits consecutivos son de la **misma sesión** si entre uno y otro pasan **90 minutos o menos**. Se repite con **60** y con **120** minutos para dar un rango.
-3. **Duración de una sesión** = último commit menos primer commit, más 30 minutos de trabajo previo al primer commit. Una sesión de un solo commit vale 30 minutos.
-4. Cada sesión se asigna al día (en hora de Argentina) de su **primer** commit: una sesión que pasa la medianoche o el cierre de un sprint cuenta entera en el día en que empezó.
-5. Se marcan **para revisar** las sesiones de más de 10 horas.
-6. **Claude Code:** un commit se cuenta «con Claude Code» si su mensaje tiene una línea `Co-Authored-By: Claude …`. Se informa el porcentaje de commits con esa línea y el de horas de las sesiones que tienen al menos un commit con ella.
+Estimación por tres valores (Malcolm et al., 1959; PMI, 2017):
 
-## Totales
+1. **Calendario.** Sale de las bitácoras: inicio el 01/06/2026 (bitácora del AE1) y sin actividad de código del 07/10 al 22/10/2026 (bitácora del AE3). El corte es el 09/11/2026.
+2. **Tres valores por período.** Para cada tipo de mes la autora declara las horas semanales mínimas, probables y máximas. Las 25 horas semanales probables de los meses de más programación son las declaradas en el plan (5 horas por día).
+3. **Valor esperado y desvío por semana.** E = (mínimo + 4 × probable + máximo) / 6. Desvío = (máximo − mínimo) / 6.
+4. **Horas del período** = semanas × E. El desvío del período = semanas × desvío semanal.
+5. **Total** = suma de los períodos. El desvío del total es la raíz de la suma de las varianzas de los períodos. Intervalo del 95 % = total ± 1,96 desvíos.
+6. **Exclusiones.** Se restan las 3 horas de reuniones con la referente. No entran la capacitación prevista, los informes, la redacción de bitácoras ni el estudio.
 
-| | 60 min | 90 min | 120 min |
-|---|---|---|---|
-| Sesiones | 48 | 45 | 45 |
-| Horas estimadas | 46,1 | 48,3 | 48,3 |
-| Sesiones de más de 10 horas (para revisar) | 0 | 0 | 0 |
-| Horas de sesiones con al menos un commit con la marca de Claude Code | 25,4 (55,1 %) | 26,1 (54,0 %) | 26,1 (54,0 %) |
+## Cálculo
 
-**Rango: de 46,1 a 48,3 horas; 48,3 con el umbral de 90 minutos.**
+| Período | Desde | Hasta | Semanas | Mínimo | Probable | Máximo | Horas esperadas |
+|---|---|---|---|---|---|---|---|
+| Junio de 2026 | 01/06 | 30/06 | 4,3 | 10 | 15 | 20 | 64 |
+| Julio de 2026 | 01/07 | 31/07 | 4,4 | 20 | 25 | 30 | 111 |
+| Agosto de 2026 | 01/08 | 31/08 | 4,4 | 20 | 25 | 30 | 111 |
+| Septiembre de 2026 | 01/09 | 30/09 | 4,3 | 10 | 15 | 20 | 64 |
+| 1 al 6 de octubre de 2026 | 01/10 | 06/10 | 0,9 | 10 | 15 | 20 | 13 |
+| 7 al 22 de octubre de 2026 | | | | | | | sin actividad |
+| 23 de octubre al 9 de noviembre de 2026 | 23/10 | 09/11 | 2,6 | 20 | 25 | 30 | 64 |
 
-**Commits con la marca `Co-Authored-By: Claude`:** 130 de 303 (42,9 %): 52 de 179 en el backend y 78 de 124 en el frontend. La línea no se puso de forma pareja:
+- Total esperado: 427 horas. Menos 3 horas de reuniones: **424 horas**.
+- Desvío del total: 15,2 horas. Intervalo del 95 %: **394 a 454 horas**.
+- Semanas con actividad: 20,9.
+
+## Límites de la estimación
+
+- Los valores semanales son un juicio de la autora, no un dato medido.
+- Se supone que los errores de cada período son independientes. Si todos fueran en el mismo sentido, el margen sería de unas 68 horas y no de unas 30.
+- El valor de las dos últimas semanas (25 horas semanales) es un supuesto a confirmar.
+- La estimación incluye el desarrollo hecho con asistencia de IA. No se separa lo hecho con y sin Claude Code: el uso de IA se declara en la bitácora y en el README (sección 8).
+
+## Historial de commits (dato complementario, no es la cifra de horas)
+
+Calculado el 2026-11-06 (hora de Argentina), con los commits alcanzables desde `origin/main` y las ramas abiertas de los dos repositorios, sin merges:
+
+- Backend: 179 commits. Frontend: 124 commits. Total: 303.
+- Primer commit: 2026-08-25 16:43. Autora de todos los commits: Emily Kohler.
+- Commits con la línea `Co-Authored-By: Claude`: 130 de 303 (42,9 %): 52 de 179 en el backend y 78 de 124 en el frontend. La línea no se puso de forma pareja y el porcentaje subestima el uso de Claude Code, porque desde el 25/09/2026 se dejó de agregar casi siempre (README, sección 8.2).
 
 | Período (fecha de autor) | Backend | Frontend |
 |---|---|---|
@@ -49,22 +54,7 @@ Calculado el **2026-11-06** (hora de Argentina). Entran los commits alcanzables 
 | Del 25/09 al 29/10/2026 | 9 de 74 | 4 de 38 |
 | Desde el 30/10/2026 (AE4) | 16 de 72 | 42 de 49 |
 
-Por eso este porcentaje **subestima** el uso de Claude Code: desde el 25/09/2026 se dejó de agregar la línea casi siempre (README, sección 8.2). Según la sección 8.2 del README, casi todos los commits que no son merges, ediciones web ni los primeros de agosto los hizo Claude Code; esa cifra no sale de las marcas y no se usa acá.
+## Referencias
 
-## Por sprint
-
-| Sprint | Sesiones (90 min) | 60 min | 90 min | 120 min |
-|---|---|---|---|---|
-| Sprint 1 (hasta el 03/09) | 5 | 4,2 | 4,2 | 4,2 |
-| Sprint 2 (04/09 al 01/10) | 16 | 18,8 | 20,1 | 20,1 |
-| Sprint 3 (02/10 al 29/10) | 14 | 13,6 | 14,5 | 14,5 |
-| Después del sprint 3 (desde el 30/10) | 10 | 9,5 | 9,5 | 9,5 |
-
-## Por mes
-
-| Mes | Sesiones (90 min) | 60 min | 90 min | 120 min |
-|---|---|---|---|---|
-| 2026-08 | 4 | 3,6 | 3,6 | 3,6 |
-| 2026-09 | 16 | 18,9 | 20,2 | 20,2 |
-| 2026-10 | 20 | 17,9 | 18,9 | 18,9 |
-| 2026-11 | 5 | 5,7 | 5,7 | 5,7 |
+- Malcolm, D. G., Roseboom, J. H., Clark, C. E., y Fazar, W. (1959). Application of a technique for research and development program evaluation. *Operations Research, 7*(5), 646–669.
+- Project Management Institute. (2017). *A guide to the project management body of knowledge (PMBOK guide)* (6.ª ed.).
