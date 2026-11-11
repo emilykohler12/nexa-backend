@@ -33,7 +33,7 @@ Para cada migración: aplicar el SQL, registrarla con `node scripts/migration-ch
 
 ## Dependencia con el frontend (fase 3b)
 
-Los botones del mail llevan a `FRONTEND_URL/mis-turnos?turno=<id>&accion=ver|reprogramar|cancelar`. Mientras el frontend no tenga esa ruta, los enlaces no abren la pantalla correcta. Conviene publicar el frontend antes, o al mismo tiempo, que el backend con el job. Lista de lo que falta en el frontend: ver la entrada 75 de la bitácora.
+Los botones del mail llevan a `FRONTEND_URL/mis-turnos?turno=<id>&accion=ver|reprogramar|cancelar`. Mientras el frontend no tenga esa ruta, los enlaces no abren la pantalla correcta. Conviene publicar el frontend antes, o al mismo tiempo, que el backend con el job. Lista de lo que falta en el frontend: ver la entrada 92 de la bitácora.
 
 ## Qué cambia en el manual de despliegue con la fase 8
 
@@ -49,7 +49,7 @@ La fase 8 no agrega migraciones ni cambia rutas. Lo que cambia para el manual (`
 La fase 10 no agrega migraciones. Antes de publicar:
 
 1. **Cargar `SUPABASE_SERVICE_ROLE_KEY` en Render** (Supabase → Project Settings → API → `service_role`). Es secreta: solo va en Render, nunca en el repositorio ni en el frontend. Sin ella el backend arranca igual, pero el borrado de archivos del bucket falla y queda una entrada de error en Actividad.
-2. **Frontend:** cambian códigos de respuesta (ver la entrada 95 de la bitácora): `POST /api/contact/job-interest` ahora responde `400 VALIDATION_ERROR` con un cuerpo vacío o inválido y `429` tras 5 envíos por hora desde la misma IP; las franjas y el perfil de la profesional responden `400` con datos inválidos; un id inexistente en servicios, promociones y eventos responde `404 NOT_FOUND` (antes 500); borrar una entrada de stock ya vendida responde `400 INSUFFICIENT_STOCK`.
+2. **Frontend:** cambian códigos de respuesta (ver la entrada 117 de la bitácora): `POST /api/contact/job-interest` ahora responde `400 VALIDATION_ERROR` con un cuerpo vacío o inválido y `429` tras 5 envíos por hora desde la misma IP; las franjas y el perfil de la profesional responden `400` con datos inválidos; un id inexistente en servicios, promociones y eventos responde `404 NOT_FOUND` (antes 500); borrar una entrada de stock ya vendida responde `400 INSUFFICIENT_STOCK`.
 3. **Número del panel:** `pendingBalance` ahora descuenta el saldo ya cobrado en el local, así que el valor del panel baja respecto de antes.
 4. **Las postulaciones van por mail al correo del estudio** (Configuración > Negocio; si está vacío, `ADMIN_EMAIL`) y no se guardan en ningún lado: en Actividad queda solo qué campos llegaron, sin nombre, correo, teléfono ni mensaje. No hay variable nueva. Si el mail falla, el sitio muestra un error y se anota una entrada de error en Actividad; conviene cargar el correo del estudio antes de desplegar.
 
