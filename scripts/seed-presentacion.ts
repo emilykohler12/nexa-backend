@@ -23,7 +23,7 @@ import bcrypt from 'bcryptjs'; // igual que bcrypt.provider.ts del backend (SALT
 import { randomUUID } from 'crypto';
 import { PRIVACY_POLICY_VERSION } from '../src/app/constants/legal';
 import {
-  CASES, DEMO_PRO, PROFESSIONALS, SERVICES, TARGET_BY_CATEGORY, TARGET_BY_PRO,
+  CASES, COMBOS, DEMO_PRO, PROFESSIONALS, SERVICES, TARGET_BY_CATEGORY, TARGET_BY_PRO,
   addDays, pickDemoAppointments, planMonth, svc, tally,
 } from './seed-presentacion/plan';
 
@@ -36,6 +36,13 @@ const { WEEK_START, REF_DATE, PRO_EMAIL, CLIENT_EMAIL } = leerConfiguracion(() =
   PRO_EMAIL: envEmail('SEED_PRO_EMAIL', 'profesional.e@example.com'),
   CLIENT_EMAIL: envEmail('SEED_CLIENT_EMAIL', 'clienta.cdemo@example.com'),
 }));
+// Modo reducido (SEED_SKIP_MONTH=1): sin el reparto de 450 turnos ni las 60 clientas del reparto; deja los 14 casos de la semana y
+// 2 turnos futuros de la clienta de demostración. SEED_SKIP_BUSINESS=1 no toca los datos del negocio ni el horario público (los carga el
+// administrador). SEED_PRO_KEY elige qué agenda usa SEED_PRO_EMAIL (por defecto la E; por ejemplo A).
+const SKIP_MONTH = process.env.SEED_SKIP_MONTH === '1';
+const SKIP_BUSINESS = process.env.SEED_SKIP_BUSINESS === '1';
+const PRO_KEY = envText('SEED_PRO_KEY') ?? DEMO_PRO;
+if (!PROFESSIONALS.some((p) => p.key === PRO_KEY)) { console.error(`Error de configuración: SEED_PRO_KEY "${PRO_KEY}" no es una agenda (LOREN, A, B, C, D, E o F).`); process.exit(1); }
 const MONTH_START = `${WEEK_START.slice(0, 7)}-01`;
 const TERMS_VERSION = PRIVACY_POLICY_VERSION; // versión de la política vigente (RF-08), la misma que usa el backend
 const DEPOSIT = 5000;
@@ -57,12 +64,13 @@ async function main() {
   if ((await prisma.paymentSettings.count()) === 0) await prisma.paymentSettings.create({ data: {} }); // defaults: $5000 fija, 12 h, política full
   // WhatsApp con código de país (54 9 ...): el frontend arma https://wa.me/<número> con este valor tal cual.
   const info = { name: 'Loren Estudio de Belleza', description: 'Estudio de belleza en Posadas, Misiones.', address: 'Eva Perón 3137, Posadas, Misiones', phone: '3765018665', whatsapp: '5493765018665', instagram: '@loren_estudio' };
-  const biz = await prisma.businessSettings.findFirst();
+  const biz = SKIP_BUSINESS ? null : await prisma.businessSettings.findFirst();
   // "Coordinar por WhatsApp" solo aparece si el negocio tiene WhatsApp cargado.
-  if (!biz) await prisma.businessSettings.create({ data: info });
+  if (SKIP_BUSINESS) { /* los datos del negocio los carga el administrador */ }
+  else if (!biz) await prisma.businessSettings.create({ data: info });
   else await prisma.businessSettings.update({ where: { id: biz.id }, data: { name: biz.name || info.name, description: biz.description || info.description, address: biz.address || info.address, phone: biz.phone || info.phone, whatsapp: biz.whatsapp || info.whatsapp, instagram: biz.instagram || info.instagram } });
   // Horario público (solo informativo): lunes a sábado de 08:00 a 20:00.
-  for (const [i, day] of DAY_NAMES.entries()) {
+  for (const [i, day] of (SKIP_BUSINESS ? [] : DAY_NAMES).entries()) {
     const isOpen = i < 6;
     await prisma.businessScheduleDay.upsert({ where: { day }, update: { isOpen, openTime: '08:00', closeTime: '20:00' }, create: { day, isOpen, openTime: '08:00', closeTime: '20:00' } });
   }
@@ -74,11 +82,16 @@ async function main() {
       (await prisma.service.create({ data: { name: s.name, categoryId: s.cat, description: s.description, duration: s.duration, price: s.price } }));
     serviceId[s.key] = row.id;
   }
+  // Servicios simultáneos (combos): categoría "combo", cada componente lo hace una profesional distinta a la misma hora.
+  for (const c of COMBOS) {
+    if (await prisma.service.findFirst({ where: { name: c.name } })) continue;
+    await prisma.service.create({ data: { name: c.name, categoryId: 'combo', description: c.description, duration: c.duration, price: c.price, isCombo: true, simultaneous: true, comboServiceIds: c.parts.map((k) => serviceId[k]) } });
+  }
 
   // --- Profesionales ---
   const proUserId: Record<string, string> = {};
   for (const p of PROFESSIONALS) {
-    const email = p.key === DEMO_PRO ? PRO_EMAIL : p.email;
+    const email = p.key === PRO_KEY ? PRO_EMAIL : p.email;
     const user = await prisma.user.upsert({
       where: { email }, update: {},
       create: { name: p.name, email, passwordHash, role: 'professional', gender: 'female', emailVerified: true, profileComplete: true, termsAcceptedAt: now, termsVersion: TERMS_VERSION },
@@ -101,7 +114,7 @@ async function main() {
   }
 
   // --- Clientas: C1 a C6 (casos), M001 a M060 (reparto mensual) y CDEMO (clienta de demostración) ---
-  const keys = ['CDEMO', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', ...Array.from({ length: CLIENT_POOL }, (_, i) => `M${String(i + 1).padStart(3, '0')}`)];
+  const keys = ['CDEMO', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', ...(SKIP_MONTH ? [] : Array.from({ length: CLIENT_POOL }, (_, i) => `M${String(i + 1).padStart(3, '0')}`))];
   const clientId: Record<string, string> = {};
   for (const [i, k] of keys.entries()) {
     const email = k === 'CDEMO' ? CLIENT_EMAIL : `clienta.${k.toLowerCase()}@example.com`;
@@ -161,8 +174,9 @@ async function main() {
   }
 
   // --- Reparto mensual por cuotas ---
-  const plan = process.env.SEED_SKIP_MONTH === '1' ? [] : planMonth({ monthStart: MONTH_START, weekStart: WEEK_START, refDate: REF_DATE, clientPool: CLIENT_POOL });
-  const demoKeys = new Set(pickDemoAppointments(plan, REF_DATE)); // 2 turnos futuros de la profesional de demostración para la clienta de demostración
+  const fullPlan = planMonth({ monthStart: MONTH_START, weekStart: WEEK_START, refDate: REF_DATE, clientPool: CLIENT_POOL });
+  const demoKeys = new Set(pickDemoAppointments(fullPlan, REF_DATE, PRO_KEY));
+  const plan = SKIP_MONTH ? fullPlan.filter((m) => demoKeys.has(m.key)) : fullPlan; // 2 turnos futuros de la profesional de demostración para la clienta de demostración
   for (const m of plan) {
     const clientKey = demoKeys.has(m.key) ? 'CDEMO' : m.clientKey;
     if (await exists(clientKey, m.pro, m.date, m.time)) continue;
@@ -179,7 +193,7 @@ async function main() {
   }
 
   // --- Control: lo guardado debe coincidir con los Gráficos 1 y 2 ---
-  if (plan.length) {
+  if (!SKIP_MONTH) {
     const rows = await prisma.appointment.findMany({ where: { clientId: { in: [...seededClientIds] }, OR: [{ internalNotes: null }, { NOT: { internalNotes: { startsWith: 'DEMO-AHORA' } } }] }, select: { professionalId: true, serviceId: true } });
     const proByUser = Object.fromEntries(Object.entries(proUserId).map(([k, v]) => [v, k]));
     const svcByKey = Object.fromEntries(Object.entries(serviceId).map(([k, v]) => [v, k]));
@@ -189,7 +203,7 @@ async function main() {
     if (t.total !== 450) console.warn(`Atención: se esperaban 450 turnos y hay ${t.total} (¿datos previos en la base?).`);
   }
   console.log(`Seed completado. Turnos nuevos: ${created}.`);
-  console.log(`Cuentas (todas con la contraseña de SEED_PASSWORD): profesional de demostración (Profesional E) ${PRO_EMAIL}, clienta de demostración ${CLIENT_EMAIL}, Loren loren.demo@example.com y profesional.a, b, c, d, f@example.com. El administrador es ADMIN_EMAIL (ve todos los turnos).`);
+  console.log(`Cuentas (todas con la contraseña de SEED_PASSWORD): profesional de demostración (agenda ${PRO_KEY}) ${PRO_EMAIL}, clienta de demostración ${CLIENT_EMAIL}, Loren loren.demo@example.com y profesional.a, b, c, d, f@example.com. El administrador es ADMIN_EMAIL (ve todos los turnos).`);
 }
 
 main()
