@@ -52,7 +52,8 @@ export const authRepository = {
         verificationToken: data.verificationToken ?? null,
         termsAcceptedAt:   data.termsAcceptedAt ?? null,
         termsVersion:      data.termsVersion ?? null,
-        emailVerified:     false,
+        // Ya no se manda mail de verificación: la cuenta nace verificada.
+        emailVerified:     true,
       },
     }),
 

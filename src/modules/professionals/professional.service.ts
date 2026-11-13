@@ -370,7 +370,12 @@ export const professionalService = {
       }
     }
 
-    return { availability, bookedTimes, earliestStart, reopenedStarts }
+    // Vacaciones: el frontend no ofrece horarios en esos días y avisa por qué (en vez de fallar recién al pagar).
+    const vacationFrom = professional?.vacationFrom ? professional.vacationFrom.toISOString().slice(0, 10) : null
+    const vacationTo   = professional?.vacationTo   ? professional.vacationTo.toISOString().slice(0, 10)   : null
+    const onVacation   = !!date && !!vacationFrom && !!vacationTo && date >= vacationFrom && date <= vacationTo
+
+    return { availability, bookedTimes, earliestStart, reopenedStarts, vacationFrom, vacationTo, onVacation }
   },
 
   getAll: async () => {

@@ -3,10 +3,12 @@ import { prisma }   from '../../app/database/prisma'
 import { AppError } from '../../app/middlewares/errorHandler'
 import { HTTP }     from '../../app/constants/http'
 
-// RF-24: solo los tipos que algún código emite (alta de servicio, producto, promoción y servicio especial).
-// El recordatorio del turno sale por mail, no como aviso de la app, y `system` no lo emitía nadie.
+// RF-24: solo los tipos que algún código emite: alta de servicio, producto, promoción y servicio especial, y los
+// cambios que hace el personal en un turno de la clienta (cancelación, reprogramación y cambio de profesional en un
+// combo), que el frontend muestra como aviso emergente al entrar. El recordatorio del turno sale por mail.
 export type ClientNotificationType =
   | 'new_service' | 'new_product' | 'new_promotion' | 'special_service'
+  | 'appointment_cancelled' | 'appointment_rescheduled' | 'professional_changed'
 
 function mapNotification(n: {
   id: string; type: string; title: string; body: string
