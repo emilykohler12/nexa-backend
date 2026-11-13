@@ -14,9 +14,9 @@ import { cookieFor } from '../helpers/auth'
 
 // RF-24: bandejas de avisos de la profesional y de la clienta (lectura y marcado como leída), y los mails que
 // recibe la clienta. Regla (decisión de Emily del 01/11/2026): el sistema le escribe a la clienta por un turno solo
-// cuando el PERSONAL lo cancela o lo reprograma. Excepciones explícitas, fuera de esta regla: el recordatorio del
-// turno (jobs/appointmentReminder.job.ts, ver appointments.reminder.test.ts) y los mails de cuenta que pide la
-// propia clienta (verificación del correo y código para recuperar la contraseña).
+// cuando el PERSONAL lo cancela, lo reprograma o cambia la profesional de un servicio de su combo. Excepciones
+// explícitas, fuera de esta regla: el recordatorio del turno (jobs/appointmentReminder.job.ts, ver
+// appointments.reminder.test.ts) y el código para recuperar la contraseña que pide la propia clienta.
 
 type U = { id: string; email: string; role: string }
 
@@ -182,7 +182,7 @@ describe('RF-24: mails a la clienta por un turno', () => {
     expect(mailsTo(client.email).map(([, subject]) => subject)).toEqual(['Tu turno fue reprogramado — Nexa'])
   })
 
-  it('en el código, los únicos envíos de mail son los permitidos (personal, recordatorio, cuenta, invitación y aviso de postulación al estudio)', () => {
+  it('en el código, los únicos envíos de mail son los permitidos (personal, recordatorio, recuperar contraseña, invitación y aviso de postulación al estudio)', () => {
     const root = path.resolve(__dirname, '../../src')
     const sends: string[] = []
     const walk = (dir: string) => {
@@ -207,9 +207,9 @@ describe('RF-24: mails a la clienta por un turno', () => {
       'modules/contact/contact.service.ts: Nueva postulación — Nexa',               // al estudio, RF-33 (no es un mail a la clienta)
       'modules/appointments/appointment.service.ts: Tu turno fue cancelado — Nexa', // a la clienta, solo con emailClient (personal)
       'modules/appointments/appointment.service.ts: Tu turno fue reprogramado — Nexa', // a la clienta, reprogramación del personal
+      'modules/appointments/appointment.service.ts: Cambió la profesional de tu turno — Nexa', // a la clienta, cambio de profesional en un combo (personal)
       'modules/appointments/appointment.service.ts: Turno reprogramado — Nexa',     // a la profesional
       'modules/auth/auth.service.ts: Código para recuperar tu contraseña — Nexa',   // de cuenta, lo pide la clienta (excepción)
-      'modules/auth/auth.service.ts: Verificá tu email — Nexa',                     // de cuenta, lo pide la clienta (excepción)
       'modules/invitations/invitation.service.ts: Invitación para unirte como profesional — Nexa', // a una profesional
     ].sort())
   })

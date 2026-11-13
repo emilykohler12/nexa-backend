@@ -52,6 +52,20 @@ export const activityService = {
       for (const r of reviews) statusByReviewId.set(r.id, r.status)
     }
 
+    // Entradas «…seña por coordinar por WhatsApp»: se lee en vivo si el turno sigue esperando la seña, igual que el
+    // estado de las reseñas, para que el botón desaparezca apenas se marca paga (o se cancela el turno).
+    const whatsappIds = [...new Set(rows
+      .filter(r => r.appointmentId && r.action.includes('seña por coordinar por WhatsApp'))
+      .map(r => r.appointmentId as string))]
+    const pendingDeposit = new Set<string>()
+    if (whatsappIds.length > 0) {
+      const appts = await prisma.appointment.findMany({
+        where:  { id: { in: whatsappIds }, depositMethod: 'whatsapp', paymentStatus: 'pending', status: { in: ['pending', 'confirmed'] } },
+        select: { id: true },
+      })
+      for (const a of appts) pendingDeposit.add(a.id)
+    }
+
     return rows.map(r => ({
       id:        r.id,
       timestamp: r.createdAt.toISOString(),
@@ -62,6 +76,7 @@ export const activityService = {
       detail:    r.detail ?? undefined,
       reviewId:     r.reviewId ?? undefined,
       appointmentId: r.appointmentId ?? undefined,
+      pendingWhatsappDeposit: r.appointmentId && r.action.includes('seña por coordinar por WhatsApp') ? pendingDeposit.has(r.appointmentId) : undefined,
       reviewStatus: r.reviewId ? (statusByReviewId.get(r.reviewId) as 'pending' | 'approved' | 'rejected' | undefined) : undefined,
     }))
   },

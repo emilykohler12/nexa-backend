@@ -16,6 +16,7 @@ import { settingsService, computeDeposit } from '../settings/settings.service'
 import { activityService } from '../activity/activity.service'
 import { paymentService } from '../payments/payment.service'
 import { notificationService } from '../professionals/notification.service'
+import { clientNotificationService } from '../clients/client-notification.service'
 import { mailProvider } from '../auth/providers/mail.provider'
 import { bcryptProvider } from '../auth/providers/bcrypt.provider'
 import type { SpecialSlot } from '../services/service.model'
@@ -53,6 +54,12 @@ export function loadTemplate(name: string, replacements: Record<string, string>)
     html = html.replaceAll(`{{${key}}}`, value)
   }
   return html
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;').replaceAll("'", '&#39;')
 }
 
 export function formatDate(date: string): string {
@@ -211,6 +218,7 @@ function toProfessionalView(a: AppointmentRow, peers: ComboPeer[] | null, attend
     },
     serviceName:    a.service.name,
     servicePrice:   Number(a.servicePrice),
+    serviceListPrice: Number(a.service.price),
     duration:       a.duration,
     date:           a.date,
     time:           a.time,
@@ -251,6 +259,7 @@ function toAdminView(a: AppointmentRow, peers: ComboPeer[] | null = null) {
     serviceName:      a.service.name,
     serviceDuration:  a.duration,
     servicePrice:     Number(a.servicePrice),
+    serviceListPrice: Number(a.service.price),
     start,
     end,
     status:            a.status,
@@ -323,26 +332,38 @@ async function notifyProfessionalOfNewAppointments(legs: AppointmentRow[]) {
   }
 }
 
-async function afterCreate(a: AppointmentRow) {
+// whatsappPending: la clienta eligió coordinar la seña por WhatsApp. El turno se avisa YA (a la profesional y al
+// administrador) y queda en Actividad con la advertencia de que la seña está por cobrar; el administrador la marca
+// paga desde ahí cuando la recibe (registerWhatsappDepositPaid).
+const WHATSAPP_PENDING_NOTE = 'La seña se coordina por WhatsApp: cuando la recibas, marcala como paga.'
+
+async function afterCreate(a: AppointmentRow, whatsappPending = false) {
   await activityService.log({
-    action: 'Nuevo turno', module: 'appointments', level: 'success', appointmentId: a.id,
-    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}`,
+    action: whatsappPending ? 'Nuevo turno: seña por coordinar por WhatsApp' : 'Nuevo turno',
+    module: whatsappPending ? 'payments' : 'appointments', level: whatsappPending ? 'warning' : 'success', appointmentId: a.id,
+    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}${whatsappPending ? `. ${WHATSAPP_PENDING_NOTE}` : ''}`,
   })
   await notifyProfessionalOfNewAppointment(a)
+}
+
+// ¿Ya se le avisó este turno a la profesional (entrada «Nuevo turno…» en Actividad)?
+async function wasAnnounced(appointmentIds: string[]): Promise<boolean> {
+  return (await prisma.activityLog.count({ where: { appointmentId: { in: appointmentIds }, action: { startsWith: 'Nuevo turno' } } })) > 0
 }
 
 // Para un combo/simultáneo: UN solo log de actividad para el admin (antes
 // quedaba uno por cada servicio del combo), pero cada profesional sigue
 // recibiendo su propia notificación in-app + mail — cada una necesita
 // enterarse de su parte igual.
-async function afterCreateGroup(legs: AppointmentRow[]) {
+async function afterCreateGroup(legs: AppointmentRow[], whatsappPending = false) {
   if (legs.length === 0) return
-  if (legs.length === 1) { await afterCreate(legs[0]); return }
+  if (legs.length === 1) { await afterCreate(legs[0], whatsappPending); return }
 
   const summary = legs.map(l => `${l.service.name} con ${l.professional.name}`).join(', ')
   await activityService.log({
-    action: 'Nuevo turno simultáneo', module: 'appointments', level: 'success', appointmentId: legs[0].id,
-    detail: `${fullName(legs[0].client)} el ${legs[0].date} ${legs[0].time}: ${summary}`,
+    action: whatsappPending ? 'Nuevo turno simultáneo: seña por coordinar por WhatsApp' : 'Nuevo turno simultáneo',
+    module: whatsappPending ? 'payments' : 'appointments', level: whatsappPending ? 'warning' : 'success', appointmentId: legs[0].id,
+    detail: `${fullName(legs[0].client)} el ${legs[0].date} ${legs[0].time}: ${summary}${whatsappPending ? `. ${WHATSAPP_PENDING_NOTE}` : ''}`,
   })
   // Una vez por profesional (no por pata), en orden de aparición.
   const byProfessional = new Map<string, AppointmentRow[]>()
@@ -361,6 +382,13 @@ async function afterCancel(a: AppointmentRow, emailClient: boolean, extraDetail 
     body:  `El turno de ${fullName(a.client)} (${a.service.name}, ${a.date} ${a.time}) fue cancelado.`,
   })
   if (emailClient) {
+    // Cancela el personal: la clienta se entera por mail y, apenas entra a la app, con un aviso emergente.
+    await clientNotificationService.notify(a.clientId, {
+      type:  'appointment_cancelled',
+      title: 'Tu turno fue cancelado',
+      body:  `El estudio canceló tu turno de ${a.service.name} del ${formatDate(a.date)} a las ${a.time}.`,
+      link:  '/mis-turnos',
+    })
     mailProvider.send(
       a.client.email,
       'Tu turno fue cancelado — Nexa',
@@ -534,6 +562,12 @@ async function afterStaffReschedule(a: AppointmentRow, previousDate: string, pre
     type:  'rescheduled_appointment',
     title: 'Turno reprogramado',
     body:  `El turno de ${fullName(a.client)} (${a.service.name}) se reprogramó para el ${a.date} a las ${a.time}.`,
+  })
+  await clientNotificationService.notify(a.clientId, {
+    type:  'appointment_rescheduled',
+    title: 'Tu turno fue reprogramado',
+    body:  `Tu turno de ${a.service.name} pasó del ${formatDate(previousDate)} a las ${previousTime} al ${formatDate(a.date)} a las ${a.time}.`,
+    link:  '/mis-turnos',
   })
   mailProvider.send(
     a.client.email,
@@ -734,7 +768,7 @@ async function comboGroupPeers(comboGroupIds: (string | null)[]): Promise<Map<st
         professionalName: e.professional.name,
         status:           e.status,
         duration:         e.duration,
-        price:            Number(e.servicePrice),
+        price:            Number(e.service.price),
       })))
     }
   }
@@ -926,7 +960,10 @@ async function assertWithinAvailability(professionalUserId: string, date: string
       availability: { where: { active: true, dayOfWeek: backendDayOf(date) }, select: { startTime: true, endTime: true } },
     },
   })
-  if (!professional || isOnVacation(professional, date) || !isTimeInRanges(professional.availability, time)) {
+  if (professional && isOnVacation(professional, date)) {
+    throw new AppError(HTTP.BAD_REQUEST, 'La profesional está de vacaciones ese día. Elegí otro día u otra profesional.', 'OUT_OF_HOURS')
+  }
+  if (!professional || !isTimeInRanges(professional.availability, time)) {
     throw new AppError(HTTP.BAD_REQUEST, 'Ese horario está fuera de la disponibilidad de la profesional. Elegí otro horario.', 'OUT_OF_HOURS')
   }
 }
@@ -1006,6 +1043,25 @@ async function afterComboReassign(updated: AppointmentRow, previousProfessionalI
     title: 'Turno reasignado',
     body:  `El turno de ${fullName(updated.client)} (${updated.service.name}, ${updated.date} a las ${updated.time}) pasó a ${updated.professional.name}.`,
   })
+  // La clienta se entera por mail y con un aviso emergente al entrar a la app.
+  await clientNotificationService.notify(updated.clientId, {
+    type:  'professional_changed',
+    title: 'Cambió la profesional de tu turno',
+    body:  `En tu turno del ${formatDate(updated.date)} a las ${updated.time}, ${updated.service.name} ahora te lo hace ${updated.professional.name} (antes ${previous?.name ?? 'otra profesional'}).`,
+    link:  '/mis-turnos',
+  })
+  mailProvider.send(
+    updated.client.email,
+    'Cambió la profesional de tu turno — Nexa',
+    loadTemplate('appointmentProfessionalChanged', {
+      CLIENT_NAME:           escapeHtml(fullName(updated.client)),
+      SERVICE_NAME:          escapeHtml(updated.service.name),
+      PREVIOUS_PROFESSIONAL: escapeHtml(previous?.name ?? 'otra profesional'),
+      PROFESSIONAL:          escapeHtml(updated.professional.name),
+      DATE:                  formatDate(updated.date),
+      TIME:                  updated.time,
+    }),
+  ).catch(err => console.error('[mail] error notificando cambio de profesional:', err.message))
   const alreadyInGroup = await prisma.appointment.count({
     where: {
       comboGroupId: updated.comboGroupId, id: { not: updated.id }, professionalId: updated.professionalId,
@@ -1119,10 +1175,12 @@ export const appointmentService = {
       throw err
     }
 
-    // OJO: acá NO se llama a afterCreate. El turno recién se le avisa al
-    // profesional (notificación + mail + actividad) cuando se confirma el pago
-    // de la seña — ver applyPaymentResult. Hasta entonces es solo una reserva
-    // provisoria que el job release-unpaid libera si no se paga.
+    // Con Mercado Pago, la profesional recién se entera (notificación + mail + actividad) cuando se confirma el
+    // pago de la seña — ver applyPaymentResult; hasta entonces es una reserva provisoria que el job release-unpaid
+    // libera si no se paga. Sin seña, o con la seña coordinada por WhatsApp (el job no la libera), el turno se
+    // avisa ahora: a la profesional y al administrador (Actividad), que marca la seña como paga cuando la recibe.
+    if (deposit <= 0) await afterCreate(appointment)
+    else if (appointment.depositMethod === 'whatsapp') await afterCreate(appointment, true)
     return toClientView(appointment)
   },
 
@@ -1293,10 +1351,12 @@ export const appointmentService = {
       throw err
     }
 
-    // Con seña: a los profesionales se les avisa recién cuando se paga
-    // (applyGroupPaymentResult). Sin seña: se avisa acá, ya está confirmado.
+    // Con seña por Mercado Pago: a los profesionales se les avisa recién cuando se paga (applyGroupPaymentResult).
+    // Sin seña, o con la seña coordinada por WhatsApp (el administrador la marca paga desde Actividad): se avisa acá.
     if (noDeposit) {
       await afterCreateGroup(created)
+    } else if (input.depositMethod === 'whatsapp') {
+      await afterCreateGroup(created, true)
     }
 
     return {
@@ -1426,7 +1486,8 @@ export const appointmentService = {
           action: 'Seña coordinada por WhatsApp marcada como paga', module: 'payments', appointmentId: legs[0].id,
           detail: `Combo — ${fullName(legs[0].client)}: ${legs.map(l => l.service.name).join(', ')}`,
         })
-        await afterCreateGroup(legs.map(l => ({ ...l, paymentStatus: 'partial' })))
+        // Las reservas nuevas ya avisaron a las profesionales al agendarse; solo las anteriores a ese cambio no.
+        if (!(await wasAnnounced(legs.map(l => l.id)))) await afterCreateGroup(legs.map(l => ({ ...l, paymentStatus: 'partial' })))
       }
 
       const fresh = await prisma.appointment.findMany({
@@ -1452,7 +1513,7 @@ export const appointmentService = {
       action: 'Seña coordinada por WhatsApp marcada como paga', module: 'payments', appointmentId: updated.id,
       detail: `${updated.service.name} — ${fullName(updated.client)} con ${updated.professional.name}`,
     })
-    await afterCreate(updated)
+    if (!(await wasAnnounced([updated.id]))) await afterCreate(updated)
     return toAdminView(updated, null)
   },
 

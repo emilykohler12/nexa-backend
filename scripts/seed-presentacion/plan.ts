@@ -46,6 +46,14 @@ export const SERVICES: ServiceDef[] = [
   { key: 'S14', name: 'Peinado para eventos', cat: 'cabello', price: 25000, duration: 90, description: 'Peinado para eventos. Precio y duración de prueba.', fictitious: true },
 ];
 
+// Servicios simultáneos (combos): cada servicio lo hace una profesional distinta a la misma hora (R-07).
+// El precio del combo es menor que la suma de los servicios. No cuentan en los 450 turnos: ningún turno del plan los usa.
+export interface ComboDef { name: string; parts: string[]; price: number; duration: number; description: string }
+export const COMBOS: ComboDef[] = [
+  { name: 'Semipermanente + Perfilado de cejas', parts: ['S1', 'S6'], price: 32000, duration: 90, description: 'Semipermanente en manos y perfilado de cejas, en simultáneo con dos profesionales.' },
+  { name: 'Extensiones de pestañas + Capping manos', parts: ['S4', 'S2'], price: 42000, duration: 120, description: 'Extensiones de pestañas clásicas y capping en manos, en simultáneo con dos profesionales.' },
+];
+
 // ---------- Agendas (Gráfico 2) ----------
 // dayOfWeek: 0 = lunes ... 5 = sábado (6 = domingo, sin atención).
 const DAYS = [0, 1, 2, 3, 4, 5];
@@ -165,9 +173,9 @@ export function planMonth(o: PlanOpts): Planned[] {
 export const DEMO_PRO = 'E';
 
 /** Elige los 2 turnos de la clienta de demostración: los primeros confirmados de la profesional de demostración desde refDate + 4 días. */
-export function pickDemoAppointments(plan: Planned[], refDate: string): string[] {
+export function pickDemoAppointments(plan: Planned[], refDate: string, proKey: string = DEMO_PRO): string[] {
   const from = addDays(refDate, 4);
-  const mine = plan.filter((a) => a.status === 'confirmed' && a.pro === DEMO_PRO).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  const mine = plan.filter((a) => a.status === 'confirmed' && a.pro === proKey).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   const late = mine.filter((a) => a.date >= from);
   return (late.length >= 2 ? late : mine).slice(0, 2).map((a) => a.key);
 }

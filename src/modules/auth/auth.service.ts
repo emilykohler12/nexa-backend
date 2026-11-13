@@ -7,11 +7,10 @@ import { bcryptProvider }           from './providers/bcrypt.provider'
 import { jwtProvider }              from './providers/jwt.provider'
 import { generateTokens }           from './utils/generateTokens'
 import { hashRefreshToken }         from './utils/hashToken'
-import { generateSecureToken, generateVerificationCode } from './utils/generateCode'
+import { generateVerificationCode } from './utils/generateCode'
 import { mailProvider }             from './providers/mail.provider'
 import { AppError }                 from '../../app/middlewares/errorHandler'
 import { HTTP }                     from '../../app/constants/http'
-import { env }                      from '../../app/config/env'
 import type { RegisterDto }         from './dto/register.dto'
 import type { LoginDto }            from './dto/login.dto'
 import type { ForgotPasswordDto }   from './dto/forgotPassword.dto'
@@ -101,24 +100,14 @@ export const authService = {
     const exists = await authRepository.emailExists(dto.email)
     if (exists) throw new AppError(HTTP.CONFLICT, 'El email ya está registrado', 'EMAIL_TAKEN')
 
-    const passwordHash      = await bcryptProvider.hash(dto.password)
-    const verificationToken = generateSecureToken()
+    const passwordHash = await bcryptProvider.hash(dto.password)
 
     const created = await authRepository.create({
       name: dto.name, lastName: dto.lastName, email: dto.email, passwordHash,
-      role: 'client', phone: dto.phone, gender: dto.gender, verificationToken,
+      role: 'client', phone: dto.phone, gender: dto.gender,
       termsAcceptedAt: new Date(),
       termsVersion:    PRIVACY_POLICY_VERSION,
     })
-
-    const html = loadTemplate('verifyEmail', {
-      LINK: `${env.FRONTEND_URL}/verify-email?token=${verificationToken}`,
-      NAME: dto.name,
-    })
-
-    mailProvider.send(dto.email, 'Verificá tu email — Nexa', html).catch(err =>
-      console.error('[mail] ❌ Error enviando verificación:', err.message)
-    )
 
     const user   = toAuthUser(created)
     const tokens = await authService.startSession(user)
