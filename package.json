@@ -48,6 +48,11 @@
     "test:migrate": "node -e \"require('dotenv').config({ path: '.env.test', quiet: true }); require('child_process').execSync('npx prisma migrate deploy', { stdio: 'inherit' })\"",
     "typecheck": "tsc --noEmit",
     "typecheck:all": "tsc -p tsconfig.test.json --noEmit",
-    "seed:demo": "tsx scripts/seed-demo.ts"
+    "seed:demo": "tsx scripts/seed-demo.ts",
+    "seed:presentacion": "tsx scripts/seed-presentacion.ts",
+    "seed:presentacion:verificar": "tsx scripts/seed-presentacion/verify-plan.ts",
+    "demo:turnos-ahora": "tsx scripts/demo-turnos-ahora.ts",
+    "demo:turnos-ahora:verificar": "tsx scripts/seed-presentacion/verify-demo-times.ts",
+    "demo:recordatorio": "tsx scripts/demo-recordatorio.ts"
   }
 }
