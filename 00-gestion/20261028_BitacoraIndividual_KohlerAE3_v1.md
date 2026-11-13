@@ -2100,3 +2100,183 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Claude Fable 5.2) con el navegador integrado, `git`, `gh` y Node. Context7 no se consultó: el cambio del frontend es CSS y marcado, sin API de ninguna librería. |
 
 **Impacto en el frontend (contrato):** ninguno. No cambia ninguna ruta ni respuesta.
+
+## Entrada 146: AE4, instalación y revisión del seed de la presentación (datos sintéticos, base local)
+
+**Fecha:** 2026-11-12 23:55 a 2026-11-13 00:20 aprox. (hora de la máquina, UTC-3)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), no por Emily**, a pedido de ella, sin commit. **(a) Instalación:** los archivos de `scripts/seed_AE4/` pasaron a `scripts/seed-presentacion.ts`, `scripts/demo-turnos-ahora.ts` y `scripts/seed-presentacion/` (plan, verificadores, horarios de demostración); se agregaron a `package.json` los comandos `seed:presentacion`, `seed:presentacion:verificar`, `demo:turnos-ahora`, `demo:turnos-ahora:verificar` y `demo:recordatorio`, y a `.env.example` los nombres `SEED_*` sin valores. `demo-turnos-vivo.ts` quedó sin instalar en `scripts/seed_AE4/` (ver 5). **(b) Correcciones al seed:** el WhatsApp del negocio se cargaba como `3765018665` y el frontend arma `https://wa.me/<número>`, así que el enlace «Coordinar por WhatsApp» no funcionaba: ahora `5493765018665` (el mismo que `social.data.ts` del frontend); las variables vacías (como queda al copiar `.env.example`) pisaban los valores por defecto porque se usaba `??`: ahora cuentan como no definidas; `SEED_PASSWORD` es obligatoria (había una contraseña por defecto escrita en un repositorio público); la versión de la política sale de `PRIVACY_POLICY_VERSION` (estaba repetida a mano); los correos de `SEED_PRO_EMAIL` y `SEED_CLIENT_EMAIL` se normalizan con `trim().toLowerCase()` como en el resto del backend y no pueden coincidir entre sí ni con `ADMIN_EMAIL`; las fechas `SEED_REF_DATE` y `SEED_WEEK_START` se validan; el control de «base local» solo acepta `localhost`, `127.0.0.1` y `::1` (antes también `postgres` y `db`) y el seed se niega si la base ya tiene cuentas que no son de demostración (`SEED_ACEPTAR_CUENTAS_AJENAS=1` lo permite a propósito); `demo-turnos-ahora` suma `--reiniciar` (borra solo los turnos marcados `DEMO-AHORA` de la clienta de demostración, para repetir entre el ensayo y la presentación) y ya cuenta los horarios con `slot_locked` como ocupados. Esa lógica común vive en `scripts/seed-presentacion/entorno.ts`. **(c) `scripts/demo-recordatorio.ts`:** recibe el id de un turno y llama a `runAppointmentReminderJob` con `now` = inicio menos 3 horas. Por defecto solo muestra cuántos turnos entran en la ventana y no envía nada; envía únicamente con `--enviar`, solo si el turno elegido es el único que entra y si el correo de la clienta no es `@example.com`; `--restaurar` deja el recordatorio como «sin enviar». |
+| 2 | Alternativas y criterio de descarte | **Dejar los archivos como llegaron:** descartado, el WhatsApp mal formateado y las variables vacías rompían la demostración. **Instalar también `demo-turnos-vivo.ts`:** descartado, hace lo mismo que `demo-turnos-ahora` con otra marca (`DEMO_VIVO`) que el control de los 450 turnos no excluye, y usa a Loren en vez de la Profesional E. **Que el script de recordatorio envíe directo:** descartado, el job manda un mail por cada turno que entre en la ventana, no solo el elegido, y el mail es real. **Usar la base de `.env` o la de `.env.test`:** descartado; se creó una base local nueva, `nexa_presentacion_test` (el hook del proyecto exige «test» en el nombre para correr `prisma`). |
+| 3 | Evidencia que la sostiene | `npm run typecheck:all` sin errores; los scripts (que `typecheck:all` no incluye) se revisaron con un `tsconfig` temporal, también sin errores, y se borró. `npm run seed:presentacion:verificar`: 17 líneas ok, 0 fallas; `npm run demo:turnos-ahora:verificar`: 24 ok, 0 fallas. Con `prisma migrate deploy` sobre la base nueva (62 migraciones), el servidor arrancado una vez (creó un administrador de prueba `@example.com`) y el seed corrido tres veces: 450 turnos nuevos la primera, 0 las otras dos; SQL de solo lectura: 450 turnos, categorías 220/130/70/30, profesionales 120/85/85/65/65/15/15, 0 pares activos con el mismo inicio, 2 turnos de la clienta de demostración confirmados (25/11 y 27/11, 08:00) con `reminder_sent_at` nulo y 139 de los 141 confirmados con la marca puesta. Con el servidor local y la API: ingresan administrador, profesionales y clienta; la clienta cancela el turno de «menos de 12 h» y la seña queda `partial` (retenida) y el de «12 h o más» queda `refunded`; el administrador ve 453 turnos (450 más 3 de demostración). Pruebas de negativos: sin `SEED_PASSWORD`, base remota, fecha mala, correos repetidos, correo del administrador y base con una cuenta real: el seed se niega en todos. `npm test`: 683 pruebas en 61 archivos, todas pasan. |
+| 4 | Aporte personal | Emily subió los archivos, dio el pedido paso a paso y pidió revisar todo y avisar cada problema. |
+| 5 | Desacuerdo y resolución | Sin resolver, para Emily: (a) el seed y `demo-turnos-ahora` no envían ningún mail; solo `demo-recordatorio --enviar` y el programador de tareas (que arranca siempre, también en desarrollo) pueden hacerlo, y no se ejecutó ningún envío real; (b) los 450 incluyen 3 turnos cancelados, 1 inasistencia marcada y 1 automática, y el tablero cuenta como «atendidos» solo los `finished` con fecha de hoy o anterior; (c) no se creó la rama `feature/seed-presentacion`; (d) la base `nexa_presentacion_test` quedó en el PostgreSQL local, con el administrador `admin.presentacion@example.com` y datos sintéticos. No se tocó ningún `.env` ni Mercado Pago. |
+| 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5) con `psql`, Node, `tsx`, `tsc` y la API local. Context7 no se consultó: no se usó ninguna API nueva de una librería (solo `dotenv` con la misma opción `quiet` que ya usa `env.ts`). |
+
+**Impacto en el frontend (contrato):** ninguno. No cambia ninguna ruta ni respuesta; son scripts y variables de entorno.
+
+## Entrada 147: capítulos V, VI, VII y IX redactados (sesión de chat AJ)
+
+**Fecha:** 2026-11-10 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Redactar los capítulos V, VI, VII y IX en un Word, con el formato de la Resolución 97/23 y la lista de verificación formal. Usar la cifra única de 424 horas de desarrollo (431 en total) y 200 como lo planificado. Armar la matriz de decisión ponderada del Capítulo IX a partir del ADR-001, con una tabla por perfil en el Capítulo VII y componentes de terceros leídos de los repositorios. |
+| 2 | Alternativas y criterio de descarte | (a) Inventar las actas de los sprints: descartado, no hay evidencia; se declara como pendiente. (b) Cargar valores medidos de RNF-01: descartado, no hay medición. (c) Incluir canales de redes sociales de Loren: descartado, no constan. (d) Copiar «Gmail SMTP» del Capítulo X: descartado, el código usa Brevo en producción. |
+| 3 | Evidencia que la sostiene | Resolución 97/23 (arts. 20 a 24), consigna AE4 v02, lista de verificación formal, informe AE2 v4.1 y su devolución, repositorios en main, libro v9 y bitácoras. Kotler y Armstrong (2012), verificado por búsqueda web. |
+| 4 | Aporte personal | Emily confirmó las 25 horas semanales de las últimas dos semanas y definió el alcance. Le toca revisar la matriz, completar los datos pendientes y firmar su Capítulo XII. |
+| 5 | Desacuerdo y resolución | El Capítulo X de la AE2 dice «Gmail SMTP» y el sistema envía por Brevo: se escribe lo que hace el código y queda pendiente corregir el Capítulo X. Los pesos y puntajes de la matriz son una propuesta de Claude, por confirmar. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con los conectores de Google Drive y los repositorios clonados. Las cifras de pruebas del backend salen del informe de Claude Code. Revisión final por Emily pendiente. |
+
+**Impacto en el frontend (contrato):** ninguno.
+
+## Entrada 148: datos de prueba (seed) de la semana del 2 al 7 de noviembre (sesión de chat AK)
+
+**Fecha:** 2026-11-10 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Armar un seed de datos sintéticos adaptado al schema.prisma real (nexa-backend/prisma/seed.ts): 11 turnos, 3 profesionales (Loren, Sol y Ludmila) y 6 clientas ficticias, para la semana del lunes 2 al sábado 7 de noviembre de 2026. Quitar el 80 % de ocupación y el 20 % de solapamiento. Mantener 3 profesionales y 3 categorías. Cargar maquillaje en Rostro sin profesional asignada. Redactar un correo al profesor con el enfoque estadístico. |
+| 2 | Alternativas y criterio de descarte | (a) Datos reales de clientas: descartado, Ley 25.326. (b) Factor de estacionalidad y ocupación del 80 %: descartado por Emily, no hay datos medidos. (c) Inventar las otras 4 profesionales: descartado por ahora, queda como consulta al profesor. (d) Modelar la reprogramación como dos turnos enlazados (como en el JSON): descartado, el schema usa previousDate y previousTime. (e) Crear cuentas de Google: descartado, OAuth no está implementado, se usan alias de Gmail. (f) Cargar la comisión del 20 %: no se cargó, commissionPct queda en 0 hasta definir la base de cálculo. |
+| 3 | Evidencia que la sostiene | schema.prisma, el documento de arquitectura pegado por Emily, capturas de las publicaciones de Instagram del estudio (precios y horarios de Loren, Sol y Ludmila) y los datos que aportó Emily (nombres, rubros, precios de maquillaje). No se pudo abrir la carpeta de Drive. Las proporciones del Gráfico 1 y las cifras de 450 y 120 turnos vienen de Emily, sin verificar contra la tesis. |
+| 4 | Aporte personal | Emily aportó los nombres y rubros de las profesionales, los precios de maquillaje, y decidió trabajar con 3 profesionales, descartar el 80 % y el 20 % y consultar al profesor. Le toca confirmar los supuestos del código, definir si la limpieza facial es Rostro o Cuerpo, correr el seed y enviar el correo. |
+| 5 | Desacuerdo y resolución | Claude advirtió que los parámetros de 450 turnos, 120 de Loren, 80 % y 20 % no estaban verificados, y Emily los quitó. Claude detectó que healthConsentGivenAt figura en el documento pero no existe en el schema (el consentimiento está en Client.consents). Correcciones de Claude: se había dicho 12 turnos y el seed tiene 11, y la distribución del seed (4, 3 y 4) no coincide con el Gráfico 1. La limpieza facial quedó en Cuerpo por un supuesto de Claude, por confirmar. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5). El seed.ts no se ejecutó ni se probó contra una base de datos, así que su funcionamiento queda sin verificar. Los valores supuestos están marcados en el código. Revisión final por Emily pendiente. |
+
+**Impacto en el frontend (contrato):** ninguno.
+
+## Entrada 149: instrumentos 36 y 37, hoja de ruta y factibilidad tecnológica, clase 12/11 (sesión de chat AL)
+
+**Fecha:** 2026-11-11 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Resolver los Instrumentos 36 y 37 en un solo Word, sobre la plantilla oficial de la AE4 y con datos del libro v6. La hoja de ruta tiene 6 evoluciones en 3 horizontes. Ahora: Mercado Pago en producción y medición de RNF-01. Próximo: indicador de inasistencias y liquidación de comisión. Después: talleres y segunda instancia. El Instrumento 37 evalúa dos hipótesis. La H1, predicción de inasistencia, da un índice de 3,05 y se posterga con condición. La H2, gamificación, no pasa la prueba de necesidad. |
+| 2 | Alternativas y criterio de descarte | (a) Chatbot de WhatsApp como evolución: descartado, L-03 lo excluye y queda en 36.3. (b) Pronóstico de demanda por franja: descartado, no hay turnos reales (datos en 1). (c) H1 repetida en el horizonte Después: descartado, quedó solo en 36.3 para no duplicar. (d) Seguir los apuntes de arquitectura pegados (chatbot, talleres con seña del 50 %): descartado, el catálogo v6 los excluye. |
+| 3 | Evidencia que la sostiene | Consigna AE4 v02 y plantillas de la carpeta «Estudio Proyecto» del Drive. Libro v6 (H-xx, R-xx, L-xx, trazabilidad, Recursos). Ley 25.326 en argentina.gob.ar/normativa/nacional/64790/texto. No se pudo abrir el Trello (bloquea acceso automático) ni GitHub, así que la etiqueta v2.0.0 y su fecha están sin verificar. |
+| 4 | Aporte personal | Emily mandó la consigna y los links, y pidió el formato APA 7 y la versión en Word editable. Le toca confirmar la etiqueta y su fecha, validar los umbrales con Loren, revisar los puntajes de la matriz y las 40 horas, y defenderlo en la clase del 12/11. |
+| 5 | Desacuerdo y resolución | Claude advirtió que los apuntes de arquitectura contradicen el catálogo v6 y se siguió el v6. El libro v6 está al estado v1.3 y el proyecto apunta a v2.0.0, por eso quedó resaltado para confirmar. Primero se entregó un PDF y Emily pidió Word, así que se rehízo el documento. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5). Los puntajes, los umbrales y las 40 horas son propuesta de Claude, sin validar con Loren. No se contrastó el documento con la rúbrica oficial de la AE4. Revisión final por Emily pendiente. |
+
+**Impacto en el frontend (contrato):** ninguno.
+
+## Entrada 150: Instrumento 39 resuelto, con medición propia (sesión de chat AM)
+
+**Fecha:** 2026-11-11 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Resolver el Instrumento 39 en un Word con 9 supuestos, la prueba de los diez de 5 componentes y 5 experimentos. Medir tamaños y tiempos con 5.400 y 54.000 turnos sintéticos, tomar las cuotas de los proveedores de su documentación y dejar los resultados observados como «Pendiente». |
+| 2 | Alternativas y criterio de descarte | (a) Multiplicar por diez cargas sin medir: descartado, es un error frecuente del instrumento. (b) Usar la prueba de Prisma del backend: descartado, el entorno de Claude no puede descargar los motores y se midió con SQL directo. (c) Poner resultados a los experimentos: descartado, no hay turnos reales. |
+| 3 | Evidencia que la sostiene | Plantilla del Instrumento 39 y libro de trabajo de la AE4. Medición del 11/11/2026 en PostgreSQL 16 con las 62 migraciones. Ayuda oficial de Brevo (300 mails por día) y página de precios de Supabase (500 MB), consultadas el 11/11/2026. Medición de 29 a 44 ms por reserva del 09/11/2026. |
+| 4 | Aporte personal | Emily pidió el instrumento y debe repetir la medición, validar los umbrales con Loren y medir E-05. |
+| 5 | Desacuerdo y resolución | La medición la ejecutó Claude y no Emily: el documento lo declara. Los umbrales de E-01, E-03 y E-04 son propuestos por Claude y quedan para que Emily los confirme. El Instrumento 36 y 37 tiene datos desactualizados. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5) con los conectores de Google Drive y los repositorios clonados. Revisión final por Emily pendiente. |
+
+**Impacto en el frontend (contrato):** ninguno.
+
+## Entrada 151: Instrumento 38, ficha de búsqueda marcaria (sesión de chat AN)
+
+**Fecha:** 2026-11-12 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Armar la ficha en Word sobre la plantilla de la AE4, con la consulta real al INPI que hizo Emily el 12/11/2026 (04:29 a 04:38). Signo KOLOGIC, denominativa, clases 42 y 9; la 35 se descartó. Marca: sí, más adelante. Código fuente en la DNDA: sí. Base de datos propia: no. Dominio: sí. Confidencialidad: sí, por contrato. |
+| 2 | Alternativas y criterio de descarte | (a) Registrar NEXA: descartado, tiene 450 resultados, un NEXA en clase 9 y varios en clase 35. (b) Marca mixta: descartada hasta que haya logo. (c) Clase 35 para Kologic: descartada, no presta gestión comercial a terceros. (d) AAIP para la base de datos: fuera de la ficha, es obligación del responsable (Loren) y va en privacidad. (e) Búsqueda fonética arancelada: no se hizo, la cátedra no exige trámites arancelados. |
+| 3 | Evidencia que la sostiene | Capturas y PDF de las actas 1288762, 1614901 y 1824537 del Portal de Trámites del INPI. Captura de Donweb para el dominio. Plantilla de la AE4. Fichas oficiales de INPI, DNDA y AAIP en argentina.gob.ar. |
+| 4 | Aporte personal | Emily hizo la búsqueda real y sacó las capturas. Le toca completar los estados de las NEXA (clases 9 y 35), buscar las variantes de KOLOGIC, repetir el dominio en nic.ar, escribir el motivo del nombre, definir el titular y confirmar las decisiones. |
+| 5 | Desacuerdo y resolución | Emily preguntó si el instrumento pide código en DNDA y base en AAIP: la plantilla pide DNDA para los dos y la AAIP queda afuera. Claude marcó que «clase 8» parece un error y que la captura muestra NEXA en clase 9. También marcó que el dominio se consultó en Donweb y no en NIC. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5). Claude no consultó el INPI: todo resultado sale de lo que mandó Emily. Los riesgos y las decisiones son propuesta de Claude, a confirmar. Varios estados quedan sin completar. Revisión final por Emily pendiente. |
+
+**Impacto en el frontend (contrato):** ninguno.
+
+## Entrada 152: Instrumento 38, versión final de la ficha marcaria (sesión de chat AO)
+
+**Fecha:** 2026-11-12 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Rehacer el Word del Instrumento 38 con los datos que dio Emily. Signo KOLOGIC, denominativa, sin variantes. NEXA se resume por clase: 42 y 9 sin registros, 35 con 17 resultados. Titular de la marca, el dominio y el depósito del código: la autora. Dominio kologic.ar disponible en NIC Argentina (04:48) y kologic.com.ar en Donweb (04:38). |
+| 2 | Alternativas y criterio de descarte | (a) Buscar variantes de KOLOGIC: descartado por Emily. (b) Listar cada NEXA de la clase 35 con su estado: descartado, la captura no muestra esa columna. (c) Incluir las capturas amplias de NEXA (450 resultados): descartado, una muestra un NEXA en clase 9 que contradice lo informado por Emily. (d) Registrar NEXA ahora: descartado, hay 17 antecedentes en la clase 35. |
+| 3 | Evidencia que la sostiene | Capturas y PDF de las actas 1288762, 1614901 y 1824537 del INPI. Captura de la clase 35 de NEXA (17 resultados). Captura sin registros del 12/11/2026, 04:35. Capturas de Donweb y NIC Argentina. Instructivo del Buscador de marcas del INPI. |
+| 4 | Aporte personal | Emily hizo las búsquedas y las capturas, explicó el significado del nombre, decidió trabajar solo con KOLOGIC sin variantes y aclaró que NEXA no tiene antecedentes en las clases 9 y 42. Le toca revisar la ficha y resolver la duda del acta 1341836. |
+| 5 | Desacuerdo y resolución | Emily afirmó que NEXA en clase 9 no tiene resultados, y una captura de la búsqueda amplia muestra el acta 1341836 en esa clase. Se siguió el dato de Emily y se dejó la captura afuera. Queda abierta la pregunta de cuál es el caso. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5). Claude no consultó el INPI ni NIC: todos los resultados salen de lo que mandó Emily. Los riesgos y las decisiones de trámite son propuesta de Claude. Revisión final por Emily pendiente. |
+
+**Impacto en el frontend (contrato):** ninguno.
+
+## Entrada 153: lectura de la v9.1 y preguntas previas a Claude Code (sesión de chat AP)
+
+**Fecha:** 2026-11-12 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | No crear más archivos hasta definir todo. Leer la v9.1 y contrastarla con el seed y la matriz. Preparar un prompt de solo lectura para Claude Code con las preguntas necesarias, antes de rehacer el seed y la matriz. |
+| 2 | Alternativas y criterio de descarte | (a) Seguir con la v6: descartado, la v9.1 cambia la tolerancia (30 minutos), los estados, los combos y el horario reabierto. (b) Crear cuentas de Gmail por rol: descartado, alcanza una casilla con alias, sujeto a la lista permitida del proveedor de correo. (c) Mostrar el cobro con Mercado Pago de prueba: no seguro, no hay credenciales de prueba cargadas (RF-03 abierta); alternativa: coordinar por WhatsApp. |
+| 3 | Evidencia que la sostiene | Libro v9.1 (hojas Cambios v9, Reglas, Límites, Código y pruebas, Panel y prioridades del Catálogo); consigna y grilla del coloquio de la AE4; schema.prisma. |
+| 4 | Aporte personal | Emily detectó que se había usado la v6 en lugar de la v9, pidió frenar la creación de archivos y definió las preguntas previas. Le toca correr el prompt en Claude Code, traer las respuestas, configurar un correo de prueba y las credenciales de prueba de Mercado Pago. |
+| 5 | Desacuerdo y resolución | Resueltas con la v9.1: M-05 es una brecha aceptada por Loren el 30/10 (declarar en el Capítulo IX); RF-04 ya declara que la seña solo se marca como devuelta. Quedan abiertas la tolerancia de 20 minutos del informe frente a los 30 del libro, y el nombre real de los estados (completed frente a finished). |
+| 6 | Herramienta auxiliar (declaración de uso) | Claude (chat, Claude Sonnet 5.5) con los conectores de Google Drive y Google Sheets. Función: lectura y contraste de la v9.1 y redacción del prompt. Pieza afectada: ninguna (solo lectura). Fecha: 12/11/2026. Verificación: el contenido leído corresponde a la v9.1 del 10/11/2026; no se leyeron todas las hojas. Verificación de Emily: pendiente. |
+
+**Impacto en el frontend (contrato):** ninguno.
+
+## Entrada 154: seed v3, matriz y guía de estudio (sesión de chat AQ)
+
+**Fecha:** 2026-11-12 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Rehacer el seed con el relevamiento de Claude Code y el libro v9.1: reparto por cuotas sobre la grilla de 120 minutos, 14 casos de prueba, estados reales (finished, no_show_auto, cancelled_no_show), Gmail reales solo por variables de entorno y administrador creado por seedAdmin(). Rehacer la matriz de pruebas (58 casos). Redactar en Word una guía de estudio con instalación, correos, guion cronológico y preguntas del profesor. |
+| 2 | Alternativas y criterio de descarte | (a) Crear Gmail para todas las cuentas: descartado, solo la profesional y la clienta reciben mails que se muestran. (b) prisma.seed: descartado, el repositorio ya usa scripts con tsx. (c) Horarios cada 30 minutos: descartado, la pantalla de reserva usa bloques de 120. (d) Cargar mpPaymentId inventados: descartado, solo lo escribe el webhook. (e) Dejar el recordatorio activo para todos los turnos: descartado, se marcó como enviado en las cuentas ficticias. (f) Mostrar el cobro con tarjeta de prueba: descartado, no hay credenciales de prueba. |
+| 3 | Evidencia que la sostiene | Respuestas de Claude Code a los 24 puntos (12/11/2026), libro v9.1, schema.prisma, respuesta del PosDr. Díaz, consigna AE4 v02 y grilla del coloquio. verify-plan.ts ejecutado: 450 turnos, categorías y profesionales exactos, sin turnos activos repetidos, todo sobre la grilla y salida idéntica en dos corridas. |
+| 4 | Aporte personal | Emily aportó la composición real del equipo, decidió qué cuentas de Gmail usar y pidió la guía de estudio. Le toca crear la Gmail de la profesional y configurar el envío, correr el seed en una base local vacía, confirmar con Loren los datos provisorios, ensayar la demostración, completar la matriz y hacer la verificación posterior. |
+| 5 | Desacuerdo y resolución | El relevamiento de código corrigió a Claude: finished y no completed, día 0 igual a lunes, tolerancia de 30 minutos, grilla de 120 minutos, sin lista de correos permitidos y seed previo existente; se corrigieron el seed y la matriz. Quedan abiertos: el supuesto de los 15 peinados de la profesional de maquillaje, la base de capacidad (4.200 frente a 1.050), la tolerancia de 20 minutos del informe y el comentario desactualizado de schema.prisma. |
+| 6 | Herramienta auxiliar (declaración de uso) | Claude (chat, Claude Sonnet 5.5) con los conectores de Google Drive y Google Sheets. Función: generar el seed, la matriz y la guía en Word. Pieza afectada: scripts/seed-presentacion.ts, scripts/seed-presentacion/, matriz_pruebas_nexa.xlsx y Guia_Nexa_datos_demostracion_defensa.docx. Fecha: 12/11/2026. Verificación: verify-plan.ts ejecutado sin base de datos; seed-presentacion.ts no se ejecutó ni se compiló contra Prisma; no se vio ninguna pantalla ni correo. Verificación de Emily: pendiente. |
+
+**Impacto en el frontend (contrato):** ninguno.
+
+## Entrada 155: Instrumento 39 sin cambios en el repositorio (sesión de chat AR)
+
+**Fecha:** 2026-11-11 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | No ejecutar en Claude Code la repetición de la medición del Instrumento 39. Guardar el método y sus resultados en el Portafolio AE4. Corregir el Anexo A del documento para que lo diga. |
+| 2 | Alternativas y criterio de descarte | Repetir la medición ahora en el repositorio: descartado, podría chocar con el trabajo de otra sesión sobre el mismo repositorio mientras se prepara la demostración. |
+| 3 | Evidencia que la sostiene | Las bases de la medición (nexa_m5400 y nexa_m54000) son distintas de nexa_dev y de la base de seed:demo. |
+| 4 | Aporte personal | Emily decidió no ejecutarlo. Le toca guardar los archivos en el Portafolio. |
+| 5 | Desacuerdo y resolución | El documento quedaba afirmando que los scripts estaban en el repositorio; se corrigió el Anexo A. |
+| 6 | Herramienta auxiliar | Claude (chat, Claude Sonnet 5.5). Revisión final por Emily pendiente. |
+
+**Impacto en el frontend (contrato):** ninguno.
+
+## Entrada 156: aclaración de fechas de los turnos de demostración (sesión de chat AS)
+
+**Fecha:** 2026-11-12 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Aclarar que los 14 casos de la semana del 2 al 7 de noviembre son solo evidencia y que los turnos para cancelar o reprogramar en vivo son los confirmados del 21 al 30 de noviembre. Cambiar SEED_REF_DATE por defecto a 2026-11-21, el día siguiente a la presentación. |
+| 2 | Alternativas y criterio de descarte | (a) Dejar 2026-11-19 como fecha de referencia: descartado, los turnos del día de la presentación quedaban confirmados y vencidos, y el proceso de no asistido los marcaba. (b) Cargar turnos de diciembre: descartado, no hace falta, el mes cargado alcanza. (c) Mostrar la cancelación con menos de 12 horas en vivo: descartado, la hora de aviso futura da 400 INVALID_NOTICE_TIME; se muestra con A13. |
+| 3 | Evidencia que la sostiene | Pregunta de Emily; respuestas de Claude Code (reloj real, autoNoShow con más de 30 minutos, hora de aviso no futura); verify-plan.ts ejecutado con la nueva fecha (turnos futuros del 21 al 30 de noviembre, dos turnos de la clienta de demostración el 25/11). |
+| 4 | Aporte personal | Emily detectó que los turnos de la semana pasada no se podían cancelar ni reprogramar. Le toca fijar SEED_REF_DATE según el día real de su presentación. |
+| 5 | Desacuerdo y resolución | Claude había fijado el 19/11 como fecha de referencia, sin considerar los turnos vencidos del mismo día; se corrigió. Queda sin resolver la demostración en vivo de la cancelación con menos de 12 horas. |
+| 6 | Herramienta auxiliar (declaración de uso) | Claude (chat, Claude Sonnet 5.5). Función: corregir la fecha de referencia y regenerar el seed y la guía. Pieza afectada: scripts/seed-presentacion.ts, scripts/seed-presentacion/verify-plan.ts, scripts/seed-presentacion/README.md y Guia_Nexa_datos_demostracion_defensa.docx. Fecha: 12/11/2026. Verificación: verify-plan.ts ejecutado sin base de datos; el seed no se ejecutó contra una base. Verificación de Emily: pendiente. |
+
+**Impacto en el frontend (contrato):** ninguno.
+
+## Entrada 157: cuentas reales de demostración y turnos que dependen del reloj (sesión de chat AT)
+
+**Fecha:** 2026-11-12 (hora aproximada, Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | Usar como administrador de la instancia de demostración la cuenta real de Loren, con base y contraseña de demostración. Usar noralikohler@gmail.com para la Profesional E, emilykohler@hotmail.com.ar para la clienta de demostración y dejar pocos turnos propios a la Profesional E. Agregar demo-turnos-ahora.ts, que crea tres turnos contados desde el momento real (menos de 12 horas, 12 horas o más y recordatorio). |
+| 2 | Alternativas y criterio de descarte | (a) Cargar el seed en la base real de Loren: descartado, mezcla datos inventados con el negocio real y no se pueden borrar. (b) Cancelar con menos de 12 horas un turno lejano: imposible, la hora de aviso no puede ser futura (R-02). (c) Cambiar el reloj de la computadora: descartado, rompería las conexiones cifradas del correo. (d) Agregar una octava profesional: descartado, rompe los 450 turnos y las 7 agendas del Gráfico 2. |
+| 3 | Evidencia que la sostiene | Mensajes de Emily con los correos; respuestas de Claude Code (reloj real, INVALID_NOTICE_TIME, recordatorio entre 5 y 1 hora, reminderSentAt); libro v9.1 (R-02, R-24, L-12); verify-plan.ts y verify-demo-times.ts ejecutados sin base de datos. |
+| 4 | Aporte personal | Emily aportó los tres correos, definió qué cuenta ve todos los turnos y pidió poder cancelar y reprogramar cualquier turno. Le toca correr el seed y el comando en su base local, configurar el envío de Gmail y confirmar que los mails llegan, incluida la carpeta de no deseados de Hotmail. |
+| 5 | Desacuerdo y resolución | Claude había afirmado que no se podía mostrar la cancelación con menos de 12 horas; se resolvió con turnos creados al momento de presentar. Queda declarado que esos turnos no pasan por la reserva y pueden caer fuera del horario del estudio. Siguen abiertos el programador de tareas en desarrollo y el envío real de correos. |
+| 6 | Herramienta auxiliar (declaración de uso) | Claude (chat, Claude Sonnet 5.5). Función: reasignar los correos reales, crear demo-turnos-ahora.ts y actualizar la guía. Pieza afectada: scripts/seed-presentacion.ts, scripts/demo-turnos-ahora.ts, scripts/seed-presentacion/ y Guia_Nexa_datos_demostracion_defensa.docx. Fecha: 12/11/2026. Verificación: verificaciones sin base de datos ejecutadas; ni el seed ni el comando se ejecutaron contra una base, ni se vieron pantallas ni correos. Verificación de Emily: pendiente. |
+
+**Impacto en el frontend (contrato):** ninguno.
