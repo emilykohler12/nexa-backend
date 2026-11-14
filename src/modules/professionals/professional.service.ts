@@ -88,11 +88,36 @@ async function syncAvailability(professionalId: string, availability: WeeklyAvai
   }
 }
 
+// Un servicio simultáneo (combo) lo arma el administrador con servicios sueltos y la clienta elige quién hace cada parte:
+// no es un servicio que una profesional «realice». Se rechaza asignar uno NUEVO; los que ya tenía asignados no se tocan
+// (para que guardar su lista no falle) y se pueden quitar.
+async function assertNoNewComboServices(professionalId: string | null, serviceIds: string[]) {
+  if (serviceIds.length === 0) return
+  const combos = await prisma.service.findMany({
+    where:  { id: { in: serviceIds }, OR: [{ isCombo: true }, { simultaneous: true }] },
+    select: { id: true, name: true },
+  })
+  if (combos.length === 0) return
+  const already = professionalId
+    ? await prisma.professionalService.findMany({ where: { professionalId, serviceId: { in: combos.map(c => c.id) } }, select: { serviceId: true } })
+    : []
+  const had = new Set(already.map(a => a.serviceId))
+  const fresh = combos.filter(c => !had.has(c.id))
+  if (fresh.length > 0) {
+    throw new AppError(
+      HTTP.BAD_REQUEST,
+      `Los servicios simultáneos los asigna el administrador: ${fresh.map(c => c.name).join(', ')}`,
+      'COMBO_NOT_ASSIGNABLE',
+    )
+  }
+}
+
 async function syncServices(
   professionalId: string,
   services: { serviceId: string; status: 'active' | 'inactive' }[],
 ) {
   const keepIds = services.map(s => s.serviceId)
+  await assertNoNewComboServices(professionalId, keepIds)
   await prisma.professionalService.deleteMany({
     where: keepIds.length
       ? { professionalId, serviceId: { notIn: keepIds } }
@@ -600,6 +625,10 @@ export const professionalService = {
   saveOnboarding: async (userId: string, data: any): Promise<void> => {
     const { personal, work, availability, services, policies } = data
     assertValidPhone(personal?.phone)
+    if (Array.isArray(services)) {
+      const current = await prisma.professional.findUnique({ where: { userId }, select: { id: true } })
+      await assertNoNewComboServices(current?.id ?? null, services.map((s: { serviceId: string }) => s.serviceId))
+    }
 
     // El paso "Personal" del onboarding manda un único campo `name` (no
     // firstName/lastName/dni) — se persiste en el User igual que en el registro.
