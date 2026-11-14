@@ -3,7 +3,7 @@ import request from 'supertest'
 import { app } from '../../src/app/app'
 import { prisma } from '../../src/app/database/prisma'
 import {
-  createClientUser, createProfessionalUser, createAdminUser, createService, createAppointmentDirect, hoursFromNow,
+  createClientUser, createProfessionalUser, createAdminUser, createService, createAppointmentDirect, hoursFromNow, minutesAgo,
 } from '../helpers/factories'
 import { cookieFor } from '../helpers/auth'
 
@@ -214,6 +214,8 @@ describe('visibilidad de las alergias (RNF-03)', () => {
 
   it('al finalizar el turno, la respuesta ya trae la alergia del perfil', async () => {
     const { pro, appt } = await setupWithAllergies()
+    // Solo se finaliza un turno que ya empezó.
+    await prisma.appointment.update({ where: { id: appt.id }, data: minutesAgo(10) })
 
     const res = await request(app)
       .patch(`/api/professional/appointments/${appt.id}`)

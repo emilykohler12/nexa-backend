@@ -427,6 +427,15 @@ async function logStatusChange(a: AppointmentRow, from: string, to: string, acto
 //  - Corregir a 'confirmed' deja registrada la llegada (arrivedAt = ahora): si no, el job lo volvería a
 //    marcar como no asistido en la corrida siguiente.
 // El cambio y el horario reabierto se escriben en una sola transacción.
+// Finalizar es decir que el servicio ya se hizo: no tiene sentido antes de la hora de inicio (y un turno finalizado con
+// fecha futura quedaba afuera del tablero). Vale para cualquier cambio del personal a «Finalizado», también al corregir un
+// «No asistió».
+function assertStartedToFinish(appointment: { date: string; time: string }, now: Date = new Date()): void {
+  if (!hasStarted(appointment, now)) {
+    throw new AppError(HTTP.BAD_REQUEST, 'No se puede finalizar un turno que todavía no empezó', 'FINISH_BEFORE_START')
+  }
+}
+
 async function changeStatusByStaff(appointment: AppointmentRow, to: string, actorName: string, now: Date = new Date()): Promise<AppointmentRow> {
   const from = appointment.status
   if (from === to) return appointment
@@ -437,6 +446,7 @@ async function changeStatusByStaff(appointment: AppointmentRow, to: string, acto
   if (to === 'no_show_auto') {
     throw invalid('El estado "No asistió (automático)" lo asigna solo el sistema')
   }
+  if (to === 'finished') assertStartedToFinish(appointment, now)
   if (to === 'cancelled_no_show') {
     if (!['confirmed', 'no_show_auto'].includes(from)) {
       throw invalid('Solo se puede marcar como "No asistió" un turno confirmado o ya marcado como no asistido automáticamente')
@@ -2029,6 +2039,7 @@ export const appointmentService = {
     // Marcar o corregir una inasistencia tiene reglas propias (ver changeStatusByStaff).
     const statusChanging = data.status !== undefined && data.status !== appointment.status
     const viaNoShowRules = statusChanging && isNoShowTransition(appointment.status, data.status!)
+    if (statusChanging && data.status === 'finished') assertStartedToFinish(appointment)
     if (viaNoShowRules) await changeStatusByStaff(appointment, data.status!, appointment.professional.name)
 
     const updated = await updateAppointmentRow(id, {
@@ -2212,6 +2223,7 @@ export const appointmentService = {
     // Marcar o corregir una inasistencia tiene reglas propias (ver changeStatusByStaff).
     const statusChanging = data.status !== undefined && data.status !== appointment.status
     const viaNoShowRules = statusChanging && isNoShowTransition(appointment.status, data.status!)
+    if (statusChanging && data.status === 'finished') assertStartedToFinish(appointment)
     if (viaNoShowRules) await changeStatusByStaff(appointment, data.status!, actorName)
 
     const updated = await updateAppointmentRow(id, {
