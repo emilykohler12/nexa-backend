@@ -22,6 +22,23 @@ Agregar a `package.json` → scripts:
     SEED_REF_DATE=2026-11-21
     SEED_CONFIRM_HOST=
 
+## Instalar en otra computadora (paso a paso)
+
+Todo vive en GitHub (rama `main`): no hace falta copiar nada a mano.
+
+1. Clonar el repositorio y correr `npm install` dentro de `nexa-backend`.
+2. Crear una base de PostgreSQL LOCAL y vacía. Si la vas a migrar con `prisma` desde Claude Code, el nombre tiene que llevar «test» (por ejemplo `nexa_presentacion_test`).
+3. Copiar `.env.example` como `.env` y completar: `DATABASE_URL` (la base local), los secretos `JWT_*`, `FRONTEND_URL`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` (de demostración, distinta de la real), y los de mail si se quieren ver los correos. Además, solo para el seed: `SEED_PASSWORD` (contraseña de todas las cuentas de demostración), `SEED_PRO_EMAIL` (correo real de la Profesional A) y `SEED_CLIENT_EMAIL` (correo real de la clienta).
+4. Aplicar las migraciones a esa base: `npx prisma migrate deploy`.
+5. Arrancar el servidor una vez (`npm run dev`) para que cree el administrador, y frenarlo.
+6. Cargar los datos, a elegir:
+
+        npm run seed:presentacion:demo     # reducido: 7 profesionales (A es la de SEED_PRO_EMAIL), servicios con 2 simultáneos y los 14 casos de la semana; sin datos del negocio (los carga el administrador)
+        npm run seed:presentacion          # completo: lo mismo más los 450 turnos del mes y los datos del negocio
+
+   Los dos son idempotentes (se pueden correr de nuevo sin duplicar) y se niegan si la base no es local o si ya tiene cuentas reales.
+7. Para el frontend: clonar `nexa-frontend`, `npm install`, `VITE_API_URL` apuntando al backend local, y `npm run dev`.
+
 ## Qué carga
 
 7 agendas (Loren y Profesional A a F; la E es la de demostración), 13 servicios, 1 clienta de demostración, 6 clientas de casos, 60 clientas del reparto,

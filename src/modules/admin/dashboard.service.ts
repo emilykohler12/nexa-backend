@@ -120,7 +120,20 @@ export const dashboardService = {
     const heatmap: Record<number, Record<string, number>> = {}
     for (let d = 0; d < 6; d++) heatmap[d] = { morning: 0, afternoon: 0, evening: 0 }
 
-    let depositRevenueTotal = 0
+    // «Ingresos por señas confirmadas»: se suma la seña en el período en que se CONFIRMÓ (depositPaidAt). Las señas sin esa
+    // fecha (anteriores a la columna o cargadas a mano) siguen contando por la fecha del turno.
+    const paidDeposits = await prisma.appointment.findMany({
+      where: {
+        paymentStatus: { in: ['partial', 'paid'] },
+        depositAmount: { gt: 0 },
+        OR: [
+          { depositPaidAt: { gte: rangeStart, lte: rangeEnd } },
+          { depositPaidAt: null, date: { gte: startStr, lte: endStr } },
+        ],
+      },
+      select: { depositAmount: true },
+    })
+    const depositRevenueTotal = paidDeposits.reduce((sum, d) => sum + Number(d.depositAmount), 0)
     let attendedAppointments = 0
     let noShowAppointments = 0
     let refundedDeposits = 0
@@ -150,7 +163,6 @@ export const dashboardService = {
       if (a.status === 'cancelled_no_show' || a.status === 'no_show_auto') noShowAppointments += 1
 
       if (a.paymentStatus === 'partial' || a.paymentStatus === 'paid') {
-        depositRevenueTotal += Number(a.depositAmount)
         svcBucket.depositRevenue += Number(a.depositAmount)
       }
       if (a.paymentStatus === 'refunded') refundedDeposits += 1

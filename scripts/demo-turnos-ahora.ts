@@ -50,7 +50,7 @@ async function main() {
   const busyRows = await prisma.appointment.findMany({ where: { professionalId: proUser.id, OR: [{ status: { notIn: ['cancelled', 'cancelled_no_show'] } }, { slotLocked: true }] }, select: { date: true, time: true } });
   const starts = pickDemoStarts(now, new Set(busyRows.map((r) => `${r.date}|${r.time}`)), DEMO_PRO);
   const s = svc('S1');
-  const base = { clientId: client.id, professionalId: proUser.id, serviceId: service.id, duration: s.duration, servicePrice: s.price, depositAmount: DEPOSIT, depositMethod: 'whatsapp', status: 'confirmed', paymentStatus: 'partial', hasCompanion: false };
+  const base = { clientId: client.id, professionalId: proUser.id, serviceId: service.id, duration: s.duration, servicePrice: s.price, depositAmount: DEPOSIT, depositMethod: 'whatsapp', status: 'confirmed', paymentStatus: 'partial', hasCompanion: false, depositPaidAt: now };
   const rows: [keyof typeof starts, string, Date | undefined, boolean][] = [
     ['menosDe12h', `${MARK} menos de 12 h`, undefined, true],
     ['masDe12h', `${MARK} 12 h o más`, undefined, true],

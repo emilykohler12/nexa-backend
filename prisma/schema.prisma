@@ -329,6 +329,9 @@ model Appointment {
   // ANTES de enviar y se vuelve a null si el envío falla; con valor, el recordatorio no se reenvía nunca.
   // En un combo se marca igual en todas las patas, porque sale un solo mail por grupo.
   reminderSentAt DateTime? @map("reminder_sent_at") @db.Timestamptz
+  // Cuándo se confirmó la seña (Mercado Pago aprobado o marcada paga por el administrador). El tablero suma las señas por
+  // este día; en NULL (turnos anteriores a la columna, o cargados a mano) se usa la fecha del turno, como antes.
+  depositPaidAt  DateTime? @map("deposit_paid_at") @db.Timestamptz
   // Cobro del SALDO restante (precio - seña) en el local — la seña ya se
   // cobra sola por Mercado Pago (mpPaymentId), pero el resto se paga en mano
   // al momento del servicio y hasta ahora no quedaba ningún registro. 'cash' |

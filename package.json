@@ -50,6 +50,7 @@
     "typecheck:all": "tsc -p tsconfig.test.json --noEmit",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "seed:presentacion": "tsx scripts/seed-presentacion.ts",
+    "seed:presentacion:demo": "cross-env SEED_SKIP_MONTH=1 SEED_SKIP_BUSINESS=1 SEED_PRO_KEY=A tsx scripts/seed-presentacion.ts",
     "seed:presentacion:verificar": "tsx scripts/seed-presentacion/verify-plan.ts",
     "demo:turnos-ahora": "tsx scripts/demo-turnos-ahora.ts",
     "demo:turnos-ahora:verificar": "tsx scripts/seed-presentacion/verify-demo-times.ts",
