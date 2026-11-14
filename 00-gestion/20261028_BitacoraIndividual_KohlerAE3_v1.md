@@ -2325,3 +2325,31 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5) con Node, `vitest` y el navegador integrado. Context7 no se consultó (no se usó ninguna API nueva de una librería). |
 
 **Impacto en el frontend (contrato):** códigos de error nuevos: `FINISH_BEFORE_START` (`PATCH /api/admin/appointments/:id` y `PATCH /api/professional/appointments/:id`) y `COMBO_NOT_ASSIGNABLE` (`PATCH /api/professional/services`, `PATCH /api/professionals/:id` y `POST /api/professional/onboarding`); el frontend ya muestra el mensaje del servidor. Archivos del frontend: `pages/admin/appointments/AppointmentModal.tsx`, `features/professional/agenda/dialogs/AppointmentDialog.tsx`, `features/professional/onboarding/steps/ServicesStep.tsx`, `features/professional/services/{Services.tsx,types.ts}`.
+
+## Entrada 161: catálogo de requisitos v10 al repositorio
+
+**Fecha:** 2026-11-13, 23:50 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), no por Emily**, a pedido de ella: se sube a `03-requisitos/` el archivo `20261113_CatalogoRequisitos_Kohler_v10.xlsx` (copiado sin modificar desde su carpeta de descargas), junto a la v5, la v6 y la v7. Rama `docs/entrega-v2-0` del backend, cortada de `origin/main`. |
+| 2 | Alternativas y criterio de descarte | **Renombrar el archivo:** descartado, ya respeta el patrón `AAAAMMDD_CatalogoRequisitos_Kohler_vN.xlsx` de los anteriores. **Reemplazar la v7:** descartado, las versiones anteriores se conservan como historial. |
+| 3 | Evidencia que la sostiene | El archivo queda en `03-requisitos/` con 364.968 bytes (los mismos que el original). No se abrió ni se editó su contenido. |
+| 4 | Aporte personal | Emily elaboró el catálogo v10 y pidió subirlo. |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5) con Git. Context7 no se consultó (no hay código). |
+
+## Entrada 162: manual de despliegue en los dos README y congelamiento de la versión v2.0
+
+**Fecha:** 2026-11-13, 23:59 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), no por Emily**, a pedido de ella, en las ramas `docs/entrega-v2-0` de los dos repositorios (cortadas de `origin/main`, con los pull requests 39 y 26 ya integrados). Se revisaron los dos README contra la guía de despliegue de 11 secciones y se corrigió lo que estaba desactualizado o faltaba: tabla de correspondencia con las 11 secciones; versión congelada `v2.0` y `git checkout v2.0` en lugar de `main` (4.1); 63 migraciones en lugar de 62 (4.5); usuarios de demostración en una sección propia, con el seed de la presentación (4.6); prueba de humo (6.0) y recorrido de los requisitos Must del catálogo v10 (6.5); resultados esperados de las pruebas (backend 64 archivos y 704 pruebas, frontend 58 archivos y 405 pruebas); chequeo de tipos y build (7.3); terceros (8.4); problemas frecuentes nuevos, entre ellos los servicios gratuitos que se duermen (11); catálogo v10 como vigente y entradas de bitácora 1 a 162 (1.5); tercer corte de cifras y filas de la 8.3 para el trabajo del 10 al 14/11; y la ruta de `PaymentStep.tsx` (1.3). **Etiqueta:** se crea anotada, `v2.0`, en los dos repositorios, sobre el commit de `main` que resulte de integrar estas ramas y después de la corrida verde del canal sobre él; el commit exacto queda en el mensaje de la etiqueta y en `git show v2.0` (un commit no puede citar su propio hash, por eso no figura acá). |
+| 2 | Alternativas y criterio de descarte | **Etiquetar la punta de la rama antes del merge:** descartado, si el merge no fuera de tipo «merge commit» la etiqueta quedaría fuera de `main`; se etiqueta `main` ya integrada y verde. **Escribir un manual aparte:** descartado, la guía pide que sea el mismo archivo que va como PDF y los README ya tenían la mayor parte. **Subir `scripts/seed_AE4/demo-turnos-vivo.ts` (sin seguimiento en Git):** descartado, es un borrador viejo que importa `./seed-presentacion/time`, un archivo que se quitó en `1441b30`, y lo reemplaza `scripts/demo-turnos-ahora.ts`; no corre y no se versiona. **Reiniciar la base de pruebas para probar las migraciones desde cero:** no se pudo, el hook del proyecto bloquea leer `.env.test` desde la terminal; la prueba desde cero la hace el canal sobre un PostgreSQL 16 vacío (corrida verde en `main` para los pull requests 39 y 26). |
+| 3 | Evidencia que la sostiene | `npm run typecheck:all` sin errores y `npm test` en el backend: 64 archivos, 704 pruebas, todas pasan (4 minutos). `npm test` en el frontend: 58 archivos, 405 pruebas, todas pasan. `npm run test:migrate`: 63 migraciones, ninguna pendiente. Canal de GitHub Actions en verde sobre `main` de ambos repositorios (backend `d0a971d`, frontend `7fc0857`). Búsqueda de credenciales en los archivos versionados de los dos repositorios (`git grep` de claves de Mercado Pago, JWT, Brevo y cadenas de conexión de Supabase): solo una cadena falsa de prueba en `tests/integration/auth.security.test.ts` y texto de bitácoras. `.gitignore`: no excluye `package-lock.json`, `.node-version` (backend) ni los `.example`; sí excluye `.env`, `.env.*`, `dist` y `node_modules`. Todas las rutas que nombran los README existen. |
+| 4 | Aporte personal | Emily pidió revisar los README contra la guía, congelar la versión como `v2.0` con los datos de prueba de la presentación y subir el catálogo v10. |
+| 5 | Desacuerdo y resolución | Sin resolver, para Emily: (a) la etiqueta `v2.0` solo se puede crear después de que ella integre los dos pull requests (el hook impide empujar a `main` desde la sesión); (b) falta correr a mano la instalación desde una base vacía con esta versión (la última prueba manual es la del 05/11/2026); (c) el PDF de la entrega se genera desde estos README una vez integrados. |
+| 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5) con Git, Node, `vitest` y `gh`. Context7 no se consultó (no se usó ninguna API nueva de una librería). |
+
+**Impacto en el frontend (contrato):** ninguno; no cambió código ni rutas. Archivos del frontend tocados: `README.md`.
