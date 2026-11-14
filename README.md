@@ -9,6 +9,24 @@ El sistema está dividido en dos repositorios que se clonan uno al lado del otro
 
 ---
 
+**Este archivo es el manual de despliegue de la entrega** (el mismo archivo va como PDF). Correspondencia con las 11 secciones de la guía de despliegue:
+
+| Sección de la guía | Dónde está en este manual |
+|---|---|
+| 1. Propósito y versión (etiqueta) | 1.1 |
+| 2. Requisitos previos con versiones exactas | 1.2 y 3 |
+| 3. Clonado y checkout de la etiqueta | 4.1 |
+| 4. Configuración (`.env.example` con todas las variables) | 4.4 |
+| 5. Base de datos: crear, migrar y cargar datos de prueba | 4.3 y 4.5 |
+| 6. Ejecución: comando, puerto y cómo detenerla | 5 |
+| 7. Usuario de demostración | 4.6 |
+| 8. Verificación: prueba de humo y recorrido de los casos de uso Must | 6 |
+| 9. Pruebas automatizadas y resultado esperado | 7 |
+| 10. Problemas frecuentes | 11 |
+| 11. Terceros e IA, coincidente con las bitácoras | 8 |
+
+---
+
 ## 1. Identificación del proyecto y qué hace el sistema
 
 ### 1.1 Identificación
@@ -20,7 +38,7 @@ El sistema está dividido en dos repositorios que se clonan uno al lado del otro
 | Comisión | A |
 | Instancia | Proyecto Final de Grado — AE4 |
 | Docente | PosDr. Darío Ezequiel Díaz |
-| Versión | Rama `main` de los dos repositorios al 10/11/2026. La última etiqueta es `v1.3` (AE3; `v1`, `v1.1` y `v1.2` se conservan). La etiqueta de la versión congelada de la AE4 todavía no está puesta: cuando se ponga, este manual vale para esa etiqueta |
+| Versión | **v2.0**, la versión congelada de la AE4 (13/11/2026): etiqueta anotada `v2.0` en los dos repositorios (se baja con `git checkout v2.0`, ver 4.1). Las etiquetas anteriores (`v1`, `v1.1`, `v1.2` y `v1.3`, de la AE3) se conservan, pero no son la que vale. Si apareciera un defecto después de la etiqueta, se crearía una etiqueta nueva (por ejemplo `v2.0.1`) y la entrega declararía cuál vale. El commit exacto lo muestra `git show v2.0` |
 | En producción | Frontend: https://lorenestudiodebelleza.vercel.app (Vercel). Backend en Render y base de datos en Supabase |
 
 ### 1.2 Versiones exactas del entorno
@@ -37,7 +55,7 @@ Una clienta se registra, elige un servicio, una profesional, una fecha y un hora
 
 | Estación | Dónde vive |
 |---|---|
-| Interfaz | `nexa-frontend/src/features/client/booking/BookingWizard.tsx` (+ `steps/DateTimeStep.tsx`, `PaymentStep.tsx`) |
+| Interfaz | `nexa-frontend/src/features/client/booking/BookingWizard.tsx` (+ `steps/DateTimeStep.tsx` y, en la misma carpeta que él, `PaymentStep.tsx`) |
 | Lógica (regla R-01) | `nexa-backend/src/modules/appointments/appointment.service.ts` → `createForClient` |
 | Persistencia | `nexa-backend/prisma/schema.prisma` (modelo `Appointment`, tabla `appointments`) |
 | Retorno a la interfaz | `nexa-frontend/src/pages/client/AppointmentsPage.tsx` ("Mis turnos") |
@@ -66,7 +84,7 @@ Vive en el repositorio **nexa-backend**:
 
 | Documento | Ubicación |
 |---|---|
-| Catálogo de requisitos | `03-requisitos/20261030_CatalogoRequisitos_Kohler_v7.xlsx` es la última versión subida al repositorio (también están la v5 y la v6). Las versiones v8 (06/11/2026) y v9 (09/11/2026) todavía no están en el repositorio |
+| Catálogo de requisitos | `03-requisitos/20261113_CatalogoRequisitos_Kohler_v10.xlsx` es la versión vigente (13/11/2026). También están la v5, la v6 y la v7 como historial; las versiones v8 y v9 no están en el repositorio: la v10 las reemplaza y la hoja «Cambios v10» lista lo que cambió desde la v9 |
 | Relevamiento (entrevistas e instrumentos) | `01-relevamiento/` |
 | Cobertura de cada requisito con pruebas automatizadas | `docs/cobertura-por-requisito.md` |
 | Cambios y decisiones de la AE4, por fase | `docs/cambios-y-decisiones.md` |
@@ -78,7 +96,7 @@ Vive en el repositorio **nexa-backend**:
 | ADR-003: JWT para autenticación | `04-diseno/adr-003-jwt-auth.md` |
 | Bitácora de decisiones, AE1 (hasta el 03/09/2026) | `00-gestion/BITACORA.md` |
 | Bitácora de decisiones, AE2 (10/09 al 06/10/2026; continúa la anterior) | `00-gestion/20261006_BitacoraIndividual_KohlerAE2_v5.docx` |
-| Bitácora de decisiones, AE3 y AE4 (desde el 23/10/2026 hasta hoy; continúa la anterior; incluye los cambios del frontend y las sesiones de Claude en el chat; entradas 1 a 145) | `00-gestion/20261028_BitacoraIndividual_KohlerAE3_v1.md` |
+| Bitácora de decisiones, AE3 y AE4 (desde el 23/10/2026 hasta hoy; continúa la anterior; incluye los cambios del frontend y las sesiones de Claude en el chat; entradas 1 a 162) | `00-gestion/20261028_BitacoraIndividual_KohlerAE3_v1.md` |
 | Backup y restauración, RUNBOOK, SOP y texto de la política de privacidad | `00-gestion/` |
 | Evidencia de la medición de RNF-01 | `05-entregas/evidencia-RNF-01/` |
 
@@ -145,7 +163,14 @@ nexa/
 └── nexa-frontend/
 ```
 
-Los dos quedan en la rama `main`, que es la versión que describe este manual. No hacer `git checkout v1.3`: esa etiqueta es la de la AE3 y trae un código anterior (54 migraciones y otros datos de demo), que no coincide con las salidas esperadas de abajo.
+Pasar los dos repositorios a la etiqueta de la entrega, `v2.0` (la versión congelada que describe este manual):
+
+```bash
+cd nexa-backend  && git checkout v2.0 && git describe --tags && cd ..
+cd nexa-frontend && git checkout v2.0 && git describe --tags && cd ..
+```
+
+Cada `git describe --tags` tiene que imprimir `v2.0`. Git avisa que quedó en «detached HEAD» (cabeza separada): es lo esperado al pararse en una etiqueta y no hay que hacer nada. `git show v2.0` muestra el commit exacto sobre el que se puso la etiqueta. No usar `v1.3`: es la de la AE3 y trae un código anterior (54 migraciones y otros datos de demo), que no coincide con las salidas esperadas de abajo.
 
 ### 4.2 Instalar dependencias
 
@@ -208,10 +233,12 @@ npm run seed:demo
 **Esperado:**
 
 ```
-62 migrations found in prisma/migrations
+63 migrations found in prisma/migrations
 Applying migration `20260720211431_init`
 Applying migration `20260813212326_init`
 ...
+Applying migration `20261113120000_sena_pagada_en`
+
 All migrations have been successfully applied.
 ...
 ✔ Generated Prisma Client
@@ -228,6 +255,28 @@ All migrations have been successfully applied.
 `seed:demo` carga un escenario de demostración con datos inventados, coherente con las reglas de la AE4: una profesional con horario de lunes a sábado, un servicio, una clienta de demo con un turno **confirmado** (a 2 días o más, en día hábil, con la seña paga), uno **`no_show_auto`** («No asistió (automático)», del día hábil anterior, con la seña retenida y el horario todavía ocupado) y uno **cancelado** por la clienta con más de 12 horas de aviso (seña marcada como devuelta y horario libre), una **promoción vigente** (desde hoy por 30 días) y un WhatsApp de demo del negocio. Las fechas se calculan en hora de Argentina el día que se corre. Se puede correr más de una vez sin duplicar nada: cada corrida vuelve a crear solo los turnos de la clienta de demo. Lo verifica `tests/integration/seed-demo.test.ts`. Solo para desarrollo: nunca correrlo contra la base de producción.
 
 > Usar `migrate deploy`, **no** `migrate dev`: `migrate dev` puede quedarse esperando que escribas el nombre de una migración nueva.
+
+El esquema se prueba desde cero en cada corrida del canal de construcción (sección 9), que aplica las 63 migraciones sobre un PostgreSQL 16 vacío. Las migraciones son archivos versionados en `prisma/migrations/`; el índice único parcial de la regla R-01 está creado en SQL dentro de la migración, no en `schema.prisma`.
+
+### 4.6 Usuarios de demostración
+
+Todos son datos inventados. Nunca cargarlos en la base de producción.
+
+| Rol | Usuario | Contraseña de prueba | Cómo se crea |
+|---|---|---|---|
+| Administradora | `admin@nexa.local` | `Admin1234!` | La crea el servidor al arrancar por primera vez, con `ADMIN_EMAIL`, `ADMIN_PASSWORD` y `ADMIN_NAME` del `.env` (los valores de arriba son los de `.env.example`) |
+| Profesional | `profesional@nexa.local` | `Profesional1234!` | `npm run seed:demo` |
+| Clienta | `clienta@nexa.local` | `Clienta1234!` | `npm run seed:demo` |
+
+**Datos de la presentación (opcional, más completos).** Además de `seed:demo`, el repositorio trae un seed grande con 7 agendas, 13 servicios (dos de ellos simultáneos), clientas de casos y los 14 casos de prueba de la semana de la presentación (`scripts/seed-presentacion/README.md`). Hace falta definir en el `.env` `SEED_PASSWORD` (contraseña de todas las cuentas), `SEED_PRO_EMAIL` y `SEED_CLIENT_EMAIL` (correos que elijas para la profesional y la clienta de demostración), y después:
+
+```bash
+npm run seed:presentacion:demo   # reducido: 7 profesionales, servicios con 2 simultáneos y los 14 casos de la semana
+npm run seed:presentacion        # completo: lo mismo más 450 turnos del mes y los datos del negocio
+npm run demo:turnos-ahora        # 3 turnos contados desde este momento, para probar cancelación con menos y más de 12 horas y el recordatorio
+```
+
+Los dos primeros son idempotentes y se niegan a correr si la base no es local o si ya tiene cuentas reales (el resto de las cuentas son `@example.com`, sin buzón). Se pueden verificar sin base con `npm run seed:presentacion:verificar`. La administradora de ese escenario es la de `ADMIN_EMAIL`.
 
 ---
 
@@ -273,6 +322,17 @@ Abrir **http://localhost:5173** en el navegador.
 
 ## 6. Prueba del caso de uso vertical (punta a punta)
 
+### 6.0 Prueba de humo
+
+Con el backend y el frontend corriendo (sección 5) y los datos de demo cargados (4.5):
+
+```bash
+curl http://localhost:4000/api/health
+curl -i -X POST http://localhost:4000/api/auth/login -H "Content-Type: application/json" -d '{"email":"clienta@nexa.local","password":"Clienta1234!"}'
+```
+
+**Esperado:** el primero devuelve `{"status":"ok","database":"up",...}`; el segundo, `HTTP/1.1 200` con dos cabeceras `Set-Cookie` (`access_token` y `refresh_token`). En el navegador, http://localhost:5173 muestra la página de inicio con los servicios y se puede ingresar con `clienta@nexa.local`. Si algo de esto falla, ir a la sección 11.
+
 ### 6.1 Crear una cuenta de clienta
 
 1. En http://localhost:5173 ir a **Ingresar** → pestaña **Registro**.
@@ -308,6 +368,25 @@ psql -U postgres -d nexa_dev -c "SELECT date, time, status, payment_status FROM 
 
 **Esperado:** una fila por turno reservado, con `status = confirmed` y `payment_status = pending` (en pantalla: "Pendiente de seña"). Si se reinicia el backend y se recarga **Mis turnos**, el turno sigue estando.
 
+### 6.5 Recorrido de los casos de uso Must
+
+Son los requisitos de prioridad Must del catálogo v10. Cada uno tiene su prueba automatizada (qué archivo cubre cuál: `docs/cobertura-por-requisito.md` del backend); acá está la comprobación a mano. Salvo que se diga otra cosa, con la clienta de demo (`clienta@nexa.local`).
+
+| Requisito | Qué hacer | Esperado |
+|---|---|---|
+| RF-01 | Pasos 6.2 y 6.3 | El horario ocupado no se ofrece; reservarlo directo por la API da `409 PROFESSIONAL_SLOT_TAKEN` (test `appointments.booking`) |
+| RF-02 | Pasos 6.1 y 6.2 | Una visitante se registra y reserva sin verificar el correo |
+| RF-03 | En 6.2, paso 5 | El resumen muestra el total y la seña calculada; el administrador cambia el valor en el panel, en Configuración > Pagos |
+| RF-04 | **Mis turnos** > un turno *Confirmado* de la demo (seña paga, a 2 días o más) > **Cancelar** | Antes de confirmar dice que la seña se devuelve (12 horas o más de aviso); el turno pasa a *Cancelado* con la seña *Devuelta*. Con `npm run demo:turnos-ahora` hay uno de menos de 12 horas: la seña queda retenida |
+| RF-07 | En la reserva, paso *Antes de terminar...*, completar alergias | No deja guardar la alergia sin tildar el consentimiento (test `allergies.consent-visibility`) |
+| RF-08 | En **Registro**, intentar registrarse sin aceptar los términos y la política de privacidad | El formulario no avanza; al aceptar se guarda fecha, hora y versión (`2026-11`) |
+| RF-11 | Entrar como administradora (4.6) > **Servicios**, y ver la lista pública al reservar | Los servicios salen por categoría (uñas, cabello, cuerpo, rostro), con precio y duración |
+| RF-12 | En la reserva, paso *Antes de terminar...*, marcar acompañante | Solo se guarda el vínculo de una lista cerrada, sin nombre ni edad (test `appointments.companion`) |
+| RNF-01 | `05-entregas/evidencia-RNF-01/README.md` | Medición de la reserva con 4G simulado: mediana de 0,80 s contra el límite de 5 s |
+| RNF-02 | Hacer todo lo anterior solo con el navegador | No se instala nada |
+| RNF-03 | Entrar como la profesional de demo (4.6) y abrir la ficha de la clienta de demo, que todavía no tiene un turno *Finalizado* con ella | No ve la alergia del perfil de la clienta hasta que exista ese turno *Finalizado* (test `allergies.consent-visibility`) |
+| RNF-04 | `grep -n "card\|tarjeta" prisma/schema.prisma` | Ninguna columna guarda tarjeta ni datos bancarios; solo el identificador del pago |
+
 ---
 
 ## 7. Ejecutar los tests
@@ -332,8 +411,8 @@ npm test
 **Esperado:**
 
 ```
-Test Files  61 passed (61)
-     Tests  683 passed (683)
+Test Files  64 passed (64)
+     Tests  704 passed (704)
 ```
 
 Los tests del caso de uso vertical están en `tests/integration/appointments.booking.test.ts`, entre ellos:
@@ -343,7 +422,7 @@ Los tests del caso de uso vertical están en `tests/integration/appointments.boo
 Y en `tests/integration/appointments.out-of-hours.test.ts`:
 - *rechaza reservar a las 23:00 con disponibilidad de 09:00 a 18:00*
 
-La corrida completa tarda unos 5 a 6 minutos (los archivos corren en serie contra la base). Qué prueba cubre cada requisito está en `docs/cobertura-por-requisito.md`.
+La corrida completa tarda unos 4 a 6 minutos (los archivos corren en serie contra la base). Qué prueba cubre cada requisito está en `docs/cobertura-por-requisito.md`.
 
 ### 7.2 Frontend
 
@@ -355,9 +434,22 @@ npm test
 **Esperado:**
 
 ```
-Test Files  53 passed (53)
-     Tests  395 passed (395)
+Test Files  58 passed (58)
+     Tests  405 passed (405)
 ```
+
+Si alguna prueba falla en una máquina lenta, volver a correr solo ese archivo (`npx vitest run ruta/del/archivo`) antes de dar el problema por cierto.
+
+### 7.3 Chequeo de tipos y build
+
+Corren en el canal de construcción y se pueden repetir a mano:
+
+```bash
+cd nexa-backend  && npm run typecheck:all && npm run build
+cd nexa-frontend && npm run typecheck:all && npm run lint && npm run build
+```
+
+No tiene que imprimir errores.
 
 ---
 
@@ -399,6 +491,18 @@ La línea de coautoría, por modelo:
 | Commits sin contar merges | 196 | 125 |
 | de ellos, con la línea `Co-Authored-By: Claude …` | 67 commits (69 líneas: Sonnet 5.5, 41; Sonnet 5, 24; Haiku 4.5, 4) | 79 commits (80 líneas: Sonnet 5.5, 46; Sonnet 5, 29; Haiku 4.5, 3; Opus 5.5, 2) |
 | de ellos, sin la línea | 129 | 46 |
+
+**Tercer corte (13/11/2026, versión `v2.0`):** commit `d0a971d` en nexa-backend y `7fc0857` en nexa-frontend (los merges de los pull requests #39 y #26 en `main`). No cuenta los commits de la rama `docs/entrega-v2-0`, que son posteriores.
+
+| | nexa-backend | nexa-frontend |
+|---|---|---|
+| Commits totales | 246 | 157 |
+| Merges de pull requests (los hace la autora) | 41 | 27 |
+| Commits sin contar merges | 205 | 130 |
+| de ellos, con la línea `Co-Authored-By: Claude …` | 67 commits (los mismos que en el segundo corte) | 79 commits (los mismos) |
+| de ellos, sin la línea | 138 | 51 |
+
+Los 9 commits nuevos del backend y los 5 del frontend, sin contar merges, no llevan la línea: los hizo Claude Code a pedido de la autora y con el nombre de ella como autor; el modelo de cada uno está en la entrada de la bitácora que lo describe (8.3).
 
 Nota: los commits sin la línea incluyen, en cada repositorio, la edición del README desde la web y los primeros commits de agosto (6 en el backend y 5 en el frontend), que no son de Claude Code. Igual que en el primer corte, todos los commits que no son merges, ediciones web ni los primeros de agosto los hizo Claude Code a pedido de la autora, lleven o no la línea; el modelo de cada sesión posterior al 28/10 figura en la entrada de la bitácora que describe el cambio (8.3).
 
@@ -448,7 +552,30 @@ El detalle por modelo de 8.2 está cortado en `6e7d8c0`. Desde ahí, cada fase d
 | Cierre del backend — Mercado Pago en modo prueba, `.env.example`, base vacía, CI y alertas de Sentry | `chore/cierre-final` y `docs/bitacora-104-sentry` (pull requests 31, 32 y 33) | `3ec1f8b`, `d867e55`, `ed8336a`, `5158335`, `8a3d2bf` (bitácora, entradas 126 a 128, 133 y 134) |
 | Entradas del frontend copiadas a la bitácora | pull requests 27 y 31 | `6c72b52`, `f9f04ac`, `0f99881` (bitácora, entradas 107 a 110, 114, 115, 124 y 125) |
 | Cambios de reglas del 06/11/2026 | `feat/cambios-de-reglas-06-11` (pull request 34) | `fe42e06`, `1fbb562`, `2f06fce`, `99aea11`, `86be0c3`, `0fa6c9d`, `731b097`, `d6dd428`, `b5224b3`, `fee5a80`, `43da484`, `3f3672a` (bitácora, entradas 135 y 137) |
-| Cifra única de horas, bitácora renumerada y este README | rama `docs/horas-bitacora-readme` | `6146c03`, `ab1fa4a` (bitácora, entrada 144) y el commit de este README (bitácora, entrada 145) |
+| Cifra única de horas, bitácora renumerada y este README | rama `docs/horas-bitacora-readme` | `6146c03`, `ab1fa4a` (bitácora, entrada 144) y el commit de ese README (bitácora, entrada 145) |
+| Seed de la presentación (450 turnos sintéticos, turnos de demostración y recordatorio a pedido) | `feature/seed-presentacion` (pull request 36) | `1b9dcba`, `1441b30` (bitácora, entradas 146 a 157) |
+| Modo reducido del seed y ajustes pedidos al probar la demostración | pull request 37 | `310aa9a`, `e29e922` (bitácora, entrada 158) |
+| Señas del tablero por día de pago, invitación con vencimiento fijo y comando del seed | `fix/ajustes-demo-13-11-b` (pull request 38) | `6541884` (bitácora, entrada 159) |
+| No finalizar turnos que no empezaron y combos fuera de los servicios de la profesional | `fix/ajustes-demo-14-11-c` (pull request 39) | `be1f478` (bitácora, entrada 160) |
+| Catálogo v10, manual de despliegue y etiqueta `v2.0` | `docs/entrega-v2-0` | Catálogo v10 (bitácora, entrada 161) y este README (bitácora, entrada 162), ver `git log v2.0` |
+
+### 8.4 Terceros: servicios y librerías
+
+Ninguno recibe datos de clientas reales en la instalación local de este manual.
+
+| Tercero | Para qué se usa | Hace falta para el manual |
+|---|---|---|
+| Mercado Pago (SDK `mercadopago`) | Cobro de la seña; el sistema solo guarda el identificador del pago (RNF-04) | No: la reserva se puede coordinar por WhatsApp |
+| Supabase | PostgreSQL de producción y almacenamiento de imágenes | No: se usa PostgreSQL local |
+| Render y Vercel | Hosting del backend y del frontend | No |
+| Brevo | Envío de mails en producción (API HTTPS) | No |
+| Sentry | Registro de errores | No (opcional) |
+| GitHub y GitHub Actions | Repositorios, canal de construcción y backup diario cifrado | Solo para clonar |
+| UptimeRobot | Mantiene despiertos Render y Supabase | No |
+| Google Search Console | Indexación del sitio (10.1) | No |
+| Context7 (MCP) | Documentación actualizada de las librerías que consultó el asistente de IA al programar; no recibe código ni datos del proyecto | No |
+
+Las librerías de npm están fijadas en `package-lock.json` de cada repositorio (se instalan con `npm ci`); cada una se distribuye con la licencia de su paquete. Las principales están en la sección 2. El uso de IA (Claude Code y Claude en el chat) es el declarado en esta sección 8 y coincide con lo que dicen las entradas de la bitácora (`Herramienta auxiliar`, elemento 6).
 
 ---
 
@@ -522,9 +649,21 @@ Tiene que ser un celular argentino: código de área más número, 10 dígitos (
 **El puerto 4000 ya está en uso**
 Cambiar `PORT` en `nexa-backend/.env` (ej. `4100`) y `VITE_API_URL` en `nexa-frontend/.env.local` al mismo puerto.
 
+**La versión desplegada (Render, Supabase) tarda en responder o da error la primera vez**
+Los planes gratuitos se duermen cuando pasan un rato sin tráfico: el primer pedido a Render puede tardar cerca de un minuto en despertar el backend y Supabase pausa los proyectos inactivos. Esperar y volver a cargar; si sigue, probar `/api/health`. Un monitor de UptimeRobot consulta `/api/health` para mantenerlos despiertos. En la instalación local de este manual no pasa.
+
+**No llegan los mails (recuperar contraseña, recordatorio) en local**
+Sin `BREVO_API_KEY` el backend intenta enviar por SMTP con `MAIL_*`, y con esos valores vacíos falla. No impide reservar ni nada del recorrido de 6; el fallo queda solo en el log del servidor (`[mail] ❌`). Los mails de producción salen por la API de Brevo.
+
+**`npm run seed:presentacion` se niega a correr**
+Es una protección: la base no es local (si es tu base de demostración, definir `SEED_CONFIRM_HOST` con el nombre del servidor) o ya tiene cuentas reales. Usar una base local vacía (4.3).
+
+**`git checkout v2.0` dice que la etiqueta no existe**
+Falta traer las etiquetas: `git fetch --tags` y repetir.
+
 **Los tests abortan con `DATABASE_URL no parece ser una base de test`**
 Falta `.env.test`, o su `DATABASE_URL` apunta a una base cuyo nombre no contiene `test`. Es una protección para no borrar la base de desarrollo (paso 7.1).
 
 ---
 
-**Última actualización:** 2026-11-10 (sobre `main`; ver 1.1)
+**Última actualización:** 2026-11-13 (versión congelada `v2.0`; ver 1.1)
