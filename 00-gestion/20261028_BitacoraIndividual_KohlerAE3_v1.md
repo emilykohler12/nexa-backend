@@ -2325,3 +2325,16 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5) con Node, `vitest` y el navegador integrado. Context7 no se consultó (no se usó ninguna API nueva de una librería). |
 
 **Impacto en el frontend (contrato):** códigos de error nuevos: `FINISH_BEFORE_START` (`PATCH /api/admin/appointments/:id` y `PATCH /api/professional/appointments/:id`) y `COMBO_NOT_ASSIGNABLE` (`PATCH /api/professional/services`, `PATCH /api/professionals/:id` y `POST /api/professional/onboarding`); el frontend ya muestra el mensaje del servidor. Archivos del frontend: `pages/admin/appointments/AppointmentModal.tsx`, `features/professional/agenda/dialogs/AppointmentDialog.tsx`, `features/professional/onboarding/steps/ServicesStep.tsx`, `features/professional/services/{Services.tsx,types.ts}`.
+
+## Entrada 161: catálogo de requisitos v10 al repositorio
+
+**Fecha:** 2026-11-13, 23:50 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), no por Emily**, a pedido de ella: se sube a `03-requisitos/` el archivo `20261113_CatalogoRequisitos_Kohler_v10.xlsx` (copiado sin modificar desde su carpeta de descargas), junto a la v5, la v6 y la v7. Rama `docs/entrega-v2-0` del backend, cortada de `origin/main`. |
+| 2 | Alternativas y criterio de descarte | **Renombrar el archivo:** descartado, ya respeta el patrón `AAAAMMDD_CatalogoRequisitos_Kohler_vN.xlsx` de los anteriores. **Reemplazar la v7:** descartado, las versiones anteriores se conservan como historial. |
+| 3 | Evidencia que la sostiene | El archivo queda en `03-requisitos/` con 364.968 bytes (los mismos que el original). No se abrió ni se editó su contenido. |
+| 4 | Aporte personal | Emily elaboró el catálogo v10 y pidió subirlo. |
+| 5 | Desacuerdo y resolución | Ninguno. |
+| 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5) con Git. Context7 no se consultó (no hay código). |
