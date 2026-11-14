@@ -140,7 +140,7 @@ async function main() {
     if (c.comboGroup) groupIds[c.comboGroup] ??= randomUUID();
     const base = {
       clientId: clientId[c.client], professionalId: proUserId[c.pro], serviceId: serviceId[c.service], date, time: c.time,
-      duration: s.duration, servicePrice: s.price, depositAmount: deposit, depositMethod: 'whatsapp', allergies: c.allergies ?? null,
+      duration: s.duration, servicePrice: s.price, depositAmount: deposit, depositMethod: 'whatsapp', depositPaidAt: deposit > 0 ? plusMin(start, -2880) : null, allergies: c.allergies ?? null,
       hasCompanion: false, comboGroupId: c.comboGroup ? groupIds[c.comboGroup] : null,
       previousDate: c.previous ? addDays(WEEK_START, c.previous.day) : null, previousTime: c.previous ? c.previous.time : null,
     };
@@ -181,7 +181,7 @@ async function main() {
     const clientKey = demoKeys.has(m.key) ? 'CDEMO' : m.clientKey;
     if (await exists(clientKey, m.pro, m.date, m.time)) continue;
     const start = at(m.date, m.time);
-    const base = { clientId: clientId[clientKey], professionalId: proUserId[m.pro], serviceId: serviceId[m.service], date: m.date, time: m.time, duration: m.duration, servicePrice: m.price, depositAmount: DEPOSIT, depositMethod: 'whatsapp', hasCompanion: false };
+    const base = { clientId: clientId[clientKey], professionalId: proUserId[m.pro], serviceId: serviceId[m.service], date: m.date, time: m.time, duration: m.duration, servicePrice: m.price, depositAmount: DEPOSIT, depositMethod: 'whatsapp', hasCompanion: false, depositPaidAt: m.status === 'finished' ? plusMin(start, -2880) : now };
     await prisma.appointment.create({
       data: m.status === 'finished'
         ? { ...base, status: 'finished', paymentStatus: 'paid', arrivedAt: start, balancePaymentMethod: 'cash', balancePaidAmount: m.price - DEPOSIT, balancePaidAt: plusMin(start, m.duration), balanceCollectedById: proUserId[m.pro] }

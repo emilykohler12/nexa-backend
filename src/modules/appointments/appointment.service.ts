@@ -1442,7 +1442,7 @@ export const appointmentService = {
     // todas las patas, esta llamada no cambia nada y no vuelve a notificar.
     const claimed = await prisma.appointment.updateMany({
       where: { comboGroupId, status: { not: 'cancelled' }, paymentStatus: { not: 'partial' } },
-      data:  { paymentStatus, mpPaymentId },
+      data:  { paymentStatus, mpPaymentId, ...(paymentStatus === 'partial' ? { depositPaidAt: new Date() } : {}) },
     })
     if (claimed.count === 0) return
 
@@ -1480,7 +1480,7 @@ export const appointmentService = {
       if (!legs.every(l => l.paymentStatus === 'partial')) {
         await prisma.appointment.updateMany({
           where: { comboGroupId, status: { not: 'cancelled' } },
-          data:  { paymentStatus: 'partial' },
+          data:  { paymentStatus: 'partial', depositPaidAt: new Date() },
         })
         await activityService.log({
           action: 'Seña coordinada por WhatsApp marcada como paga', module: 'payments', appointmentId: legs[0].id,
@@ -1507,7 +1507,7 @@ export const appointmentService = {
     if (full.paymentStatus === 'partial') return toAdminView(full, null)
 
     const updated = await prisma.appointment.update({
-      where: { id }, data: { paymentStatus: 'partial' }, include: APPOINTMENT_INCLUDE,
+      where: { id }, data: { paymentStatus: 'partial', depositPaidAt: new Date() }, include: APPOINTMENT_INCLUDE,
     })
     await activityService.log({
       action: 'Seña coordinada por WhatsApp marcada como paga', module: 'payments', appointmentId: updated.id,
@@ -1706,7 +1706,7 @@ export const appointmentService = {
     // Por eso la escritura es condicional y la base decide quién gana; el otro no hace nada.
     const claimed = await prisma.appointment.updateMany({
       where: { id, paymentStatus: { not: 'partial' } },
-      data:  { paymentStatus, mpPaymentId },
+      data:  { paymentStatus, mpPaymentId, ...(paymentStatus === 'partial' ? { depositPaidAt: new Date() } : {}) },
     })
     if (claimed.count === 0) return
     const updated = await prisma.appointment.findUniqueOrThrow({ where: { id }, include: APPOINTMENT_INCLUDE })
