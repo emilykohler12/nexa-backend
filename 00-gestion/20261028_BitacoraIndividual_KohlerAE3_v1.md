@@ -2353,3 +2353,18 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5) con Git, Node, `vitest` y `gh`. Context7 no se consultó (no se usó ninguna API nueva de una librería). |
 
 **Impacto en el frontend (contrato):** ninguno; no cambió código ni rutas. Archivos del frontend tocados: `README.md`.
+
+## Entrada 163: cierre de pruebas parciales (ensayo de concurrencia HTTP, M-37 y pruebas manuales del 13/11)
+
+**Fecha:** 2026-11-15, 18:27 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), no por Emily**, a pedido de ella, en la rama `test/cierre-pruebas-ae4` de los dos repositorios (sin tocar `main` ni código de producción): (a) ensayo de concurrencia con dos pedidos HTTP simultáneos sobre `POST /api/client/appointments` (`appointments.concurrency-http.test.ts`, 20 rondas, queda en el canal) y su informe `docs/evidencias/ensayo-concurrencia-http.md`; (b) M-37, combo con una profesional ocupada, todo o nada (`appointments.combo-all-or-nothing.test.ts`); (c) pruebas PM-03 y PM-05 en el backend (`pruebas-manuales-13-11.test.ts`) y PM-03, PM-06 y PM-09 en el frontend. M-04 y M-10 no se escribieron: no figuran en el libro ni en los repositorios. |
+| 2 | Alternativas y criterio de descarte | **Probar con supertest en memoria:** descartado para la concurrencia, se levanta un servidor con sockets reales. **Crear un `.env.test` descartable para apuntar a PostgreSQL 16:** el hook lo bloquea; se corrió vitest desde una carpeta sin `.env.test` con las variables del canal por entorno. **Reescribir las pruebas que ya existían (ajustes-13-11, -13-11-b, -14-11):** descartado, se corrieron y se completó solo lo que faltaba. |
+| 3 | Evidencia que la sostiene | Ensayo HTTP: 20 de 20 rondas con un 201 y un 409 `PROFESSIONAL_SLOT_TAKEN`, ningún 500, una fila activa por horario, sobre PostgreSQL 16.16 con las 63 migraciones. Backend: `npm run typecheck:all` sin errores; 67 archivos y 712 pruebas pasan contra la base local (PostgreSQL 18.4) y también contra PostgreSQL 16.16. Frontend: 62 archivos y 412 pruebas pasan. |
+| 4 | Aporte personal | Emily definió las tres tareas, M-37 y el criterio de no tocar producción. |
+| 5 | Desacuerdo y resolución | Sin resolver: faltan las definiciones de M-04 y M-10, y las pruebas que solo se pueden hacer a mano. |
+| 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5) con Git, Node, `vitest` y Docker (PostgreSQL 16 descartable). Context7 no se consultó (no se usó ninguna API nueva de una librería). |
+
+**Impacto en el frontend (contrato):** ninguno; solo se agregaron pruebas.
