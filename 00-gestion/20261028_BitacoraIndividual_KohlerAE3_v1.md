@@ -2368,3 +2368,18 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5) con Git, Node, `vitest` y Docker (PostgreSQL 16 descartable). Context7 no se consultó (no se usó ninguna API nueva de una librería). |
 
 **Impacto en el frontend (contrato):** ninguno; solo se agregaron pruebas.
+
+## Entrada 164: pruebas M-04 y M-10, cruce de la matriz de pruebas y README
+
+**Fecha:** 2026-11-15, 18:44 (hora de la máquina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), no por Emily**, a pedido de ella, en la rama `test/cierre-pruebas-ae4`: (a) pruebas M-04 (turnos de 08:00, 10:00 y 12:00 de 120 minutos, los tres aceptados) y M-10 (tres reprogramaciones seguidas del mismo turno, las tres aceptadas) en `appointments.limits-m04-m10.test.ts`; (b) cruce de los 58 casos de la hoja «Matriz» de `matriz_pruebas_nexa` contra las pruebas (`docs/evidencias/cobertura-matriz-pruebas.md`); (c) cifras de pruebas de los dos README (backend 68 archivos y 714 pruebas; frontend 62 y 412) y referencia a las dos evidencias. Sin cambios de código de producción. |
+| 2 | Alternativas y criterio de descarte | **Exigir `previousDate`/`previousTime` en M-10:** descartado, el servicio los deja en `null` cuando reprograma la clienta (solo los guarda la reprogramación del personal); no es un error de M-10, pero contradice el resultado esperado de M-09 en la matriz y queda declarado en el cruce, sin tocar el código. **Escribir pruebas nuevas para M-13, M-14, M-15 y M-42:** no se hizo, no se pidió; quedan como «Parcial» en el cruce. |
+| 3 | Evidencia que la sostiene | `npm run typecheck:all` sin errores y `npm test` en el backend: 68 archivos, 714 pruebas, todas pasan. Cruce: 50 casos con prueba, 6 parciales (M-08, M-09, M-13, M-14, M-15, M-42), 1 sin prueba por ser brecha aceptada (M-05) y 1 manual (M-57). |
+| 4 | Aporte personal | Emily pasó el texto de M-04 y M-10, definió el criterio del cruce y pidió actualizar el README. |
+| 5 | Desacuerdo y resolución | Sin resolver, para Emily: la discrepancia de M-09 (la matriz espera `previousDate` guardado y el código lo borra al reprogramar la clienta) y qué hacer con M-13, M-14, M-15 y M-42. |
+| 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5) con Git, Node, `vitest` y la planilla de Drive. Context7 no se consultó (no se usó ninguna API nueva de una librería). |
+
+**Impacto en el frontend (contrato):** ninguno. Archivos del frontend tocados: `README.md` (cifras de pruebas).

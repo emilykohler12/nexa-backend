@@ -411,8 +411,8 @@ npm test
 **Esperado:**
 
 ```
-Test Files  64 passed (64)
-     Tests  704 passed (704)
+Test Files  68 passed (68)
+     Tests  714 passed (714)
 ```
 
 Los tests del caso de uso vertical están en `tests/integration/appointments.booking.test.ts`, entre ellos:
@@ -422,7 +422,7 @@ Los tests del caso de uso vertical están en `tests/integration/appointments.boo
 Y en `tests/integration/appointments.out-of-hours.test.ts`:
 - *rechaza reservar a las 23:00 con disponibilidad de 09:00 a 18:00*
 
-La corrida completa tarda unos 4 a 6 minutos (los archivos corren en serie contra la base). Qué prueba cubre cada requisito está en `docs/cobertura-por-requisito.md`.
+La corrida completa tarda unos 4 a 6 minutos (los archivos corren en serie contra la base). Qué prueba cubre cada requisito está en `docs/cobertura-por-requisito.md`. Qué prueba cubre cada caso de la matriz de pruebas (M-01 a M-58) está en `docs/evidencias/cobertura-matriz-pruebas.md`, y el ensayo de dos pedidos HTTP simultáneos sobre PostgreSQL 16 (20 de 20 rondas) en `docs/evidencias/ensayo-concurrencia-http.md`.
 
 ### 7.2 Frontend
 
@@ -434,8 +434,8 @@ npm test
 **Esperado:**
 
 ```
-Test Files  58 passed (58)
-     Tests  405 passed (405)
+Test Files  62 passed (62)
+     Tests  412 passed (412)
 ```
 
 Si alguna prueba falla en una máquina lenta, volver a correr solo ese archivo (`npx vitest run ruta/del/archivo`) antes de dar el problema por cierto.
