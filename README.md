@@ -38,7 +38,7 @@ El sistema está dividido en dos repositorios que se clonan uno al lado del otro
 | Comisión | A |
 | Instancia | Proyecto Final de Grado — AE4 |
 | Docente | PosDr. Darío Ezequiel Díaz |
-| Versión | **v2.1**, la versión congelada de la AE4 (13/11/2026): etiqueta anotada `v2.1` en los dos repositorios (se baja con `git checkout v2.1`, ver 4.1). Las etiquetas anteriores (`v1`, `v1.1`, `v1.2` y `v1.3`, de la AE3) se conservan, pero no son la que vale. Si apareciera un defecto después de la etiqueta, se crearía una etiqueta nueva (por ejemplo `v2.0.1`) y la entrega declararía cuál vale. El commit exacto lo muestra `git show v2.1` |
+| Versión | **v2.1**, la versión de entrega de la AE4 (15/11/2026): etiqueta anotada v2.1en los dos repositorios (se baja congit checkout v2.1, ver 4.1). Las etiquetas anteriores (v1, v1.1, v1.2, v1.3yv2.0) se conservan, pero no son la que vale. La v2.1 no cambia el código de producción de la v2.0 (14/11/2026): agrega las pruebas de cierre, el ensayo de concurrencia con pedidos HTTP y la documentación de la matriz de pruebas. Si apareciera un defecto después de la etiqueta, se crearía una etiqueta nueva (por ejemplo v2.1.1) y la entrega declararía cuál vale. El commit exacto lo muestra git show v2.1 |
 | En producción | Frontend: https://lorenestudiodebelleza.vercel.app (Vercel). Backend en Render y base de datos en Supabase |
 
 ### 1.2 Versiones exactas del entorno
@@ -492,7 +492,7 @@ La línea de coautoría, por modelo:
 | de ellos, con la línea `Co-Authored-By: Claude …` | 67 commits (69 líneas: Sonnet 5.5, 41; Sonnet 5, 24; Haiku 4.5, 4) | 79 commits (80 líneas: Sonnet 5.5, 46; Sonnet 5, 29; Haiku 4.5, 3; Opus 5.5, 2) |
 | de ellos, sin la línea | 129 | 46 |
 
-**Tercer corte (13/11/2026, versión `v2.1`):** commit `d0a971d` en nexa-backend y `7fc0857` en nexa-frontend (los merges de los pull requests #39 y #26 en `main`). No cuenta los commits de la rama `docs/entrega-v2-1`, que son posteriores.
+**Tercer corte (13/11/2026, versión `v2.0`):** commit `d0a971d` en nexa-backend y `7fc0857` en nexa-frontend (los merges de los pull requests #39 y #26 en `main`). No cuenta los commits de la rama `docs/entrega-v2-1`, que son posteriores.
 
 | | nexa-backend | nexa-frontend |
 |---|---|---|
@@ -557,7 +557,7 @@ El detalle por modelo de 8.2 está cortado en `6e7d8c0`. Desde ahí, cada fase d
 | Modo reducido del seed y ajustes pedidos al probar la demostración | pull request 37 | `310aa9a`, `e29e922` (bitácora, entrada 158) |
 | Señas del tablero por día de pago, invitación con vencimiento fijo y comando del seed | `fix/ajustes-demo-13-11-b` (pull request 38) | `6541884` (bitácora, entrada 159) |
 | No finalizar turnos que no empezaron y combos fuera de los servicios de la profesional | `fix/ajustes-demo-14-11-c` (pull request 39) | `be1f478` (bitácora, entrada 160) |
-| Catálogo v10, manual de despliegue y etiqueta `v2.1` | `docs/entrega-v2-1` | Catálogo v10 (bitácora, entrada 161) y este README (bitácora, entrada 162), ver `git log v2.1` |
+| Catálogo v10, manual de despliegue y etiqueta `v2.0` | `docs/entrega-v2-1` | Catálogo v10 (bitácora, entrada 161) y este README (bitácora, entrada 162), ver `git log v2.0` |
 
 ### 8.4 Terceros: servicios y librerías
 
