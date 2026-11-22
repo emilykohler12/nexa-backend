@@ -16,6 +16,7 @@
 import { AppError } from '../../app/middlewares/errorHandler'
 import { HTTP } from '../../app/constants/http'
 import { argentinaParts } from '../../app/utils/argentinaTime'
+import { formatDateDMY } from '../../app/utils/dateFormat'
 
 export const CANCELLED_BY = ['client', 'studio'] as const
 export type CancelledBy = typeof CANCELLED_BY[number]
@@ -108,10 +109,10 @@ export function buildStaffCancellation(
   }
 }
 
-// Fecha y hora de Argentina para el registro de actividad ("2026-11-03 13:00").
+// Fecha y hora de Argentina para el registro de actividad ("03/11/2026 13:00").
 export function formatArgentina(at: Date): string {
   const { date, time } = argentinaParts(at)
-  return `${date} ${time}`
+  return `${formatDateDMY(date)} ${time}`
 }
 
 const CHANNEL_LABELS: Record<NoticeChannel, string> = {

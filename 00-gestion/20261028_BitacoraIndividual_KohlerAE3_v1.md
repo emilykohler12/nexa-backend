@@ -2383,3 +2383,33 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5) con Git, Node, `vitest` y la planilla de Drive. Context7 no se consultó (no se usó ninguna API nueva de una librería). |
 
 **Impacto en el frontend (contrato):** ninguno. Archivos del frontend tocados: `README.md` (cifras de pruebas).
+
+## Entrada 165: finalizar sin fecha futura, recordatorio solo a las 5 horas, reprogramar combos y fechas día/mes/año
+
+**Fecha:** 2026-11-21, 18:50 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), no por Emily**, a pedido de ella, en la rama `test/cierre-pruebas-ae4`: (a) **Finalizar:** el bloqueo `FINISH_BEFORE_START` ya existía, pero se medía con la fecha vieja del turno; un pedido que a la vez finalizaba y movía el turno a un día futuro, o que reprogramaba un turno ya finalizado, lo salteaba. Ahora se mide con la fecha y hora resultantes (administrador y profesional). (b) **Recordatorio:** se quita el piso de «1 hora antes» (`REMINDER_RETRY_UNTIL_HOURS`); sale desde las 5 horas antes y se reintenta hasta la hora de inicio. (c) **Reprogramar combos:** `PATCH /api/client/appointments/:id/reschedule` ya no responde `COMBO_NOT_RESCHEDULABLE`: mueve el combo entero (todas las patas activas) a un mismo día y hora, validando franja, vacaciones, turno propio y horario reabierto de CADA profesional, en una transacción (si una falla no se mueve ninguna). Para un turno suelto `serviceId` y `professionalId` pasan a ser opcionales en el esquema pero siguen siendo obligatorios en el servicio (`400 VALIDATION_ERROR`). La respuesta suma `appointments` (todas las patas movidas). Frontend: `ComboRescheduleModal` ofrece solo los horarios en que están libres todas las profesionales (`intersectSlots`). (d) **Fechas:** los mensajes, avisos y registro de actividad que mostraban `AAAA-MM-DD` pasan a `DD/MM/AAAA` (`formatDateDMY` en backend y frontend; `dmyInText` muestra también las entradas viejas). |
+| 2 | Alternativas y criterio de descarte | **Endpoint propio de disponibilidad del combo en el servidor:** descartado por ahora, el frontend ya calcula la intersección con los mismos datos que usa la reserva (`/availability` de cada profesional) y el servidor valida todo al guardar. **Cambiar el formato de `<input type="date">`:** descartado, lo dibuja el navegador según el idioma del sistema (en es-AR ya es día/mes/año). **Tocar las fechas guardadas en la base:** descartado, solo cambia cómo se muestran. |
+| 3 | Evidencia que la sostiene | Backend: `npm run typecheck:all` sin errores y `npm test`: 69 archivos, 725 pruebas pasan (nuevas: `appointments.combo-reschedule.test.ts`, dos casos en `ajustes-14-11.test.ts`; ajustados los del recordatorio). Frontend: `typecheck:all`, `lint` y `vitest` sin errores, 64 archivos y 419 pruebas. |
+| 4 | Aporte personal | Emily definió los cuatro cambios y el criterio de cada uno. |
+| 5 | Desacuerdo y resolución | Sin resolver, para Emily: la limpieza de datos de prueba no se ejecutó; falta que indique contra qué base (producción o una copia) y qué se considera dato de prueba. |
+| 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5) con Git, Node y `vitest`. Context7 no se consultó (no se usó ninguna API nueva de una librería). |
+
+**Impacto en el frontend (contrato):** `PATCH /api/client/appointments/:id/reschedule` acepta `{ date, time }` para un combo (antes `400 COMBO_NOT_RESCHEDULABLE`) y devuelve además `appointments`; el código `COMBO_NOT_RESCHEDULABLE` ya no se emite. Archivos del frontend tocados: `features/client/booking/ComboRescheduleModal.tsx` (nuevo), `RescheduleModal.tsx`, `features/client/appointments/reminderLink.ts`, `pages/client/AppointmentsPage.tsx`, `shared/utils/dateFormat.ts` (nuevo), `pages/admin/activity/ActivityPage.tsx`, `pages/admin/promotions/PromotionsPage.tsx`, `SpecialEventsSection.tsx`, las tres pantallas de avisos y sus pruebas. **Sin migración de base.**
+
+## Entrada 166: limpieza de datos de prueba en la base local
+
+**Fecha:** 2026-11-21 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5), a pedido de Emily.** Se borraron de la base LOCAL (`localhost`, la de `.env`; no producción) todas las cuentas salvo `lorenestudiodebelleza@gmail.com`, `admin@lorenestudio.com` y `emilykohler@hotmail.com.ar`, con lo que dependía de ellas: 19 usuarios, 70 turnos, 34 pedidos, 4 reseñas, 8 fotos, 319 avisos de clientas, 91 avisos de profesionales, 7 perfiles de profesional y 7 de clienta, entre otras filas. Se conservaron servicios, productos y ajustes del negocio. |
+| 2 | Alternativas y criterio de descarte | **Borrar a mano por tabla:** descartado, el script recorre las claves foráneas (hijos primero) en una sola transacción y se verificó antes con una corrida en seco con rollback. **Desactivar las claves foráneas:** descartado, podía dejar filas huérfanas. |
+| 3 | Evidencia que la sostiene | La corrida en seco y la real informaron las mismas cantidades; quedaron las 3 cuentas. El script se negaba a correr si el host no era `localhost` y se eliminó después de usarlo. |
+| 4 | Aporte personal | Emily eligió «solo local» y las 3 cuentas a conservar. |
+| 5 | Desacuerdo y resolución | Sin desacuerdo. Producción (Supabase) no se tocó; si tiene datos de prueba, queda pendiente. |
+| 6 | Herramienta auxiliar | Claude Code con `tsx` y Prisma. Context7 no se consultó. |
+
+**Impacto en el frontend (contrato):** ninguno.

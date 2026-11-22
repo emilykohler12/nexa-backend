@@ -45,6 +45,15 @@ const bookingSchema = z.object({
   time:           timeSchema,
 })
 
+// Reprogramar: un turno suelto manda servicio y profesional (los mismos de siempre); un combo se mueve entero y
+// solo necesita el día y la hora nuevos.
+const rescheduleSchema = z.object({
+  serviceId:      z.string().uuid('ID de servicio inválido').optional(),
+  professionalId: professionalIdSchema.optional(),
+  date:           dateSchema,
+  time:           timeSchema,
+})
+
 // Si el cliente vino de una promo de servicio en el home (ver ServicePromotionsSection),
 // se manda el id acá — el precio real nunca se confía del front, se recalcula
 // server-side en resolveServicePromotion.
@@ -283,9 +292,9 @@ export const appointmentController = {
 
   rescheduleMine: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const input = parseBody(bookingSchema, req.body)
-      const appointment = await appointmentService.rescheduleForClient(req.user!.id, getId(req), input as Parameters<typeof appointmentService.rescheduleForClient>[2])
-      res.json({ appointment })
+      const input = parseBody(rescheduleSchema, req.body)
+      const result = await appointmentService.rescheduleForClient(req.user!.id, getId(req), input as Parameters<typeof appointmentService.rescheduleForClient>[2])
+      res.json(result)
     } catch (err) { next(err) }
   },
 
