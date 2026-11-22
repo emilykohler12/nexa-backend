@@ -2578,3 +2578,18 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code con Git, Node y `vitest`. Context7 no se consultó. |
 
 **Impacto en el frontend (contrato):** `GET /api/professional/clients` deja de mandar `nextAppointment` y `cancellations` y solo trae clientas con turno finalizado; el correo del cliente viene `''` cuando es la dirección interna (en turnos del administrador y de la profesional y en la lista de clientes del admin); `PATCH /api/admin|professional/appointments/:id/balance-payment` acepta `replace: true` (`400 NO_BALANCE_TO_CORRECT`); `PATCH /api/admin/appointments/:id` acepta `clientEmail: ''`. Archivos del frontend: `pages/client/AppointmentsPage.tsx`, `features/professional/clients/*`, `features/professional/types/client.ts`, `features/professional/agenda/dialogs/AppointmentDialog.tsx`, `features/professional/agenda/Agenda.tsx`, `shared/ui/molecules/BalancePaymentForm.tsx`, `pages/admin/appointments/AppointmentModal.tsx`, con sus pruebas. **Sin migración de base.**
+
+## Entrada 178: subida a GitHub de todos los cambios del 22/11 y limpieza de ramas
+
+**Fecha:** 2026-11-22 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5), a pedido de Emily.** (a) Se subió todo lo hecho el 22/11 en una sola rama por repositorio, `feat/ajustes-22-11` (backend y frontend), y un pull request a `main` en cada uno; el merge lo hace Emily. (b) Se registró en git el borrado, hecho por Emily, de la documentación que ya no hace falta (`01-relevamiento`, `03-requisitos`, `04-diseno`, `05-entregas`, `docs/` y las bitácoras anteriores de `00-gestion`): queda `00-gestion/RUNBOOK.md` y esta bitácora. (c) Se borraron las ramas que ya no sirven: las locales apiladas del 22/11 (todas están contenidas en `feat/ajustes-22-11`) y las ramas, locales y remotas, cuyos pull requests ya estaban mergeados en `main`. |
+| 2 | Alternativas y criterio de descarte | **Un pull request por cada tema:** descartado, las ramas estaban apiladas y cada una dependía de la anterior; separarlas pedía reescribir la historia. **Borrar ramas sin mergear:** descartado, solo se borraron las ya mergeadas o contenidas en la rama nueva. |
+| 3 | Evidencia que la sostiene | Antes de subir: backend 763 pruebas y frontend 457 pasan, con typecheck y lint limpios. |
+| 4 | Aporte personal | Emily pidió subir todo y limpiar ramas, y hará el merge. |
+| 5 | Desacuerdo y resolución | **Antes de desplegar el backend** hay que aplicar en Supabase (SQL Editor) la migración `20261122120000_sena_devuelta_en` (agrega `appointments.deposit_refunded_at`); sin ella, los turnos fallan. Está en el pull request del backend. |
+| 6 | Herramienta auxiliar | Claude Code con Git y GitHub CLI (`gh`). |
+
+**Impacto en el frontend (contrato):** el de las entradas 165 a 177. **Con migración de base** (la de las señas por devolver).
