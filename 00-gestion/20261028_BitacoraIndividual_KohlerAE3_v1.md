@@ -2488,3 +2488,18 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code con Git, Node y `vitest`. Context7 no se consultó. |
 
 **Impacto en el frontend (contrato):** nuevo `GET /api/admin/clients/search?q=` (`{ clients: { id, name, email, phone }[] }`). Archivos del frontend: `pages/admin/appointments/CreateAppointmentModal.tsx`, `features/professional/agenda/dialogs/CreateAppointmentModal.tsx`, `shared/hooks/useClientAccountSearch.ts` y `shared/ui/molecules/ClientAccountMatches.tsx` (nuevos), `pages/admin/appointments/AppointmentModal.tsx`, `features/professional/agenda/dialogs/AppointmentDialog.tsx`, `pages/admin/services/ServiceList.tsx`, `pages/admin/professionals/tabs/ProfileTab.tsx`, `pages/admin/activity/ActivityPage.tsx`. **Sin migración de base.**
+
+## Entrada 172: se borran `00-gestion/diseno` y `00-gestion/docs`
+
+**Fecha:** 2026-11-22 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5), a pedido de Emily, con su confirmación expresa**: se borraron las carpetas `00-gestion/diseno` (ADR-001 a ADR-003) y `00-gestion/docs` (plan de despliegue, cobertura por requisito, consultas previas a producción, cambios y decisiones, evidencias). No tenían seguimiento de git, así que no se recuperan desde el repositorio. |
+| 2 | Alternativas y criterio de descarte | Dejarlas: descartado por pedido de Emily («dejar solo lo necesario para descargar el sistema de GitHub»). |
+| 3 | Evidencia que la sostiene | Queda en `00-gestion/` solo `RUNBOOK.md` y esta bitácora. Las referencias del README y de `CLAUDE.md` a esos archivos quedan desactualizadas. |
+| 4 | Aporte personal | Emily decidió el borrado. |
+| 5 | Desacuerdo y resolución | Sin desacuerdo. Pendiente de Emily: actualizar las referencias del README y de `CLAUDE.md` si quiere. |
+| 6 | Herramienta auxiliar | Claude Code (shell). |
+
+**Impacto en el frontend (contrato):** ninguno. **Sin migración de base.**
