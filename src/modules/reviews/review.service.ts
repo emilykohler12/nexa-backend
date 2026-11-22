@@ -86,6 +86,7 @@ export const reviewService = {
         module:   'reviews',
         detail:   `${fullName(appointment.client)} calificó "${appointment.service.name}" con ${data.rating} estrellas: "${message}"`,
         reviewId: review.id,
+        clientId: appointment.clientId,
       })
     }
 

@@ -47,7 +47,7 @@ export async function recibirWebhookMercadoPago(req: Request, res: Response): Pr
     }
 
     // Lo que Mercado Pago realmente cobró: se compara con la seña o el total esperado.
-    const paid = { amount: payment.transaction_amount, currency: payment.currency_id }
+    const paid = { amount: payment.transaction_amount, currency: payment.currency_id, statusDetail: payment.status_detail }
 
     const [kind, id] = externalReference.split(':')
     if (kind === 'appointment' && id) {

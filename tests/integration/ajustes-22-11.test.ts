@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { activityService } from '../../src/modules/activity/activity.service'
 import request from 'supertest'
 import { app } from '../../src/app/app'
 import { prisma } from '../../src/app/database/prisma'
@@ -145,15 +146,16 @@ describe('Actividad: quién cancela o reprograma un turno', () => {
     const appt   = await createAppointmentDirect({ clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: futureWeekDay(2), time: '10:00' })
     return { client, pro, svc, appt }
   }
-  const lastLog = (appointmentId: string, action: string) =>
-    prisma.activityLog.findFirstOrThrow({ where: { appointmentId, action }, orderBy: { createdAt: 'desc' } })
+  // Lo que ve el administrador (con el nombre ya resuelto): la fila guardada lleva una marca con el id de la clienta.
+  const lastLog = async (appointmentId: string, action: string) =>
+    (await activityService.getAll()).find(l => l.appointmentId === appointmentId && l.action === action)!
 
   it('la clienta cancela: figura su nombre', async () => {
     const { client, appt } = await scenario()
     await request(app).patch(`/api/client/appointments/${appt.id}/cancel`).set('Cookie', cookieFor(client))
 
     const log = await lastLog(appt.id, 'Turno cancelado')
-    expect(log.userName).toContain('Clara')
+    expect(log.user).toContain('Clara')
     expect(log.detail).toContain('la clienta')
   })
 
@@ -164,7 +166,7 @@ describe('Actividad: quién cancela o reprograma un turno', () => {
     expect(res.status).toBe(200)
 
     const log = await lastLog(appt.id, 'Turno reprogramado')
-    expect(log.userName).toContain('Clara')
+    expect(log.user).toContain('Clara')
     expect(log.detail).toContain('la clienta')
   })
 
@@ -173,13 +175,13 @@ describe('Actividad: quién cancela o reprograma un turno', () => {
     const re = await request(app).patch(`/api/professional/appointments/${appt.id}`).set('Cookie', cookieFor(pro)).send({ date: futureWeekDay(3), time: '12:00' })
     expect(re.status).toBe(200)
     const rlog = await lastLog(appt.id, 'Turno reprogramado')
-    expect(rlog.userName).toBe('Paula Pro')
+    expect(rlog.user).toBe('Paula Pro')
     expect(rlog.detail).toContain('la profesional')
 
     const ca = await request(app).patch(`/api/professional/appointments/${appt.id}`).set('Cookie', cookieFor(pro)).send({ status: 'cancelled', cancelledBy: 'studio' })
     expect(ca.status).toBe(200)
     const clog = await lastLog(appt.id, 'Turno cancelado')
-    expect(clog.userName).toBe('Paula Pro')
+    expect(clog.user).toBe('Paula Pro')
     expect(clog.detail).toContain('la profesional')
   })
 
@@ -189,13 +191,13 @@ describe('Actividad: quién cancela o reprograma un turno', () => {
     const re = await request(app).patch(`/api/admin/appointments/${appt.id}`).set('Cookie', cookieFor(admin)).send({ date: futureWeekDay(3), time: '12:00' })
     expect(re.status).toBe(200)
     const rlog = await lastLog(appt.id, 'Turno reprogramado')
-    expect(rlog.userName).toContain('Ada Admin')
+    expect(rlog.user).toContain('Ada Admin')
     expect(rlog.detail).toContain('el administrador')
 
     const ca = await request(app).patch(`/api/admin/appointments/${appt.id}`).set('Cookie', cookieFor(admin)).send({ status: 'cancelled', cancelledBy: 'studio' })
     expect(ca.status).toBe(200)
     const clog = await lastLog(appt.id, 'Turno cancelado')
-    expect(clog.userName).toContain('Ada Admin')
+    expect(clog.user).toContain('Ada Admin')
     expect(clog.detail).toContain('el administrador')
   })
 })

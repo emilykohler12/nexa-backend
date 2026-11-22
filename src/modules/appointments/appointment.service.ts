@@ -23,7 +23,8 @@ import { mailProvider } from '../auth/providers/mail.provider'
 import { bcryptProvider } from '../auth/providers/bcrypt.provider'
 import type { SpecialSlot } from '../services/service.model'
 import { todayArgentinaStr, appointmentInstant } from '../../app/utils/argentinaTime'
-import { isPaymentAcceptable, type PaidInfo } from '../payments/paidAmount'
+import { type PaidInfo } from '../payments/paidAmount'
+import { evaluatePayment, recordLatePayment } from '../payments/paymentRecord'
 import {
   NOT_COUNTED_IN_LOAD_STATUSES, NO_SHOW_STATUSES, OCCUPYING_SLOT_FILTER,
   assertServiceFits, assertStartTimeNotPassed, checkClientStart, closeReopenedSlots, hasOverlap,
@@ -128,8 +129,23 @@ function detailsOf(a: AppointmentRow) {
 // índice único, el job de impagos y los calendarios); la etiqueta se deriva:
 // confirmado + seña > 0 todavía sin pagar => 'pending_deposit'.
 function displayStatusOf(a: { status: string; paymentStatus: string; depositAmount: { toString(): string } | number }): string {
-  if (a.status === 'confirmed' && a.paymentStatus === 'pending' && Number(a.depositAmount) > 0) return 'pending_deposit'
+  // Un pago rechazado o cancelado no cambia lo que ve la clienta: sigue «esperando pago» (puede volver a intentarlo en el
+  // checkout) hasta que el job libera el turno a los 20 minutos.
+  if (a.status === 'confirmed' && ['pending', 'rejected', 'cancelled'].includes(a.paymentStatus) && Number(a.depositAmount) > 0) return 'pending_deposit'
   return a.status
+}
+
+// Frase corta para la clienta cuando el turno se liberó porque la seña no se pagó: el motivo del pago fallido si lo hubo
+// («Pago rechazado: fondos insuficientes») o, si nunca pagó, «No se pagó la seña a tiempo». En cualquier otro caso, null.
+function paymentNoteForClient(a: { status: string; cancelReason: string | null; paymentNote: string | null }): string | null {
+  if (a.status !== 'cancelled' || a.cancelReason !== 'unpaid_expired') return null
+  return a.paymentNote ?? 'No se pagó la seña a tiempo'
+}
+
+// Solo para el personal: si la clienta pagó de más, lo que Mercado Pago cobró de verdad (la seña no cambia; en el local se
+// cobra de menos por la diferencia). Null cuando pagó exactamente la seña, así el texto no aparece.
+function depositPaidAmountOf(a: { depositPaidAmount: { toString(): string } | null }): number | null {
+  return a.depositPaidAmount === null ? null : Number(a.depositPaidAmount)
 }
 
 function toClientView(a: AppointmentRow) {
@@ -152,6 +168,8 @@ function toClientView(a: AppointmentRow) {
     statusLabel:       a.status === 'no_show_auto' ? STATUS_LABELS.cancelled_no_show : (STATUS_LABELS[displayStatusOf(a)] ?? a.status),
     cancelReason:      a.cancelReason,
     paymentStatus:     a.paymentStatus,
+    // Por qué se liberó el turno si la seña no se pagó (frase corta); null en cualquier otro caso.
+    paymentNote:       paymentNoteForClient(a),
     depositMethod:     a.depositMethod,
     arrivedAt:         a.arrivedAt ? a.arrivedAt.toISOString() : null,
     comboGroupId:      a.comboGroupId,
@@ -230,7 +248,9 @@ function toProfessionalView(a: AppointmentRow, peers: ComboPeer[] | null, attend
     statusLabel:    STATUS_LABELS[displayStatusOf(a)] ?? a.status,
     cancelReason:   a.cancelReason,
     paymentStatus:  a.paymentStatus,
+    paymentNote:    a.paymentNote ?? null,
     depositAmount:  Number(a.depositAmount),
+    depositPaidAmount: depositPaidAmountOf(a),
     balancePayment: balancePaymentOf(a),
     arrivedAt:      a.arrivedAt ? a.arrivedAt.toISOString() : null,
     cancellation:   cancellationOf(a),
@@ -270,12 +290,14 @@ function toAdminView(a: AppointmentRow, peers: ComboPeer[] | null = null) {
     statusLabel:       STATUS_LABELS[displayStatusOf(a)] ?? a.status,
     cancelReason:      a.cancelReason,
     paymentStatus:     a.paymentStatus,
+    paymentNote:       a.paymentNote ?? null,
     depositMethod:     a.depositMethod,
     arrivedAt:         a.arrivedAt ? a.arrivedAt.toISOString() : null,
     cancellation:      cancellationOf(a),
     balancePayment:    balancePaymentOf(a),
     polishRemoval:     polishRemovalOf(a),
     depositAmount:     Number(a.depositAmount),
+    depositPaidAmount: depositPaidAmountOf(a),
     clientNotes:       a.clientNotes ?? '',
     professionalNotes: a.internalNotes ?? '',
     selectedZones:     (a.selectedZones ?? []) as unknown as { name: string; price: number; duration: number }[],
@@ -939,6 +961,9 @@ async function findOrCreateManualClient(name: string, phone: string, email: stri
     data: {
       name, email: finalEmail, phone: phone.trim() || null,
       passwordHash, role: 'client', emailVerified: true,
+      // Con un correo real, la clienta puede activar la cuenta más adelante (si se registra con ese correo recibe un
+      // código). Con la dirección interna no hay nada que activar.
+      pendingActivation: Boolean(trimmedEmail),
     },
   })
   return user.id
@@ -1221,6 +1246,11 @@ async function afterComboReassign(updated: AppointmentRow, previousProfessionalI
     },
   })
   if (alreadyInGroup === 0) await notifyProfessionalOfNewAppointments([updated])
+}
+
+// Texto para Actividad y mails al administrador sobre un pago: «Manos — Ana Pérez con Loren el 25/11/2026 14:00».
+function describePaid(a: AppointmentRow): string {
+  return `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${formatDateDMY(a.date)} ${a.time}`
 }
 
 function isPromoLive(promo: { status: string; startDate: string | null; endDate: string | null }): boolean {
@@ -1561,7 +1591,7 @@ export const appointmentService = {
     if (legs.every(l => l.paymentStatus === 'partial')) return { paymentStatus: 'partial' }
 
     const found = await paymentService.findPaymentByReference(`group:${comboGroupId}`)
-    if (found) await appointmentService.applyGroupPaymentResult(comboGroupId, found.id, found.status, { amount: found.amount, currency: found.currency })
+    if (found) await appointmentService.applyGroupPaymentResult(comboGroupId, found.id, found.status, { amount: found.amount, currency: found.currency, statusDetail: found.statusDetail })
 
     const fresh = await prisma.appointment.findFirst({
       where:  { comboGroupId, status: { not: 'cancelled' } },
@@ -1573,30 +1603,56 @@ export const appointmentService = {
   // Aplica el resultado del pago de la seña de un combo a TODAS sus patas.
   // Idempotente (webhook + polling). Al aprobarse, se le avisa a cada profesional.
   applyGroupPaymentResult: async (comboGroupId: string, mpPaymentId: string, status: string, paid?: PaidInfo) => {
-    const legs = await prisma.appointment.findMany({
-      where:   { comboGroupId, status: { not: 'cancelled' } },
+    const allLegs = await prisma.appointment.findMany({
+      where:   { comboGroupId },
       include: APPOINTMENT_INCLUDE,
+      orderBy: { createdAt: 'asc' },
     })
-    if (legs.length === 0) {
+    if (allLegs.length === 0) {
       console.warn(`[mercadopago] Webhook para combo inexistente: ${comboGroupId}`)
+      return
+    }
+    const legs = allLegs.filter(l => l.status !== 'cancelled')
+    const lead = allLegs[0]
+    const ctx  = {
+      kind: 'combo' as const, refId: comboGroupId, mpPaymentId, status, paid,
+      describe: `${describePaid(lead)} (combo de ${allLegs.length} servicios)`,
+      appointmentId: lead.id, clientId: lead.clientId,
+    }
+
+    // Todas las patas ya se cancelaron o liberaron: si nunca se pagó la seña, este pago llegó tarde y hay que devolverlo.
+    if (legs.length === 0) {
+      if (!allLegs.some(l => ['partial', 'paid', 'refunded'].includes(l.paymentStatus))) {
+        await recordLatePayment({ ...ctx, expected: allLegs.reduce((sum, l) => sum + Number(l.depositAmount), 0) })
+      }
       return
     }
     if (legs.every(l => l.paymentStatus === 'partial')) return // ya aplicado
 
     // La seña del combo es única y es la suma de la seña de cada pata.
-    if (!(await isPaymentAcceptable({
-      kind: 'Combo', id: comboGroupId, mpPaymentId, status,
-      expected: legs.reduce((sum, l) => sum + Number(l.depositAmount), 0), paid,
-    }))) return
+    const verdict = await evaluatePayment({ ...ctx, expected: legs.reduce((sum, l) => sum + Number(l.depositAmount), 0) })
+    if (!verdict.accept) {
+      // Pagó de menos o en otra moneda: el combo no se confirma; queda el motivo para mostrarle a la clienta si se libera.
+      await prisma.appointment.updateMany({
+        where: { comboGroupId, status: { not: 'cancelled' }, paymentStatus: { not: 'partial' } },
+        data:  { paymentNote: verdict.note },
+      })
+      return
+    }
 
     const paymentStatus = status === 'approved' ? 'partial' : status
     // Escritura condicional: si otro aviso del mismo pago ya aplicó el resultado a
     // todas las patas, esta llamada no cambia nada y no vuelve a notificar.
     const claimed = await prisma.appointment.updateMany({
       where: { comboGroupId, status: { not: 'cancelled' }, paymentStatus: { not: 'partial' } },
-      data:  { paymentStatus, mpPaymentId, ...(paymentStatus === 'partial' ? { depositPaidAt: new Date() } : {}) },
+      data:  { paymentStatus, mpPaymentId, paymentNote: verdict.note, ...(paymentStatus === 'partial' ? { depositPaidAt: new Date() } : {}) },
     })
     if (claimed.count === 0) return
+    // Pagó de más: lo realmente cobrado se guarda en la pata que lleva la seña (informativo, la seña no cambia).
+    if (paymentStatus === 'partial' && verdict.paidOver !== null) {
+      const depositLeg = legs.find(l => Number(l.depositAmount) > 0) ?? legs[0]
+      await prisma.appointment.update({ where: { id: depositLeg.id }, data: { depositPaidAmount: verdict.paidOver } })
+    }
 
     await activityService.log({
       action: 'Pago de seña recibido', module: 'payments', appointmentId: legs[0].id,
@@ -1864,7 +1920,7 @@ export const appointmentService = {
 
     const found = await paymentService.findPaymentByReference(`appointment:${id}`)
     if (found) {
-      await appointmentService.applyPaymentResult(id, found.id, found.status, { amount: found.amount, currency: found.currency })
+      await appointmentService.applyPaymentResult(id, found.id, found.status, { amount: found.amount, currency: found.currency, statusDetail: found.statusDetail })
     }
 
     const fresh = await prisma.appointment.findUnique({ where: { id }, select: { paymentStatus: true } })
@@ -1881,14 +1937,29 @@ export const appointmentService = {
       return
     }
 
+    const ctx = {
+      kind: 'appointment' as const, refId: id, mpPaymentId, status, paid,
+      describe: describePaid(appointment), appointmentId: id, clientId: appointment.clientId,
+      expected: Number(appointment.depositAmount),
+    }
+
+    // El turno ya se canceló o se liberó (por ejemplo, por falta de pago) y la seña nunca se había pagado: este pago llegó
+    // tarde. El turno NO se reactiva ni se marca pagado; queda registrado para que el administrador devuelva el dinero.
+    if (appointment.status === 'cancelled' && !['partial', 'paid', 'refunded'].includes(appointment.paymentStatus)) {
+      await recordLatePayment(ctx)
+      return
+    }
+
     // Idempotencia — el webhook y el polling pueden llegar los dos. Si la seña
     // ya estaba paga, no re-notificamos al profesional ni re-logueamos.
     if (appointment.paymentStatus === 'partial') return
 
-    // Un pago aprobado por otro monto u otra moneda no es la seña: no se registra.
-    if (!(await isPaymentAcceptable({
-      kind: 'Turno', id, mpPaymentId, status, expected: Number(appointment.depositAmount), paid,
-    }))) return
+    // Un pago aprobado por otro monto u otra moneda no es la seña: no se registra (queda el motivo y se avisa).
+    const verdict = await evaluatePayment(ctx)
+    if (!verdict.accept) {
+      await prisma.appointment.updateMany({ where: { id, paymentStatus: { not: 'partial' } }, data: { paymentNote: verdict.note } })
+      return
+    }
 
     const paymentStatus = status === 'approved' ? 'partial' : status // 'partial' = seña pagada
 
@@ -1897,7 +1968,12 @@ export const appointmentService = {
     // Por eso la escritura es condicional y la base decide quién gana; el otro no hace nada.
     const claimed = await prisma.appointment.updateMany({
       where: { id, paymentStatus: { not: 'partial' } },
-      data:  { paymentStatus, mpPaymentId, ...(paymentStatus === 'partial' ? { depositPaidAt: new Date() } : {}) },
+      data:  {
+        paymentStatus, mpPaymentId,
+        // Rechazado: el motivo corto para mostrar si se libera; aprobado o en proceso: se limpia el de un intento anterior.
+        paymentNote: verdict.note,
+        ...(paymentStatus === 'partial' ? { depositPaidAt: new Date(), depositPaidAmount: verdict.paidOver } : {}),
+      },
     })
     if (claimed.count === 0) return
     const updated = await prisma.appointment.findUniqueOrThrow({ where: { id }, include: APPOINTMENT_INCLUDE })

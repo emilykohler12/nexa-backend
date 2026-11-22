@@ -33,18 +33,20 @@ describe('emails en minúsculas al crear clientas', () => {
   const MIXED = '  Clienta.Mayus@Test.Local '
   const LOWER = 'clienta.mayus@test.local'
 
-  it('el admin crea una clienta con mayúsculas: se guarda en minúsculas y puede iniciar sesión', async () => {
+  it('el admin crea una clienta con mayúsculas: se guarda en minúsculas y la cuenta queda sin activar', async () => {
     const admin = await createAdminUser()
 
     const res = await request(app)
       .post('/api/admin/clients')
       .set('Cookie', cookieFor(admin))
-      .send({ name: 'Clienta Mayus', email: MIXED, password: 'Clave12345' })
+      .send({ name: 'Clienta Mayus', email: MIXED })
 
     expect(res.status).toBe(201)
     const users = await prisma.user.findMany({ where: { role: 'client' } })
     expect(users.map(u => u.email)).toEqual([LOWER])
-    expect(await canLogin(LOWER, 'Clave12345')).toBe(true)
+    expect(users[0].pendingActivation).toBe(true)
+    // El administrador no elige contraseña: hasta que la clienta active la cuenta nadie puede iniciar sesión.
+    expect(await canLogin(LOWER, 'Clave12345')).toBe(false)
   })
 
   it('el admin no puede crear dos clientas con el mismo email que solo difiere en mayúsculas', async () => {

@@ -6,7 +6,8 @@ import { activityService } from '../activity/activity.service'
 import { paymentService }  from '../payments/payment.service'
 import { fullName } from '../../app/utils/fullName'
 import { todayArgentinaStr } from '../../app/utils/argentinaTime'
-import { isPaymentAcceptable, type PaidInfo } from '../payments/paidAmount'
+import { type PaidInfo } from '../payments/paidAmount'
+import { evaluatePayment } from '../payments/paymentRecord'
 
 type OrderItemInput = { productId: string; quantity: number; promotionId?: string | null }
 type PromotionItem  = { id: string; name: string; price: number }
@@ -182,6 +183,7 @@ export const orderService = {
     const paymentLabel = data.paymentMethod ? paymentLabels[data.paymentMethod] ?? null : null
 
     await activityService.log({
+      clientId,
       action: 'Compra de producto', module: 'store', level: 'success',
       detail: `${fullName(client)} compró ${lineItems.map(li => `${li.quantity}x ${li.productName}`).join(', ')} — $${totalPrice.toLocaleString('es-AR')}`
         + (paymentLabel ? ` (pago: ${paymentLabel})` : ''),
@@ -242,7 +244,7 @@ export const orderService = {
 
     const found = await paymentService.findPaymentByReference(`order:${id}`)
     if (found) {
-      await orderService.applyPaymentResult(id, found.id, found.status, { amount: found.amount, currency: found.currency })
+      await orderService.applyPaymentResult(id, found.id, found.status, { amount: found.amount, currency: found.currency, statusDetail: found.statusDetail })
     }
 
     const fresh = await prisma.order.findUnique({ where: { id }, select: { paymentStatus: true } })
@@ -263,9 +265,14 @@ export const orderService = {
     if (order.paymentStatus === 'paid') return
 
     // Un pago aprobado por menos del total (u otra moneda) no paga el pedido: no se descuenta stock.
-    if (!(await isPaymentAcceptable({
-      kind: 'Pedido', id, mpPaymentId, status, expected: Number(order.totalPrice), paid,
-    }))) return
+    // (Queda registrado en payment_records con su motivo y se avisa en Actividad; un pago de menos que no paga el pedido
+    // aparece en «Pagos para devolver».)
+    const client = await prisma.user.findUnique({ where: { id: order.clientId }, select: { name: true, lastName: true } })
+    const verdict = await evaluatePayment({
+      kind: 'order', refId: id, mpPaymentId, status, expected: Number(order.totalPrice), paid,
+      describe: `Pedido de la tienda${client ? ` — ${fullName(client)}` : ''}`, clientId: order.clientId,
+    })
+    if (!verdict.accept) return
 
     const paymentStatus = status === 'approved' ? 'paid' : status
 

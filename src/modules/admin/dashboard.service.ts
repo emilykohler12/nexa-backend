@@ -2,6 +2,7 @@
 import { prisma } from '../../app/database/prisma'
 import { argentinaWallClock, todayArgentinaStr, appointmentInstant } from '../../app/utils/argentinaTime'
 import { fullName } from '../../app/utils/fullName'
+import { listPaymentsToRefund } from '../payments/paymentRecord'
 
 export type PeriodFilter = 'day' | 'week' | 'month' | 'year'
 
@@ -86,6 +87,10 @@ export const dashboardService = {
       time:          a.time,
       amount:        Number(a.depositAmount),
     }))
+
+    // Pagos de Mercado Pago en los que la clienta pagó y no se reservó nada (monto menor, otra moneda o llegó tarde): hay
+    // que devolverlos a mano. No depende del período.
+    const paymentsToRefund = await listPaymentsToRefund()
 
     const [allInRange, newClientUsers, professionals, holidaysInRange] = await Promise.all([
       prisma.appointment.findMany({
@@ -309,6 +314,7 @@ export const dashboardService = {
       pendingBalance,
       refundedDeposits,
       pendingRefunds,
+      paymentsToRefund,
     }
   },
 }

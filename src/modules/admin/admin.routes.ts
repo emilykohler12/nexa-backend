@@ -38,6 +38,9 @@ router.patch('/appointments/:id/polish-removal', appointmentController.registerP
 router.patch('/appointments/:id/deposit-paid',   appointmentController.markDepositPaid)
 router.patch('/appointments/:id/refund-done',    appointmentController.markRefundDone)
 
+// Pagos de Mercado Pago que hay que devolver a mano (monto menor, otra moneda, llegaron tarde).
+router.patch('/payments/:id/refund-done', adminController.markPaymentRefunded)
+
 router.get('/activity',  adminController.getActivity)
 router.get('/dashboard', adminController.getDashboard)
 

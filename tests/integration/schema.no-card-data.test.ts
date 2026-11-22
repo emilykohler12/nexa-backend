@@ -65,7 +65,7 @@ describe('el esquema no guarda datos de tarjeta ni bancarios (RNF-04)', () => {
     const names = fieldNamesOf(schema)
 
     expect(names).toContain('mpPaymentId')
-    expect(names.filter(n => /^mp[A-Z]/.test(n))).toEqual(['mpPaymentId', 'mpPaymentId'])
+    expect(names.filter(n => /^mp[A-Z]/.test(n))).toEqual(['mpPaymentId', 'mpPaymentId', 'mpPaymentId', 'mpStatus']) // turnos, pedidos y payment_records (con el estado que informó Mercado Pago, sin datos de tarjeta)
   })
 
   it('la revisión sí detecta columnas prohibidas (la prueba no es una tautología)', () => {
