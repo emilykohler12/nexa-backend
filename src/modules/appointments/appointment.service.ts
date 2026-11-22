@@ -372,10 +372,16 @@ async function afterCreateGroup(legs: AppointmentRow[], whatsappPending = false)
   for (const proLegs of byProfessional.values()) await notifyProfessionalOfNewAppointments(proLegs)
 }
 
-async function afterCancel(a: AppointmentRow, emailClient: boolean, extraDetail = '') {
+// Quién hizo el cambio de un turno (cancelar o reprogramar): figura en la columna «Usuario» de Actividad y en el detalle.
+type ChangeActor = { name: string; role: 'client' | 'professional' | 'admin' }
+const ACTOR_LABEL: Record<ChangeActor['role'], string> = { client: 'la clienta', professional: 'la profesional', admin: 'el administrador' }
+const byActor = (actor?: ChangeActor) => actor ? ` — lo hizo ${ACTOR_LABEL[actor.role]} (${actor.name})` : ''
+
+async function afterCancel(a: AppointmentRow, emailClient: boolean, extraDetail = '', actor?: ChangeActor) {
   await activityService.log({
+    ...(actor ? { userName: actor.name } : {}),
     action: 'Turno cancelado', module: 'appointments', level: 'warning', appointmentId: a.id,
-    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${formatDateDMY(a.date)} ${a.time}${extraDetail}`,
+    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${formatDateDMY(a.date)} ${a.time}${extraDetail}${byActor(actor)}`,
   })
   await notificationService.notify(a.professionalId, {
     type:  'cancelled_appointment',
@@ -534,12 +540,15 @@ async function updateAppointmentRow(id: string, data: Prisma.AppointmentUpdateIn
   }
 }
 
+// Reprograma la clienta (el aviso a la profesional y el mail salen siempre; `actor` es la clienta).
 async function afterReschedule(a: AppointmentRow, previousDate?: string | null, previousTime?: string | null) {
-  const detail = previousDate && previousTime
+  const actor: ChangeActor = { name: fullName(a.client), role: 'client' }
+  const detail = (previousDate && previousTime
     ? `${a.service.name} — ${fullName(a.client)} con ${a.professional.name}: ${formatDateDMY(previousDate)} ${previousTime} → ${formatDateDMY(a.date)} ${a.time}`
-    : `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} → ${formatDateDMY(a.date)} ${a.time}`
+    : `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} → ${formatDateDMY(a.date)} ${a.time}`) + byActor(actor)
 
   await activityService.log({
+    userName: actor.name,
     action: 'Turno reprogramado', module: 'appointments', level: 'warning', appointmentId: a.id,
     detail,
   })
@@ -649,10 +658,11 @@ async function rescheduleComboGroup(
   return { appointment: views.find(v => v.id === existing.id) ?? views[0], appointments: views }
 }
 
-async function afterStaffReschedule(a: AppointmentRow, previousDate: string, previousTime: string) {
+async function afterStaffReschedule(a: AppointmentRow, previousDate: string, previousTime: string, actor?: ChangeActor) {
   await activityService.log({
+    ...(actor ? { userName: actor.name } : {}),
     action: 'Turno reprogramado', module: 'appointments', level: 'warning', appointmentId: a.id,
-    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name}: ${formatDateDMY(previousDate)} ${previousTime} → ${formatDateDMY(a.date)} ${a.time}`,
+    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name}: ${formatDateDMY(previousDate)} ${previousTime} → ${formatDateDMY(a.date)} ${a.time}${byActor(actor)}`,
   })
   await notificationService.notify(a.professionalId, {
     type:  'rescheduled_appointment',
@@ -766,6 +776,8 @@ type CancelOptions = {
   // desde ahora (cancelación de la clienta desde la app).
   notice?:     CancellationNotice
   now?:        Date
+  // Quién cancela (queda en Actividad).
+  actor?:      ChangeActor
 }
 
 async function cancelWithGroup(appointment: AppointmentRow, opts: CancelOptions): Promise<AppointmentRow[]> {
@@ -819,7 +831,7 @@ async function cancelWithGroup(appointment: AppointmentRow, opts: CancelOptions)
       if (started) await openReopenedSlot(tx, row, now)
       return row
     })
-    await afterCancel(updated, opts.emailClient, extra)
+    await afterCancel(updated, opts.emailClient, extra, opts.actor)
     updatedList.push(updated)
   }
   return updatedList
@@ -917,6 +929,10 @@ async function createManualAppointment(professionalId: string, data: {
 
   const clientId = await findOrCreateManualClient(data.clientName, data.clientPhone, data.clientEmail)
 
+  // Un turno manual con día y hora que ya pasaron es un servicio ya realizado que se carga después: nace finalizado
+  // (así cuenta en el rendimiento) y no avisa a la profesional de un «turno nuevo».
+  const alreadyHappened = hasStarted({ date: data.date, time: data.time })
+
   let appointment: AppointmentRow
   try {
     appointment = await prisma.appointment.create({
@@ -929,7 +945,7 @@ async function createManualAppointment(professionalId: string, data: {
         duration:       service.duration,
         servicePrice:   Number(service.price),
         depositAmount:  0,
-        status:         'confirmed',
+        status:         alreadyHappened ? 'finished' : 'confirmed',
         paymentStatus:  'pending',
       },
       include: APPOINTMENT_INCLUDE,
@@ -941,7 +957,14 @@ async function createManualAppointment(professionalId: string, data: {
     throw err
   }
 
-  await afterCreate(appointment)
+  if (alreadyHappened) {
+    await activityService.log({
+      action: 'Turno manual cargado como finalizado', module: 'appointments', level: 'success', appointmentId: appointment.id,
+      detail: `${appointment.service.name} — ${fullName(appointment.client)} con ${appointment.professional.name} el ${formatDateDMY(appointment.date)} ${appointment.time}: el día y la hora ya pasaron`,
+    })
+  } else {
+    await afterCreate(appointment)
+  }
   return appointment
 }
 
@@ -1910,13 +1933,13 @@ export const appointmentService = {
           data:  { paymentStatus: 'refunded' },
         })
       }
-      await afterCancel(updated, false, extra)
+      await afterCancel(updated, false, extra, { name: fullName(appointment.client), role: 'client' })
 
       return { appointment: toClientView(updated), refunded, partialCombo: !isLastLeg }
     }
 
     // Turno suelto — cancelación normal.
-    const updatedList = await cancelWithGroup(appointment, { cancelledBy: 'client', emailClient: false })
+    const updatedList = await cancelWithGroup(appointment, { cancelledBy: 'client', emailClient: false, actor: { name: fullName(appointment.client), role: 'client' } })
     const target       = updatedList.find(a => a.id === id)!
     const refunded      = target.paymentStatus === 'refunded'
 
@@ -2199,7 +2222,7 @@ export const appointmentService = {
       if (data.internalNotes !== undefined) {
         await prisma.appointment.update({ where: { id }, data: { internalNotes: data.internalNotes } })
       }
-      const updatedList = await cancelWithGroup(appointment, { ...cancellation, emailClient: true, now })
+      const updatedList = await cancelWithGroup(appointment, { ...cancellation, emailClient: true, now, actor: { name: appointment.professional.name, role: 'professional' } })
       const target = updatedList.find(a => a.id === id)!
       const peers = target.comboGroupId ? (await comboGroupPeers([target.comboGroupId])).get(target.comboGroupId) ?? null : null
       return toProfessionalView(target, peers, await hasAttended(professionalId, target.clientId))
@@ -2232,7 +2255,7 @@ export const appointmentService = {
       await logStatusChange(updated, appointment.status, data.status!, appointment.professional.name)
     }
     if (reassigning) await afterComboReassign(updated, appointment.professionalId, appointment.professional.name)
-    if (rescheduling) await afterStaffReschedule(updated, appointment.date, appointment.time)
+    if (rescheduling) await afterStaffReschedule(updated, appointment.date, appointment.time, { name: appointment.professional.name, role: 'professional' })
     const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
     return toProfessionalView(updated, peers, await hasAttended(professionalId, updated.clientId))
   },
@@ -2286,7 +2309,8 @@ export const appointmentService = {
 
   getHistoryForProfessional: async (professionalId: string) => {
     const rows = await prisma.appointment.findMany({
-      where:   { professionalId, status: 'finished' },
+      // Solo finalizados y nunca de una fecha futura (un turno que todavía no se realizó no es rendimiento).
+      where:   { professionalId, status: 'finished', date: { lte: todayArgentinaStr() } },
       include: { client: true, service: true },
       orderBy: [{ date: 'desc' }, { time: 'desc' }],
     })
@@ -2319,6 +2343,11 @@ export const appointmentService = {
     internalNotes?: string; clientNotes?: string
     clientName?: string; clientPhone?: string; clientEmail?: string
   } & StaffCancellationInput, actorName: string = 'Admin', actorId: string | null = null) => {
+    // El controlador pasa el correo como respaldo: en Actividad tiene que figurar el NOMBRE de quien hizo el cambio.
+    if (actorId) {
+      const actor = await prisma.user.findUnique({ where: { id: actorId }, select: { name: true, lastName: true } })
+      if (actor) actorName = fullName(actor)
+    }
     const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
     if (!appointment) throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
 
@@ -2387,7 +2416,7 @@ export const appointmentService = {
       if (Object.keys(otherFields).length > 0) {
         await updateAppointmentRow(id, otherFields)
       }
-      const updatedList = await cancelWithGroup(appointment, { ...cancellation, emailClient: true, now })
+      const updatedList = await cancelWithGroup(appointment, { ...cancellation, emailClient: true, now, actor: { name: actorName, role: 'admin' } })
       const target = updatedList.find(a => a.id === id)!
       const peers = target.comboGroupId ? (await comboGroupPeers([target.comboGroupId])).get(target.comboGroupId) ?? null : null
       return toAdminView(target, peers)
@@ -2410,7 +2439,7 @@ export const appointmentService = {
       await logStatusChange(updated, appointment.status, data.status!, actorName)
     }
     if (reassigning) await afterComboReassign(updated, appointment.professionalId, actorName)
-    if (rescheduling) await afterStaffReschedule(updated, appointment.date, appointment.time)
+    if (rescheduling) await afterStaffReschedule(updated, appointment.date, appointment.time, { name: actorName, role: 'admin' })
     const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
     return toAdminView(updated, peers)
   },

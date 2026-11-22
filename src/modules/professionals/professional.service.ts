@@ -186,7 +186,8 @@ async function computeMetrics(professionalIds: string[]): Promise<Map<string, Ad
   if (professionalIds.length === 0) return map
 
   const rows = await prisma.appointment.findMany({
-    where:  { professionalId: { in: professionalIds }, status: 'finished' },
+    // Solo finalizados y nunca de una fecha futura: turnos totales, clientes atendidos y facturación son lo ya realizado.
+    where:  { professionalId: { in: professionalIds }, status: 'finished', date: { lte: todayArgentinaStr() } },
     select: { professionalId: true, clientId: true, servicePrice: true },
   })
 

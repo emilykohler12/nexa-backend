@@ -92,11 +92,12 @@ export const dashboardService = {
         where:   { date: { gte: startStr, lte: endStr } },
         include: { professional: true, service: true },
       }),
-      // "Nuevos" = se registraron en el período Y llegaron a reservar al menos
-      // un turno (si solo se registró pero nunca reservó, no cuenta acá).
-      prisma.user.findMany({
-        where:  { role: 'client', createdAt: { gte: rangeStart, lte: rangeEnd }, appointmentsAsClient: { some: {} } },
-        select: { id: true },
+      // "Nuevos" = clientas que reservaron un turno POR PRIMERA VEZ en el período: su primer turno (sin contar los
+      // cancelados) cae dentro del día, semana, mes o año elegido. Registrarse sin reservar no cuenta.
+      prisma.appointment.groupBy({
+        by:    ['clientId'],
+        where: { status: { not: 'cancelled' } },
+        _min:  { date: true },
       }),
       prisma.professional.findMany({
         where:   { user: { active: true, role: { in: ['professional', 'admin'] } } },
@@ -105,7 +106,9 @@ export const dashboardService = {
       prisma.businessHoliday.findMany({ where: { date: { gte: startStr, lte: endStr } }, select: { date: true } }),
     ])
 
-    const newClientIds = newClientUsers.map(u => u.id)
+    const newClientIds = newClientUsers
+      .filter(c => c._min.date !== null && c._min.date >= startStr && c._min.date <= endStr)
+      .map(c => c.clientId)
     const holidaySet = new Set(holidaysInRange.map(h => h.date))
 
     // ── Capacidad de agenda (para % de ocupación) ─────────────────────

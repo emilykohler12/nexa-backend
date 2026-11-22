@@ -52,7 +52,7 @@ describe('auditoría de cambios de estado de un turno', () => {
     const logs = await prisma.activityLog.findMany({ where: { module: 'appointments' } })
     const entry = logs.find(l => l.detail?.includes('"confirmed" → "finished"'))
     expect(entry).toBeDefined()
-    expect(entry!.userName).toBe('auditor@test.local')
+    expect(entry!.userName).toBe('Admin Test')
   })
 
   it('no duplica el log si se guarda sin cambiar el estado', async () => {
