@@ -7,6 +7,7 @@ import { assertValidPhone } from '../../app/validators/phone'
 import { bcryptProvider } from '../auth/providers/bcrypt.provider'
 import { activityService } from '../activity/activity.service'
 import { fullName } from '../../app/utils/fullName'
+import { visibleEmail } from '../../app/utils/placeholderEmail'
 import { uploadProvider } from '../uploads/upload.provider'
 
 // Resumen de visitas de la clienta: solo cuentan los turnos finalizados. No hay puntos ni
@@ -34,7 +35,7 @@ function mapAdminClient(
     name:      fullName(user),
     photo:     null as string | null,
     phone:     user.phone ?? '',
-    email:     user.email,
+    email:     visibleEmail(user.email),
     gender:    user.gender ?? null,
     clinical: {
       allergies:    client?.allergies    ?? '',
@@ -91,6 +92,29 @@ export const adminService = {
       orderBy: { createdAt: 'desc' },
     })
     return Promise.all(users.map(async u => mapAdminClient(u, u.client, await computeVisits(u.id))))
+  },
+
+  // Buscador del turno manual: cuentas de clienta activas cuyo nombre, apellido o correo contiene el texto. Devuelve lo
+  // justo para elegirla (sin visitas, alergias ni notas) y como máximo 8.
+  searchClients: async (query: string) => {
+    const q = query.trim()
+    if (q.length < 2) return []
+    const users = await prisma.user.findMany({
+      where: {
+        role: 'client', active: true,
+        // Las cuentas generadas para turnos sin correo (walkin-…@nexa.local) no se ofrecen como «cuenta de la clienta».
+        email: { not: { startsWith: 'walkin-' } },
+        OR: [
+          { name:     { contains: q, mode: 'insensitive' } },
+          { lastName: { contains: q, mode: 'insensitive' } },
+          { email:    { contains: q, mode: 'insensitive' } },
+        ],
+      },
+      select:  { id: true, name: true, lastName: true, email: true, phone: true },
+      orderBy: { name: 'asc' },
+      take:    8,
+    })
+    return users.map(u => ({ id: u.id, name: fullName(u), email: u.email, phone: u.phone ?? '' }))
   },
 
   getClientById: (id: string) => getByIdInternal(id),

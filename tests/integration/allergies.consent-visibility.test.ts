@@ -279,6 +279,15 @@ describe('visibilidad de las alergias (RNF-03)', () => {
       return res.body.clients[0].allergies
     }
 
+    // La sección «Clientes» solo lista clientas con un turno FINALIZADO (ya realizado) con la profesional: sin uno, la
+    // clienta ni figura y su alergia del perfil tampoco sale.
+    async function notListed(pro: { id: string; email: string; role: string }) {
+      const res = await request(app).get('/api/professional/clients').set('Cookie', cookieFor(pro))
+      expect(res.status).toBe(200)
+      expect(res.body.clients).toEqual([])
+      expect(JSON.stringify(res.body)).not.toContain(ALERGIA_PERFIL)
+    }
+
     // Una clienta con alergia en el perfil y un único turno, con el estado indicado, de la profesional.
     async function oneAppointmentWith(status: string, hours: number) {
       const client = await createClientUser()
@@ -297,19 +306,19 @@ describe('visibilidad de las alergias (RNF-03)', () => {
       expect(await profileAllergyFor(pro)).toBe(ALERGIA_PERFIL)
     })
 
-    it.each(['cancelled', 'cancelled_no_show', 'no_show_auto'])('con un turno %s no la ve', async status => {
+    it.each(['cancelled', 'cancelled_no_show', 'no_show_auto'])('con un turno %s no la ve (la clienta ni figura)', async status => {
       const pro = await oneAppointmentWith(status, -48)
-      expect(await profileAllergyFor(pro)).toBe('')
+      await notListed(pro)
     })
 
-    it('con un turno confirmado a futuro no la ve', async () => {
+    it('con un turno confirmado a futuro no la ve (la clienta ni figura)', async () => {
       const pro = await oneAppointmentWith('confirmed', 48)
-      expect(await profileAllergyFor(pro)).toBe('')
+      await notListed(pro)
     })
 
     it('con un turno pendiente tampoco la ve', async () => {
       const pro = await oneAppointmentWith('pending', 48)
-      expect(await profileAllergyFor(pro)).toBe('')
+      await notListed(pro)
     })
 
     it('un turno finalizado con OTRA profesional no alcanza', async () => {
@@ -323,7 +332,7 @@ describe('visibilidad de las alergias (RNF-03)', () => {
       await createAppointmentDirect({ clientId: client.id, professionalId: other.id, serviceId: svc.id, date: past.date, time: past.time, status: 'finished' })
       await prisma.client.update({ where: { userId: client.id }, data: { allergies: ALERGIA_PERFIL } })
 
-      expect(await profileAllergyFor(pro)).toBe('')
+      await notListed(pro)
       expect(await profileAllergyFor(other)).toBe(ALERGIA_PERFIL)
     })
 
@@ -334,7 +343,7 @@ describe('visibilidad de las alergias (RNF-03)', () => {
       const agenda = await request(app).get('/api/professional/appointments').set('Cookie', cookieFor(pro))
       expect(agenda.status).toBe(200)
       expect(agenda.body.appointments[0].details.allergies).toBe(ALERGIA_TURNO)
-      expect(await profileAllergyFor(pro)).toBe('')
+      await notListed(pro)
     })
   })
 

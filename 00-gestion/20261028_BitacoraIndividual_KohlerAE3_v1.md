@@ -2428,3 +2428,168 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5) con Git, Node y `vitest`. Context7 no se consultó (sin APIs nuevas de librerías). |
 
 **Impacto en el frontend (contrato):** se elimina `PATCH /api/client/appointments/:id/arrival`; se agrega `PATCH /api/client/appointments/:id/no-show` (respuesta `{ appointment, appointments }`); `PATCH …/cancel` ahora puede responder `400 APPOINTMENT_STARTED`. Archivos del frontend: `pages/client/AppointmentsPage.tsx`, `features/client/appointments/reminderLink.ts`, `features/professional/agenda/dialogs/AppointmentDialog.tsx`, `features/professional/services/Services.tsx` y `ServiceDetailModal.tsx` (nuevo), con sus pruebas. **Sin migración de base.**
+
+## Entrada 168: ocultar en el frontend la tienda del administrador, el gráfico de productos y las promociones de productos
+
+**Fecha:** 2026-11-22 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), a pedido de Emily**, en la rama local `feat/ocultar-tienda-admin` del frontend (sin subir a GitHub, a pedido suyo). Solo se **comentó** (no se borró) lo que se ve: la entrada «Tienda» del menú del administrador y su ruta `/admin/store` (`AdminSidebar.tsx`, `AppRouter.tsx`), el gráfico de productos del tablero (`DashboardPage.tsx`), la pestaña «Productos» de Promociones (`PromotionsPage.tsx`) y su sección en la página principal (`HomePage.tsx`). Cada lugar lleva un comentario con cómo volver a mostrarlo. Los componentes, el backend, los endpoints y la base quedan igual. |
+| 2 | Alternativas y criterio de descarte | **Una variable de entorno para activar o desactivar:** descartado, Emily pidió simplemente comentar. **Borrar el código o tocar el backend:** descartado, se quiere volver a ponerlo. **Ocultar también la tienda de la clienta:** no se tocó, el pedido era solo la del administrador; las promociones de productos sí se ocultaron también en la home porque ya no se pueden administrar. |
+| 3 | Evidencia que la sostiene | Frontend: typecheck, lint y 423 pruebas pasan; se ajustaron las de `PromotionsPage.test.tsx` (ya no hay pestaña «Productos»). No se revisó en el navegador. |
+| 4 | Aporte personal | Emily decidió qué ocultar y que el código y la base se conserven. |
+| 5 | Desacuerdo y resolución | Sin desacuerdo. Queda a criterio de Emily si la tienda de la clienta y las promociones de productos ya cargadas (si las hay) se quedan visibles en otras pantallas. |
+| 6 | Herramienta auxiliar | Claude Code con Git, Node y `vitest`. Context7 no se consultó. |
+
+**Impacto en el frontend (contrato):** ninguno en la API. Archivos del frontend: `shared/ui/organisms/AdminSidebar.tsx`, `app/router/AppRouter.tsx`, `pages/admin/dashboard/DashboardPage.tsx`, `pages/admin/promotions/PromotionsPage.tsx` (y su prueba), `pages/public/HomePage.tsx`. **Sin migración de base.**
+
+## Entrada 169: se quita la política de reembolso de la configuración y se agrega «Señas por devolver (Mercado Pago)» al tablero
+
+**Fecha:** 2026-11-22 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), a pedido de Emily**, en ramas locales `feat/senas-por-devolver` (sin subir a GitHub, a pedido suyo). (a) **Configuración:** el frontend deja de mostrar «Política de reembolso de seña»; el backend conserva `refundPolicy` (queda en `full`, el valor por defecto). (b) **Tablero:** nuevo cuadro «Señas por devolver (Mercado Pago)» con el total, la clienta, el servicio, la fecha y el monto de cada seña que el sistema marcó como devuelta, que se pagó por Mercado Pago (`mp_payment_id`) y que todavía no se devolvió de verdad. Como el sistema solo marca la seña, se agregó la columna `appointments.deposit_refunded_at` (migración `20261122120000_sena_devuelta_en`, nullable, solo agrega) y el endpoint `PATCH /api/admin/appointments/:id/refund-done` («Marcar devuelta»), que deja una entrada de actividad. `GET /api/admin/dashboard` suma `pendingRefunds`. Las señas por WhatsApp no figuran (solo Mercado Pago). |
+| 2 | Alternativas y criterio de descarte | **Listar todas las señas `refunded` sin poder marcarlas:** descartado, la lista nunca se vaciaría y no diría qué «falta». **Acotarlo al período del tablero:** descartado, una devolución pendiente no deja de estarlo al cambiar de mes. **Borrar `refundPolicy` del backend:** descartado, las reglas de cancelación la usan; solo se quitó del formulario. |
+| 3 | Evidencia que la sostiene | Backend: `typecheck:all` limpio y 736 pruebas pasan (nuevo `dashboard.pending-refunds.test.ts`); migración aplicada a la base de pruebas con `npm run test:migrate`. Frontend: typecheck, lint y 427 pruebas pasan (nuevo `PendingRefundsChart.test.tsx`). No se revisó en el navegador. |
+| 4 | Aporte personal | Emily definió que solo cuenten las señas por Mercado Pago y dónde se muestra. |
+| 5 | Desacuerdo y resolución | Sin resolver, para Emily: las señas ya marcadas como devueltas antes de este cambio quedan como «faltan devolver» hasta que se marquen una por una. **La migración tiene que aplicarse en Supabase ANTES del despliegue.** |
+| 6 | Herramienta auxiliar | Claude Code con Prisma, Git, Node y `vitest`. Context7 no se consultó (sin APIs nuevas). |
+
+**Impacto en el frontend (contrato):** `GET /api/admin/dashboard` devuelve además `pendingRefunds: { appointmentId, clientName, serviceName, date, time, amount }[]`; nuevo `PATCH /api/admin/appointments/:id/refund-done` (`400 NO_REFUND_PENDING`). Archivos del frontend: `pages/admin/dashboard/PendingRefundsChart.tsx` (nuevo), `DashboardPage.tsx`, `types.ts`, `pages/admin/settings/PaymentsSection.tsx`. **Con migración de base.**
+
+## Entrada 170: clientes nuevos, rendimiento solo de lo realizado, quién figura en Actividad, turno manual pasado y hora libre en el turno manual
+
+**Fecha:** 2026-11-22 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), a pedido de Emily**, en la rama local `feat/ajustes-actividad-y-kpis` (sin subir). (a) **«Clientes nuevos» del tablero:** antes eran las cuentas creadas en el período con algún turno; ahora son las clientas cuyo PRIMER turno (sin contar cancelados) cae en el día, semana, mes o año elegido. (b) **«Turnos no asistidos»:** se revisó y ya sumaba `no_show_auto` (sistema) y `cancelled_no_show` (profesional o administrador); no se cambió, se agregó prueba. (c) **Profesionales en el admin:** «Clientes» ya contaba solo clientas con turno finalizado; «Turnos totales», «Clientes», «Facturación» y la lista de «Turnos realizados» del Rendimiento ahora, además, excluyen turnos con fecha futura. (d) **Actividad:** cancelar y reprogramar un turno dejan el NOMBRE de quien lo hizo en «Usuario» y en el detalle («lo hizo la clienta / la profesional / el administrador»); antes figuraba «Sistema» y, en los cambios de estado del administrador, su correo (ahora su nombre). (e) **Turno manual con día y hora ya pasados** (administrador o profesional): nace `finished`, deja una entrada de Actividad y no manda el aviso de «turno nuevo». (f) **No dejaba crear turnos manuales:** el formulario (administrador y profesional) solo ofrecía las horas de la franja cargada de la profesional; si no tenía horarios ese día, no había hora para elegir y el botón quedaba deshabilitado. Ahora la hora se escribe a mano (los horarios de la franja quedan como atajo) y avisa si el turno se va a cargar como finalizado. |
+| 2 | Alternativas y criterio de descarte | **Medir «primera vez» por la fecha de creación de la reserva:** descartado, el resto del tablero se mide por la fecha del turno y los turnos manuales se cargan con fechas anteriores. **Validar la franja en el turno manual:** descartado, la regla del proyecto es que el personal no se valida a propósito. **Marcar finalizado solo los de días anteriores:** descartado, Emily pidió «día y hora de antes». |
+| 3 | Evidencia que la sostiene | Backend: `typecheck:all` limpio y 748 pruebas pasan (nuevo `ajustes-22-11.test.ts`; dos pruebas de auditoría ahora esperan el nombre del administrador y no su correo). Frontend: typecheck, lint y 430 pruebas pasan (nuevo `CreateAppointmentModal.manualTime.test.tsx`). El motivo del bloqueo del turno manual es el más probable según el código y no se reprodujo en el navegador (la base local está sin migrar). |
+| 4 | Aporte personal | Emily definió cada criterio. |
+| 5 | Desacuerdo y resolución | Sin desacuerdo. Pendiente de Emily: si al probarlo el turno manual sigue sin crearse, pasar el mensaje de error que muestra el formulario. |
+| 6 | Herramienta auxiliar | Claude Code con Git, Node y `vitest`. Context7 no se consultó (sin APIs nuevas). |
+
+**Impacto en el frontend (contrato):** sin cambios de rutas ni de forma de respuesta. Cambia el valor de «Clientes nuevos», de las métricas de profesionales y de la columna «Usuario» de Actividad. `POST /api/admin/appointments` y `POST /api/professional/appointments` pueden responder `status: "finished"`. Archivos del frontend: `pages/admin/appointments/CreateAppointmentModal.tsx` y `features/professional/agenda/dialogs/CreateAppointmentModal.tsx`. **Sin migración de base.**
+
+## Entrada 171: buscador de clientas en el turno manual, menos texto en servicios y turnos, actividad filtrada, aviso de alta de profesional y limpieza de `00-gestion`
+
+**Fecha:** 2026-11-22 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), a pedido de Emily**, en la rama local `feat/ajustes-22-11-b` (sin subir). (a) **Buscador:** al escribir el nombre en el turno manual aparecen las cuentas de clienta que coinciden (nombre, apellido o correo, mínimo 2 letras) y se puede elegir una: se completan nombre, teléfono y correo (el correo queda fijo, así el turno queda en SU cuenta); si no hay, avisa que se va a crear una nueva. Administrador: nuevo `GET /api/admin/clients/search?q=` (máx. 8, solo activas, sin cuentas `walkin-…` y solo id, nombre, correo y teléfono). Profesional: filtra entre SUS clientas (`/api/professional/clients`), para no mostrarle las cuentas de las demás. (b) **Duración:** se quitó del detalle del turno (administrador y profesional, también en combos, zonas y paquetes); queda en el formulario de edición del turno. (c) **Servicios del administrador:** la tarjeta ya no muestra duración ni descripción (comentada); se ven al editar. (d) **Profesionales (admin):** se quitó el texto de ayuda de «Fecha de ingreso al estudio»; el campo con la fecha queda. (e) **Actividad (admin):** el filtro y el listado ya no incluyen Tienda, Clientes, Servicios, Configuración ni Sesiones (el backend sigue registrándolos). (f) **Alta de profesional:** cuando una profesional completa el formulario de bienvenida del enlace queda UNA entrada «Profesional completó su alta» en el módulo Profesionales (solo la primera vez). (g) **`00-gestion`:** se borraron `POLITICA_PRIVACIDAD.md`, `PROTOCOLO_BACKUP_Y_RESTAURACION.md` y `SOP.md`; quedan `RUNBOOK.md` (cómo desplegar y recuperar) y esta bitácora (la exige `CLAUDE.md`); el README se ajustó. |
+| 2 | Alternativas y criterio de descarte | **Que la profesional busque entre todas las clientas:** descartado por privacidad. **Borrar también `diseno/` y `docs/` de `00-gestion` (sin seguimiento de git, no se recuperan):** no se tocaron hasta que Emily lo confirme; contienen los ADR, el plan de despliegue y las consultas de verificación de producción. **Sacar el módulo de Actividad en el backend:** descartado, Emily pidió solo el frontend. |
+| 3 | Evidencia que la sostiene | Backend: `typecheck:all` limpio y 752 pruebas pasan (nuevas: buscador, alta de profesional). Frontend: typecheck, lint y 434 pruebas pasan (nuevas: buscador del turno manual). **Las migraciones de la base local NO se pudieron aplicar desde la sesión**: un hook del proyecto bloquea `prisma migrate` sobre la base de `.env`; el error «No se pudo crear el turno» coincide con esa base sin migrar (faltan columnas que el turno nuevo lee). |
+| 4 | Aporte personal | Emily definió cada cambio. |
+| 5 | Desacuerdo y resolución | Sin resolver, para Emily: aplicar ella `npx prisma migrate deploy` en la base local; decidir si se borran `diseno/` y `docs/`. |
+| 6 | Herramienta auxiliar | Claude Code con Git, Node y `vitest`. Context7 no se consultó. |
+
+**Impacto en el frontend (contrato):** nuevo `GET /api/admin/clients/search?q=` (`{ clients: { id, name, email, phone }[] }`). Archivos del frontend: `pages/admin/appointments/CreateAppointmentModal.tsx`, `features/professional/agenda/dialogs/CreateAppointmentModal.tsx`, `shared/hooks/useClientAccountSearch.ts` y `shared/ui/molecules/ClientAccountMatches.tsx` (nuevos), `pages/admin/appointments/AppointmentModal.tsx`, `features/professional/agenda/dialogs/AppointmentDialog.tsx`, `pages/admin/services/ServiceList.tsx`, `pages/admin/professionals/tabs/ProfileTab.tsx`, `pages/admin/activity/ActivityPage.tsx`. **Sin migración de base.**
+
+## Entrada 172: se borran `00-gestion/diseno` y `00-gestion/docs`
+
+**Fecha:** 2026-11-22 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5), a pedido de Emily, con su confirmación expresa**: se borraron las carpetas `00-gestion/diseno` (ADR-001 a ADR-003) y `00-gestion/docs` (plan de despliegue, cobertura por requisito, consultas previas a producción, cambios y decisiones, evidencias). No tenían seguimiento de git, así que no se recuperan desde el repositorio. |
+| 2 | Alternativas y criterio de descarte | Dejarlas: descartado por pedido de Emily («dejar solo lo necesario para descargar el sistema de GitHub»). |
+| 3 | Evidencia que la sostiene | Queda en `00-gestion/` solo `RUNBOOK.md` y esta bitácora. Las referencias del README y de `CLAUDE.md` a esos archivos quedan desactualizadas. |
+| 4 | Aporte personal | Emily decidió el borrado. |
+| 5 | Desacuerdo y resolución | Sin desacuerdo. Pendiente de Emily: actualizar las referencias del README y de `CLAUDE.md` si quiere. |
+| 6 | Herramienta auxiliar | Claude Code (shell). |
+
+**Impacto en el frontend (contrato):** ninguno. **Sin migración de base.**
+
+## Entrada 173: «Marcar estado» unificado en el detalle del turno (profesional y administrador)
+
+**Fecha:** 2026-11-22 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), a pedido de Emily**, en la rama local `feat/marcar-estado` (sin subir). En el detalle de un turno que todavía no se realizó (pendiente o confirmado) hay, abajo, una sección «Marcar estado» con cinco opciones: **Cancelar · Reprogramar · Finalizado · Seña pagada · No asistió** (componente compartido `MarkStatusPanel`). Reglas: se puede tener «Seña pagada» tildada y UNA de las otras cuatro; Cancelar y Reprogramar valen siempre, aunque el turno ya haya empezado (el aviso a la clienta por correo, en su página de avisos y con ventana al iniciar sesión lo hace el backend, como ya hacía); Finalizado y No asistió solo desde la hora de inicio; Seña pagada: si fue por Mercado Pago figura tildada y no se destilda, si fue por WhatsApp se tilda y queda la seña paga con el turno confirmado. «Reprogramar» mueve el turno a la fecha y hora elegidas. Abajo solo queda el botón «Editar» (en el admin edita nombre, teléfono, correo, duración, precio, profesional, fecha, hora y notas; en la profesional, fecha, hora y notas internas; las alergias de la clienta no se editan en ningún caso). Se sacaron los botones sueltos de estado que había en otras partes del detalle. Backend: nuevo `PATCH /api/professional/appointments/:id/deposit-paid` (solo turnos propios, mismas reglas que el administrador) para que la profesional tilde la seña por WhatsApp. |
+| 2 | Alternativas y criterio de descarte | **Editar datos de la clienta o el precio desde la profesional:** descartado, el backend de la profesional solo acepta fecha, hora, notas, estado y profesional del combo, y abrirlo es una decisión de negocio. **Reprogramar y cancelar solo antes de empezar:** descartado, Emily pidió «en cualquier momento». |
+| 3 | Evidencia que la sostiene | Backend: `typecheck:all` limpio y 754 pruebas pasan (nuevas para la seña de la profesional). Frontend: typecheck, lint y 445 pruebas pasan (nuevo `MarkStatusPanel.test.tsx`; se actualizaron las de los dos diálogos). No se revisó en el navegador. |
+| 4 | Aporte personal | Emily definió las cinco opciones y sus reglas. |
+| 5 | Desacuerdo y resolución | Sin resolver, para Emily: qué datos puede editar la profesional (hoy fecha, hora y notas). La devolución de la seña al cancelar sigue las reglas ya confirmadas (según quién cancela y la anticipación). |
+| 6 | Herramienta auxiliar | Claude Code con Git, Node y `vitest`. Context7 no se consultó. |
+
+**Impacto en el frontend (contrato):** nuevo `PATCH /api/professional/appointments/:id/deposit-paid` (`{ appointment }`; `404` si no es suyo, `400 NOT_WHATSAPP_DEPOSIT`). Archivos del frontend: `shared/ui/molecules/MarkStatusPanel.tsx` (nuevo), `features/professional/agenda/dialogs/AppointmentDialog.tsx`, `features/professional/agenda/Agenda.tsx`, `features/professional/types/appointment.ts`, `pages/admin/appointments/AppointmentModal.tsx` y sus pruebas. **Sin migración de base.**
+
+## Entrada 174: perfil de administradora sin datos de profesional, configuración a todo el ancho y salida del formulario de bienvenida
+
+**Fecha:** 2026-11-22 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), a pedido de Emily**, solo en el frontend, rama local `feat/admin-perfil-y-alta` (sin subir). (a) **Profesionales (admin):** una persona con rol administradora muestra en su tarjeta solo nombre, rol y estado, y en su perfil solo datos personales (nombre, teléfono, correo, foto, estado e ingreso al estudio): se ocultan Rendimiento, especialidad, redes sociales, servicios que realiza, horarios y vacaciones. Se ocultan, no se borran: al volver a «profesional» reaparece todo con sus datos. (b) **Configuración:** nombre del negocio, correo y WhatsApp ahora reparten todo el ancho (los campos de ancho completo de la grilla dejaban columnas vacías). (c) **Formulario de bienvenida de la profesional:** el error «Hay datos que no son válidos» venía de un error de validación en inglés del servidor que la pantalla oculta; la causa probable es que se ofrecían los servicios especiales (duración 0), que el servidor rechaza (la duración propia tiene que ser de al menos 1 minuto). Ya no se ofrecen en ese paso (los asigna la administradora). Y el formulario tapaba toda la pantalla sin salida: ahora tiene un «Cerrar sesión». |
+| 2 | Alternativas y criterio de descarte | **Borrar los datos de profesional al hacer administradora:** descartado, Emily pidió que al volver a profesional reaparezcan. **Aceptar duración 0 en el servidor:** descartado, esa duración se usa para calcular horarios. **Mostrar el mensaje en inglés del servidor:** descartado, no es para la usuaria. |
+| 3 | Evidencia que la sostiene | Frontend: typecheck, lint y 450 pruebas pasan (nuevas: perfil y tarjeta de administradora y profesional, «Cerrar sesión» del formulario). **La causa del error del formulario es una hipótesis**: no se reprodujo con los datos reales de Emily ni en el navegador. |
+| 4 | Aporte personal | Emily definió qué ve una administradora y los problemas del formulario. |
+| 5 | Desacuerdo y resolución | Sin resolver, para Emily: probar de nuevo el formulario de bienvenida; si vuelve a fallar, pasar qué datos cargó (o el mensaje del servidor desde la consola del navegador, pestaña Red) para encontrar el campo exacto. |
+| 6 | Herramienta auxiliar | Claude Code con Git, Node y `vitest`. Context7 no se consultó. |
+
+**Impacto en el frontend (contrato):** ninguno en la API. Archivos del frontend: `pages/admin/professionals/ProfessionalCard.tsx`, `ProfessionalDetail.tsx`, `tabs/ProfileTab.tsx`, `pages/admin/settings/GeneralSection.tsx`, `features/professional/onboarding/OnboardingWizard.tsx` y `steps/ServicesStep.tsx`, con sus pruebas. **Sin migración de base.**
+
+## Entrada 175: la profesional deja de cargar precio, duración, idiomas, métodos de pago y políticas; «No asistió» sin avisos para la clienta; indicadores a todo el ancho
+
+**Fecha:** 2026-11-22 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), a pedido de Emily**, rama local `feat/profesional-sin-politicas` (sin subir). (a) **Profesional (frontend y backend):** se eliminó que cargue idiomas, el precio y la duración propios de un servicio, los métodos de pago y las políticas de tolerancia, llegadas tarde, cancelación, reprogramación y seña, tanto en el formulario de bienvenida como en su configuración. Queda: elegir qué servicios hace (precio y duración son los del catálogo, que carga el administrador), especialidad, años de experiencia, certificaciones, recomendaciones previas y cuidados posteriores. En el backend los esquemas ya no los aceptan (un pedido viejo no falla: se ignoran), los endpoints no los devuelven y el guardado no los toca; las columnas quedan en la base sin usarse. Se sacó también el bloque «Políticas de la profesional» de la reserva de la clienta. (b) **Error del formulario de la profesional:** los errores de validación del servidor ahora salen en español y nombran el campo (antes quedaba un «datos no válidos» genérico). (c) **«No asistió» en la página de la clienta:** sin ningún aviso (se sacó el texto naranja y el mensaje del enlace del mail), y el estado siempre dice «No asistió», sin «automático» ni quién lo marcó. (d) **Detalle del turno:** se quitó la frase «Cancelar y reprogramar, en cualquier momento.». (e) **Indicadores:** los 4 del administrador (y el de la profesional) reparten todo el ancho de la pantalla. (f) **Cierre de sesión del administrador:** se quitó un pedido a una ruta que no existe (`/auth/logout`, 404 en la consola); `logout()` ya avisa al servidor. |
+| 2 | Alternativas y criterio de descarte | **Borrar las columnas de la base:** descartado, no hace falta y obligaría a una migración; quedan sin uso. **Dejar a la vista las políticas que la profesional ya había cargado:** descartado, nadie podría corregirlas y Emily pidió que quede solo lo que carga el administrador. |
+| 3 | Evidencia que la sostiene | Backend: `typecheck:all` limpio y 755 pruebas pasan (ajustadas las del perfil y el formulario de bienvenida; nueva del mensaje en español). Frontend: typecheck, lint y 452 pruebas pasan. **La causa exacta del error del formulario sigue sin reproducirse**: con el envío estándar del formulario el servidor responde 200; falla con algún dato concreto que cargó Emily. |
+| 4 | Aporte personal | Emily definió qué deja de cargar la profesional y cómo se ve el estado para la clienta. |
+| 5 | Desacuerdo y resolución | Sin resolver, para Emily: volver a probar el formulario; si falla, ahora el mensaje nombra el campo. |
+| 6 | Herramienta auxiliar | Claude Code con Git, Node y `vitest`. Context7 no se consultó. |
+
+**Impacto en el frontend (contrato):** `GET /api/professionals/public`, `GET /api/professional/profile` y `GET /api/professional/services` dejan de devolver `languages`, `paymentMethods`, `toleranceMinutes`, `latePenalty`, `cancellationPolicy`, `reschedulePolicy`, `depositPolicy`, `policies`, `ownPrice` y `ownDuration`; `POST /api/professional/onboarding` y `PATCH /api/professional/profile` los ignoran; `GET /api/client/appointments` manda `statusLabel: "No asistió"` también para el automático. Archivos del frontend: formulario de bienvenida (`OnboardingWizard`, `steps/*`, `types.ts`), `features/professional/settings/Settings.tsx`, `features/client/booking/PaymentStep.tsx` y `ComboBookingFlow.tsx`, `pages/client/AppointmentsPage.tsx` y `AppointmentDetailModal.tsx`, `app/data/shared/status.data.ts`, `features/client/appointments/reminderLink.ts`, `pages/admin/dashboard/DashboardPage.tsx`, `features/professional/statistics/Statistics.tsx`, `shared/ui/molecules/MarkStatusPanel.tsx`, `shared/ui/organisms/AdminSidebar.tsx`. **Sin migración de base.**
+
+## Entrada 176: causa encontrada del error del formulario de la profesional — el precio del catálogo viajaba como texto
+
+**Fecha:** 2026-11-22 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5), a pedido de Emily**, en la misma rama local `feat/profesional-sin-politicas`. En la captura del paso «Servicios» el precio figuraba como «$20000» (sin separador de miles): `GET /api/services` mandaba el precio de los servicios comunes como TEXTO (`"20000"`, es un Decimal de la base) y el formulario lo reenviaba tal cual como precio propio; el servidor exige un número y respondía 400 (el mensaje en inglés de zod se ocultaba tras «Hay datos que no son válidos»). La corrección de fondo: `publicService` (`service.model.ts`) manda el precio siempre como número. Además el precio propio ya no se envía (entrada 175) y el paso formatea con `Number(...)`. |
+| 2 | Alternativas y criterio de descarte | **Convertir el precio solo en el formulario:** descartado, el mismo texto afectaba el formato del precio en otras pantallas de la clienta. **Cambiar también la lista del administrador (`findAll`):** no se tocó, sus pantallas ya convierten con `Number()`. |
+| 3 | Evidencia que la sostiene | Backend: nueva prueba (el precio sale como número) y 756 pruebas pasan. La captura de Emily muestra el síntoma («$20000», `toLocaleString` sobre un texto no formatea). No se volvió a probar en el navegador. |
+| 4 | Aporte personal | Emily aportó la captura y el registro de la consola. |
+| 5 | Desacuerdo y resolución | Sin desacuerdo. |
+| 6 | Herramienta auxiliar | Claude Code con Git, Node y `vitest`. Context7 no se consultó. |
+
+**Impacto en el frontend (contrato):** `GET /api/services` devuelve `price` como número (antes texto en los servicios comunes). Las pantallas que ya hacían `Number(price)` no cambian; las que formateaban el texto ahora muestran el separador de miles (ej. «$20.000»). **Sin migración de base.**
+
+## Entrada 177: Clientes solo con turnos finalizados, info del turno compacta, sin correos inventados a la vista, cobro del saldo corregible, un solo tramo «Confirmados / Historial» para la clienta
+
+**Fecha:** 2026-11-22 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), a pedido de Emily.** (a) **Clienta:** «Mis turnos» ya no tiene la sección «Cancelados»: queda «Confirmados» (los que todavía no pasaron) e «Historial» (todo lo demás, cancelados incluidos). (b) **Clientes de la profesional:** solo aparecen clientas con un turno finalizado con ella y su historial lista solo los finalizados; se sacó el texto «Sin alergias para mostrar…», el indicador de cancelaciones y el de próximo turno. (c) **Detalle del turno de la profesional:** sin «Marcar llegada» (lo reemplaza «Finalizado»); «Datos del cliente» solo con lo que hay (nada si no hay ningún dato); «Info del turno» compacta («Alergias: …», «Acompañante: sí (…)») y solo con lo que la clienta completó. (d) **Correos:** un turno manual sin correo sigue usando una dirección interna (la base exige un correo único), pero ahora nunca se muestra (queda en blanco), no se le manda ningún mail y editar con el correo en blanco no lo pisa (antes el servidor rechazaba un correo vacío al guardar). (e) **Cobro del saldo:** se agregó «Corregir monto» (el total cobrado se reemplaza por el nuevo, más o menos de lo que faltaba) para el administrador y la profesional; el permiso no cambia (administrador, cualquier turno; profesional, solo los suyos) y la profesional ya no ve «registrado por …». |
+| 2 | Alternativas y criterio de descarte | **Dejar el correo del turno manual como `NULL` en la base:** descartado por ahora, el correo es obligatorio y único y toda la autenticación depende de él; se resolvió ocultándolo. **Permitir cobrar de más sin una corrección explícita:** descartado, el cobro normal sigue sin poder superar lo que falta. **Quitar «Cancelados» sin reubicarlos:** descartado, los cancelados pasan al Historial para no perderlos de vista. |
+| 3 | Evidencia que la sostiene | Backend: `typecheck:all` limpio y 763 pruebas pasan (nuevas: clientas solo finalizadas, correo en blanco, edición con correo vacío, corrección del cobro; ajustadas las de RNF-03). Frontend: typecheck, lint y 457 pruebas pasan. No se revisó en el navegador. **Aviso:** sin «Marcar llegada», un turno confirmado cuya clienta no figure como finalizada a los 30 minutos de su hora pasa a «No asistió (automático)»: la profesional tiene que pulsar «Finalizado» dentro de esa ventana (o la administradora corregir después). |
+| 4 | Aporte personal | Emily definió todas las reglas. |
+| 5 | Desacuerdo y resolución | Sin resolver, para Emily: confirmar que «Finalizado» a la hora de inicio es lo que quiere en lugar de «Marcar llegada» (ver aviso del punto 3). |
+| 6 | Herramienta auxiliar | Claude Code con Git, Node y `vitest`. Context7 no se consultó. |
+
+**Impacto en el frontend (contrato):** `GET /api/professional/clients` deja de mandar `nextAppointment` y `cancellations` y solo trae clientas con turno finalizado; el correo del cliente viene `''` cuando es la dirección interna (en turnos del administrador y de la profesional y en la lista de clientes del admin); `PATCH /api/admin|professional/appointments/:id/balance-payment` acepta `replace: true` (`400 NO_BALANCE_TO_CORRECT`); `PATCH /api/admin/appointments/:id` acepta `clientEmail: ''`. Archivos del frontend: `pages/client/AppointmentsPage.tsx`, `features/professional/clients/*`, `features/professional/types/client.ts`, `features/professional/agenda/dialogs/AppointmentDialog.tsx`, `features/professional/agenda/Agenda.tsx`, `shared/ui/molecules/BalancePaymentForm.tsx`, `pages/admin/appointments/AppointmentModal.tsx`, con sus pruebas. **Sin migración de base.**
+
+## Entrada 178: subida a GitHub de todos los cambios del 22/11 y limpieza de ramas
+
+**Fecha:** 2026-11-22 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5), a pedido de Emily.** (a) Se subió todo lo hecho el 22/11 en una sola rama por repositorio, `feat/ajustes-22-11` (backend y frontend), y un pull request a `main` en cada uno; el merge lo hace Emily. (b) Se registró en git el borrado, hecho por Emily, de la documentación que ya no hace falta (`01-relevamiento`, `03-requisitos`, `04-diseno`, `05-entregas`, `docs/` y las bitácoras anteriores de `00-gestion`): queda `00-gestion/RUNBOOK.md` y esta bitácora. (c) Se borraron las ramas que ya no sirven: las locales apiladas del 22/11 (todas están contenidas en `feat/ajustes-22-11`) y las ramas, locales y remotas, cuyos pull requests ya estaban mergeados en `main`. |
+| 2 | Alternativas y criterio de descarte | **Un pull request por cada tema:** descartado, las ramas estaban apiladas y cada una dependía de la anterior; separarlas pedía reescribir la historia. **Borrar ramas sin mergear:** descartado, solo se borraron las ya mergeadas o contenidas en la rama nueva. |
+| 3 | Evidencia que la sostiene | Antes de subir: backend 763 pruebas y frontend 457 pasan, con typecheck y lint limpios. |
+| 4 | Aporte personal | Emily pidió subir todo y limpiar ramas, y hará el merge. |
+| 5 | Desacuerdo y resolución | **Antes de desplegar el backend** hay que aplicar en Supabase (SQL Editor) la migración `20261122120000_sena_devuelta_en` (agrega `appointments.deposit_refunded_at`); sin ella, los turnos fallan. Está en el pull request del backend. |
+| 6 | Herramienta auxiliar | Claude Code con Git y GitHub CLI (`gh`). |
+
+**Impacto en el frontend (contrato):** el de las entradas 165 a 177. **Con migración de base** (la de las señas por devolver).

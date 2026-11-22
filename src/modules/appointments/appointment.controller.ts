@@ -30,7 +30,10 @@ const professionalIdSchema = z.union([
 
 const balancePaymentSchema = z.object({
   method: z.enum(BALANCE_PAYMENT_METHODS),
-  amount: z.coerce.number().positive('El monto tiene que ser mayor a cero'),
+  amount: z.coerce.number().positive('El monto tiene que ser mayor a cero').max(999999),
+  // true = corregir lo ya cobrado: el monto reemplaza al total cobrado en el local (puede ser más o menos que lo que
+  // faltaba). Sin esto el monto se suma a lo ya cobrado y no puede superar lo que falta.
+  replace: z.boolean().optional(),
 })
 
 const polishRemovalSchema = z.object({
@@ -149,7 +152,8 @@ const adminUpdateAppointmentSchema = z.object({
   clientNotes:       z.string().max(2000).optional(),
   clientName:        z.string().trim().min(1).max(150).optional(),
   clientPhone:       z.string().max(30).optional(),
-  clientEmail:       z.string().email('Email inválido').optional(),
+  // En blanco vale (cliente cargada sin correo): no cambia el correo guardado.
+  clientEmail:       z.union([z.string().email('Email inválido'), z.literal('')]).optional(),
 }).refine(requireCancelledBy.check, { message: requireCancelledBy.message, path: requireCancelledBy.path })
 
 // PATCH de la profesional: solo estado, notas internas y fecha/hora. Cualquier otra clave se descarta.
@@ -409,6 +413,20 @@ export const appointmentController = {
   markDepositPaid: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const appointment = await appointmentService.registerWhatsappDepositPaid(getId(req))
+      res.json({ appointment })
+    } catch (err) { next(err) }
+  },
+
+  markDepositPaidForProfessional: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const appointment = await appointmentService.registerWhatsappDepositPaidForProfessional(req.user!.id, getId(req))
+      res.json({ appointment })
+    } catch (err) { next(err) }
+  },
+
+  markRefundDone: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const appointment = await appointmentService.markDepositRefundDone(getId(req), req.user!.id)
       res.json({ appointment })
     } catch (err) { next(err) }
   },

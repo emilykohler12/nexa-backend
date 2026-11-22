@@ -560,7 +560,7 @@ describe('corrección del estado por el personal (regla 2.7)', () => {
     const logs = await prisma.activityLog.findMany({ where: { appointmentId: appt.id }, orderBy: { createdAt: 'asc' } })
     const entry = logs.find(l => l.detail?.includes('"cancelled_no_show" → "finished"'))
     expect(entry).toBeDefined()
-    expect(entry!.userName).toBe(admin.email)
+    expect(entry!.userName).toBe(admin.name)
     expect(entry!.detail).toContain('corrección del personal')
     expect(entry!.createdAt).toBeInstanceOf(Date)
   })

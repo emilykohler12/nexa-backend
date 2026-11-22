@@ -66,9 +66,12 @@ function publicSlot(s: SpecialSlot) {
 }
 
 function publicService(s: any) {
-  if (!s.isSpecial) return s
+  // El precio de la base es un Decimal y en JSON salía como TEXTO ("20000"): las pantallas lo mostraban sin separador de miles y
+  // el formulario de la profesional lo reenviaba como texto (el servidor lo rechazaba). Se manda siempre como número.
+  const base = { ...s, price: Number(s.price) }
+  if (!s.isSpecial) return base
   return {
-    ...s,
+    ...base,
     specialSlots: ((s.specialSlots ?? []) as SpecialSlot[]).filter(slot => slot.active).map(publicSlot),
     zones:        ((s.zones ?? [])        as ServiceZone[]).filter(z => z.active),
     packages:     ((s.packages ?? [])     as ServicePackage[]).filter(p => p.active),

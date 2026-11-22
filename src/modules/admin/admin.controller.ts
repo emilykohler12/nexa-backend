@@ -27,6 +27,13 @@ export const adminController = {
     } catch (err) { next(err) }
   },
 
+  searchClients: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const clients = await adminService.searchClients(typeof req.query.q === 'string' ? req.query.q : '')
+      res.json({ clients })
+    } catch (err) { next(err) }
+  },
+
   getClientHistory: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const history = await adminService.getClientHistory(getId(req))

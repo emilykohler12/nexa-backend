@@ -10,6 +10,7 @@ import { assertValidPhone } from '../../app/validators/phone'
 import { releaseSpecialSlot } from './specialSlots'
 import { HTTP }          from '../../app/constants/http'
 import { fullName }      from '../../app/utils/fullName'
+import { makePlaceholderEmail, visibleEmail, isPlaceholderEmail } from '../../app/utils/placeholderEmail'
 import { PRIVACY_POLICY_VERSION } from '../../app/constants/legal'
 import type { CompanionRelation } from '../../app/constants/companion'
 import { backendDayOf, weekRangeOf, isTimeInRanges, isOnVacation } from './availability'
@@ -147,7 +148,8 @@ function toClientView(a: AppointmentRow) {
     depositAmount:     Number(a.depositAmount),
     status:            a.status,
     displayStatus:     displayStatusOf(a),
-    statusLabel:       STATUS_LABELS[displayStatusOf(a)] ?? a.status,
+    // Para la clienta «No asistió» es un solo estado: no se distingue si lo marcó el sistema o el personal.
+    statusLabel:       a.status === 'no_show_auto' ? STATUS_LABELS.cancelled_no_show : (STATUS_LABELS[displayStatusOf(a)] ?? a.status),
     cancelReason:      a.cancelReason,
     paymentStatus:     a.paymentStatus,
     depositMethod:     a.depositMethod,
@@ -212,7 +214,7 @@ function toProfessionalView(a: AppointmentRow, peers: ComboPeer[] | null, attend
       id:        a.client.id,
       name:      fullName(a.client),
       phone:     a.client.phone ?? '',
-      email:     a.client.email,
+      email:     visibleEmail(a.client.email),
       photo:     null as string | null,
       allergies: attended ? a.client.client?.allergies ?? '' : '',
       notes:     a.client.client?.notes ?? '',
@@ -253,7 +255,7 @@ function toAdminView(a: AppointmentRow, peers: ComboPeer[] | null = null) {
     title:            fullName(a.client),
     clientName:       fullName(a.client),
     clientPhone:      a.client.phone ?? '',
-    clientEmail:      a.client.email,
+    clientEmail:      visibleEmail(a.client.email),
     professionalId:   a.professionalId,
     professionalName: a.professional.name,
     serviceId:        a.serviceId,
@@ -372,10 +374,16 @@ async function afterCreateGroup(legs: AppointmentRow[], whatsappPending = false)
   for (const proLegs of byProfessional.values()) await notifyProfessionalOfNewAppointments(proLegs)
 }
 
-async function afterCancel(a: AppointmentRow, emailClient: boolean, extraDetail = '') {
+// Quién hizo el cambio de un turno (cancelar o reprogramar): figura en la columna «Usuario» de Actividad y en el detalle.
+type ChangeActor = { name: string; role: 'client' | 'professional' | 'admin' }
+const ACTOR_LABEL: Record<ChangeActor['role'], string> = { client: 'la clienta', professional: 'la profesional', admin: 'el administrador' }
+const byActor = (actor?: ChangeActor) => actor ? ` — lo hizo ${ACTOR_LABEL[actor.role]} (${actor.name})` : ''
+
+async function afterCancel(a: AppointmentRow, emailClient: boolean, extraDetail = '', actor?: ChangeActor) {
   await activityService.log({
+    ...(actor ? { userName: actor.name } : {}),
     action: 'Turno cancelado', module: 'appointments', level: 'warning', appointmentId: a.id,
-    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${formatDateDMY(a.date)} ${a.time}${extraDetail}`,
+    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${formatDateDMY(a.date)} ${a.time}${extraDetail}${byActor(actor)}`,
   })
   await notificationService.notify(a.professionalId, {
     type:  'cancelled_appointment',
@@ -534,12 +542,15 @@ async function updateAppointmentRow(id: string, data: Prisma.AppointmentUpdateIn
   }
 }
 
+// Reprograma la clienta (el aviso a la profesional y el mail salen siempre; `actor` es la clienta).
 async function afterReschedule(a: AppointmentRow, previousDate?: string | null, previousTime?: string | null) {
-  const detail = previousDate && previousTime
+  const actor: ChangeActor = { name: fullName(a.client), role: 'client' }
+  const detail = (previousDate && previousTime
     ? `${a.service.name} — ${fullName(a.client)} con ${a.professional.name}: ${formatDateDMY(previousDate)} ${previousTime} → ${formatDateDMY(a.date)} ${a.time}`
-    : `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} → ${formatDateDMY(a.date)} ${a.time}`
+    : `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} → ${formatDateDMY(a.date)} ${a.time}`) + byActor(actor)
 
   await activityService.log({
+    userName: actor.name,
     action: 'Turno reprogramado', module: 'appointments', level: 'warning', appointmentId: a.id,
     detail,
   })
@@ -649,10 +660,11 @@ async function rescheduleComboGroup(
   return { appointment: views.find(v => v.id === existing.id) ?? views[0], appointments: views }
 }
 
-async function afterStaffReschedule(a: AppointmentRow, previousDate: string, previousTime: string) {
+async function afterStaffReschedule(a: AppointmentRow, previousDate: string, previousTime: string, actor?: ChangeActor) {
   await activityService.log({
+    ...(actor ? { userName: actor.name } : {}),
     action: 'Turno reprogramado', module: 'appointments', level: 'warning', appointmentId: a.id,
-    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name}: ${formatDateDMY(previousDate)} ${previousTime} → ${formatDateDMY(a.date)} ${a.time}`,
+    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name}: ${formatDateDMY(previousDate)} ${previousTime} → ${formatDateDMY(a.date)} ${a.time}${byActor(actor)}`,
   })
   await notificationService.notify(a.professionalId, {
     type:  'rescheduled_appointment',
@@ -700,7 +712,7 @@ async function registerArrival(appointment: AppointmentRow): Promise<Appointment
 // del turno, o el admin si lo carga por ella).
 async function registerBalancePayment(
   appointment: AppointmentRow,
-  data: { method: BalancePaymentMethod; amount: number },
+  data: { method: BalancePaymentMethod; amount: number; replace?: boolean },
   collectedById: string,
 ): Promise<AppointmentRow> {
   if (!BALANCE_PAYMENT_METHODS.includes(data.method)) {
@@ -713,15 +725,45 @@ async function registerBalancePayment(
     throw new AppError(HTTP.BAD_REQUEST, 'No se puede registrar un cobro sobre un turno cancelado o no asistido', 'INVALID_STATUS')
   }
 
+  const collectedSoFar = Number(appointment.balancePaidAmount ?? 0)
+
+  // Corregir lo ya cobrado en el local: el monto REEMPLAZA al total cobrado (puede ser más o menos que lo que faltaba).
+  // Solo si ya hay un cobro registrado; la seña pagada sigue contando, y el turno queda pagado o con la seña según cubra el precio.
+  if (data.replace) {
+    if (collectedSoFar <= 0) {
+      throw new AppError(HTTP.BAD_REQUEST, 'Todavía no hay un cobro registrado para corregir', 'NO_BALANCE_TO_CORRECT')
+    }
+    const deposit    = ['partial', 'paid'].includes(appointment.paymentStatus) ? Number(appointment.depositAmount) : 0
+    const fullyPaid  = deposit + data.amount >= Number(appointment.servicePrice)
+    const updated = await prisma.appointment.update({
+      where: { id: appointment.id },
+      data: {
+        balancePaymentMethod: data.method,
+        balancePaidAmount:    data.amount,
+        balancePaidAt:        new Date(),
+        balanceCollectedById: collectedById,
+        paymentStatus:        fullyPaid ? 'paid' : (Number(appointment.depositAmount) > 0 ? 'partial' : 'pending'),
+      },
+      include: APPOINTMENT_INCLUDE,
+    })
+    await activityService.log({
+      userName: updated.balanceCollectedBy?.name ?? 'Admin',
+      action: 'Cobro de saldo corregido',
+      module: 'payments',
+      appointmentId: updated.id,
+      detail: `${updated.service.name} — ${fullName(updated.client)} con ${updated.professional.name}: de ${collectedSoFar} a ${data.amount} (turno ${appointment.id})`,
+    })
+    return updated
+  }
+
   if (appointment.paymentStatus === 'paid') {
     throw new AppError(HTTP.BAD_REQUEST, 'Este turno ya figura como pagado', 'ALREADY_PAID')
   }
 
   const depositPaid   = appointment.paymentStatus === 'partial' ? Number(appointment.depositAmount) : 0
-  const collectedSoFar = Number(appointment.balancePaidAmount ?? 0)
   const remaining     = Math.max(Number(appointment.servicePrice) - depositPaid - collectedSoFar, 0)
   if (data.amount > remaining) {
-    throw new AppError(HTTP.BAD_REQUEST, `El monto supera lo que falta cobrar ($${remaining})`, 'AMOUNT_EXCEEDS_BALANCE')
+    throw new AppError(HTTP.BAD_REQUEST, `El monto supera lo que falta cobrar (${remaining})`, 'AMOUNT_EXCEEDS_BALANCE')
   }
   // Seña + lo cobrado antes + este cobro cubren el precio: el turno queda pagado.
   const fullyPaid = depositPaid + collectedSoFar + data.amount >= Number(appointment.servicePrice)
@@ -766,6 +808,8 @@ type CancelOptions = {
   // desde ahora (cancelación de la clienta desde la app).
   notice?:     CancellationNotice
   now?:        Date
+  // Quién cancela (queda en Actividad).
+  actor?:      ChangeActor
 }
 
 async function cancelWithGroup(appointment: AppointmentRow, opts: CancelOptions): Promise<AppointmentRow[]> {
@@ -819,7 +863,7 @@ async function cancelWithGroup(appointment: AppointmentRow, opts: CancelOptions)
       if (started) await openReopenedSlot(tx, row, now)
       return row
     })
-    await afterCancel(updated, opts.emailClient, extra)
+    await afterCancel(updated, opts.emailClient, extra, opts.actor)
     updatedList.push(updated)
   }
   return updatedList
@@ -888,7 +932,8 @@ async function findOrCreateManualClient(name: string, phone: string, email: stri
     }
   }
 
-  const finalEmail    = trimmedEmail || `walkin-${randomUUID()}@nexa.local`
+  // Sin correo: dirección interna (el correo es obligatorio y único); no se muestra ni recibe mails (ver placeholderEmail.ts).
+  const finalEmail    = trimmedEmail || makePlaceholderEmail()
   const passwordHash  = await bcryptProvider.hash(randomUUID())
   const user = await prisma.user.create({
     data: {
@@ -917,6 +962,10 @@ async function createManualAppointment(professionalId: string, data: {
 
   const clientId = await findOrCreateManualClient(data.clientName, data.clientPhone, data.clientEmail)
 
+  // Un turno manual con día y hora que ya pasaron es un servicio ya realizado que se carga después: nace finalizado
+  // (así cuenta en el rendimiento) y no avisa a la profesional de un «turno nuevo».
+  const alreadyHappened = hasStarted({ date: data.date, time: data.time })
+
   let appointment: AppointmentRow
   try {
     appointment = await prisma.appointment.create({
@@ -929,7 +978,7 @@ async function createManualAppointment(professionalId: string, data: {
         duration:       service.duration,
         servicePrice:   Number(service.price),
         depositAmount:  0,
-        status:         'confirmed',
+        status:         alreadyHappened ? 'finished' : 'confirmed',
         paymentStatus:  'pending',
       },
       include: APPOINTMENT_INCLUDE,
@@ -941,7 +990,14 @@ async function createManualAppointment(professionalId: string, data: {
     throw err
   }
 
-  await afterCreate(appointment)
+  if (alreadyHappened) {
+    await activityService.log({
+      action: 'Turno manual cargado como finalizado', module: 'appointments', level: 'success', appointmentId: appointment.id,
+      detail: `${appointment.service.name} — ${fullName(appointment.client)} con ${appointment.professional.name} el ${formatDateDMY(appointment.date)} ${appointment.time}: el día y la hora ya pasaron`,
+    })
+  } else {
+    await afterCreate(appointment)
+  }
   return appointment
 }
 
@@ -1557,6 +1613,33 @@ export const appointmentService = {
   // que lo confirme solo. Funciona tanto para un turno suelto como para un
   // combo (ahí aplica a TODAS las patas, igual que applyGroupPaymentResult).
   // Idempotente: si ya estaba paga, solo devuelve el estado actual.
+  // El administrador avisa que ya devolvió, en Mercado Pago, la seña de un turno que el sistema marcó como devuelta
+  // (el sistema no ejecuta devoluciones). Solo señas pagadas por Mercado Pago (mpPaymentId). Idempotente: si ya estaba
+  // marcada, no cambia la fecha.
+  markDepositRefundDone: async (id: string, actorId: string) => {
+    const actor = await prisma.user.findUnique({ where: { id: actorId }, select: { name: true, lastName: true } })
+    const actorName = actor ? fullName(actor) : 'Administrador'
+    const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
+    if (!appointment) throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
+    if (appointment.paymentStatus !== 'refunded' || !appointment.mpPaymentId || Number(appointment.depositAmount) <= 0) {
+      throw new AppError(HTTP.BAD_REQUEST, 'Este turno no tiene una seña de Mercado Pago pendiente de devolver', 'NO_REFUND_PENDING')
+    }
+    if (appointment.depositRefundedAt) return toAdminView(appointment)
+
+    const { count } = await prisma.appointment.updateMany({
+      where: { id, depositRefundedAt: null },
+      data:  { depositRefundedAt: new Date() },
+    })
+    const updated = await prisma.appointment.findUniqueOrThrow({ where: { id }, include: APPOINTMENT_INCLUDE })
+    if (count > 0) {
+      await activityService.log({
+        userName: actorName, action: 'Seña devuelta en Mercado Pago', module: 'payments', appointmentId: id,
+        detail: `${updated.service.name} — ${fullName(updated.client)} el ${formatDateDMY(updated.date)} ${updated.time}: seña de $${Number(updated.depositAmount).toLocaleString('es-AR')} devuelta`,
+      })
+    }
+    return toAdminView(updated)
+  },
+
   registerWhatsappDepositPaid: async (id: string) => {
     const appointment = await prisma.appointment.findUnique({ where: { id } })
     if (!appointment) throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
@@ -1611,6 +1694,18 @@ export const appointmentService = {
     })
     if (!(await wasAnnounced([updated.id]))) await afterCreate(updated)
     return toAdminView(updated, null)
+  },
+
+  // La profesional marca pagada la seña coordinada por WhatsApp de UN turno suyo (mismas reglas que el administrador).
+  registerWhatsappDepositPaidForProfessional: async (professionalId: string, id: string) => {
+    const own = await prisma.appointment.findUnique({ where: { id }, select: { professionalId: true } })
+    if (!own || own.professionalId !== professionalId) {
+      throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
+    }
+    await appointmentService.registerWhatsappDepositPaid(id)
+    const full = await prisma.appointment.findUniqueOrThrow({ where: { id }, include: APPOINTMENT_INCLUDE })
+    const peers = full.comboGroupId ? (await comboGroupPeers([full.comboGroupId])).get(full.comboGroupId) ?? null : null
+    return toProfessionalView(full, peers, await hasAttended(professionalId, full.clientId))
   },
 
   // Reserva de un "servicio especial": el cliente elige zonas/paquetes (arman el
@@ -1883,13 +1978,13 @@ export const appointmentService = {
           data:  { paymentStatus: 'refunded' },
         })
       }
-      await afterCancel(updated, false, extra)
+      await afterCancel(updated, false, extra, { name: fullName(appointment.client), role: 'client' })
 
       return { appointment: toClientView(updated), refunded, partialCombo: !isLastLeg }
     }
 
     // Turno suelto — cancelación normal.
-    const updatedList = await cancelWithGroup(appointment, { cancelledBy: 'client', emailClient: false })
+    const updatedList = await cancelWithGroup(appointment, { cancelledBy: 'client', emailClient: false, actor: { name: fullName(appointment.client), role: 'client' } })
     const target       = updatedList.find(a => a.id === id)!
     const refunded      = target.paymentStatus === 'refunded'
 
@@ -2172,7 +2267,7 @@ export const appointmentService = {
       if (data.internalNotes !== undefined) {
         await prisma.appointment.update({ where: { id }, data: { internalNotes: data.internalNotes } })
       }
-      const updatedList = await cancelWithGroup(appointment, { ...cancellation, emailClient: true, now })
+      const updatedList = await cancelWithGroup(appointment, { ...cancellation, emailClient: true, now, actor: { name: appointment.professional.name, role: 'professional' } })
       const target = updatedList.find(a => a.id === id)!
       const peers = target.comboGroupId ? (await comboGroupPeers([target.comboGroupId])).get(target.comboGroupId) ?? null : null
       return toProfessionalView(target, peers, await hasAttended(professionalId, target.clientId))
@@ -2205,14 +2300,16 @@ export const appointmentService = {
       await logStatusChange(updated, appointment.status, data.status!, appointment.professional.name)
     }
     if (reassigning) await afterComboReassign(updated, appointment.professionalId, appointment.professional.name)
-    if (rescheduling) await afterStaffReschedule(updated, appointment.date, appointment.time)
+    if (rescheduling) await afterStaffReschedule(updated, appointment.date, appointment.time, { name: appointment.professional.name, role: 'professional' })
     const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
     return toProfessionalView(updated, peers, await hasAttended(professionalId, updated.clientId))
   },
 
   listClientsForProfessional: async (professionalId: string) => {
+    // Solo cuentan los turnos FINALIZADOS ya realizados: una clienta figura en la sección «Clientes» recién cuando tuvo un turno
+    // finalizado con la profesional, y su historial lista solo esos turnos (no los futuros, cancelados ni no asistidos).
     const rows = await prisma.appointment.findMany({
-      where:   { professionalId },
+      where:   { professionalId, status: 'finished', date: { lte: todayArgentinaStr() } },
       include: APPOINTMENT_INCLUDE,
       orderBy: [{ date: 'asc' }],
     })
@@ -2224,18 +2321,15 @@ export const appointmentService = {
       byClient.set(a.clientId, list)
     }
 
-    const today = todayArgentinaStr()
-
     return Array.from(byClient.values()).map(list => {
       const first = list[0]
-      const next = list.find(a => a.date >= today && ['pending', 'confirmed'].includes(a.status))
-      // RNF-03 — la alergia del perfil es un dato de salud: solo la ve una profesional que ya atendió a la
-      // clienta (al menos un turno finalizado con ella). Cancelados, inasistencias y turnos futuros no alcanzan.
-      const attended = list.some(a => a.status === 'finished')
+      // RNF-03 — la alergia del perfil es un dato de salud: solo la ve una profesional que ya atendió a la clienta. Como
+      // la lista solo trae clientas con turno finalizado, siempre se cumple.
+      const attended = true
       return {
         id:            first.client.id,
         name:          fullName(first.client),
-        email:         first.client.email,
+        email:         visibleEmail(first.client.email),
         phone:         first.client.phone ?? '',
         photo:         null as string | null,
         allergies:     attended ? first.client.client?.allergies ?? '' : '',
@@ -2251,15 +2345,14 @@ export const appointmentService = {
           displayStatus: displayStatusOf(a),
           internalNotes: a.internalNotes ?? null,
         })),
-        nextAppointment: next ? next.date : null,
-        cancellations:   list.filter(a => a.status === 'cancelled').length,
       }
     })
   },
 
   getHistoryForProfessional: async (professionalId: string) => {
     const rows = await prisma.appointment.findMany({
-      where:   { professionalId, status: 'finished' },
+      // Solo finalizados y nunca de una fecha futura (un turno que todavía no se realizó no es rendimiento).
+      where:   { professionalId, status: 'finished', date: { lte: todayArgentinaStr() } },
       include: { client: true, service: true },
       orderBy: [{ date: 'desc' }, { time: 'desc' }],
     })
@@ -2292,6 +2385,11 @@ export const appointmentService = {
     internalNotes?: string; clientNotes?: string
     clientName?: string; clientPhone?: string; clientEmail?: string
   } & StaffCancellationInput, actorName: string = 'Admin', actorId: string | null = null) => {
+    // El controlador pasa el correo como respaldo: en Actividad tiene que figurar el NOMBRE de quien hizo el cambio.
+    if (actorId) {
+      const actor = await prisma.user.findUnique({ where: { id: actorId }, select: { name: true, lastName: true } })
+      if (actor) actorName = fullName(actor)
+    }
     const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
     if (!appointment) throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
 
@@ -2309,7 +2407,10 @@ export const appointmentService = {
     const clientUpdate: Record<string, unknown> = {}
     if (data.clientName  !== undefined) clientUpdate.name  = data.clientName
     if (data.clientPhone !== undefined) clientUpdate.phone = data.clientPhone
-    if (data.clientEmail !== undefined) clientUpdate.email = data.clientEmail
+    // En blanco (o la dirección interna que se muestra en blanco) no cambia nada: el correo no se puede dejar vacío en la base.
+    if (data.clientEmail !== undefined && data.clientEmail.trim() !== '' && !isPlaceholderEmail(data.clientEmail)) {
+      clientUpdate.email = data.clientEmail.trim().toLowerCase()
+    }
     if (Object.keys(clientUpdate).length > 0) {
       try {
         await prisma.user.update({ where: { id: appointment.clientId }, data: clientUpdate })
@@ -2360,7 +2461,7 @@ export const appointmentService = {
       if (Object.keys(otherFields).length > 0) {
         await updateAppointmentRow(id, otherFields)
       }
-      const updatedList = await cancelWithGroup(appointment, { ...cancellation, emailClient: true, now })
+      const updatedList = await cancelWithGroup(appointment, { ...cancellation, emailClient: true, now, actor: { name: actorName, role: 'admin' } })
       const target = updatedList.find(a => a.id === id)!
       const peers = target.comboGroupId ? (await comboGroupPeers([target.comboGroupId])).get(target.comboGroupId) ?? null : null
       return toAdminView(target, peers)
@@ -2383,7 +2484,7 @@ export const appointmentService = {
       await logStatusChange(updated, appointment.status, data.status!, actorName)
     }
     if (reassigning) await afterComboReassign(updated, appointment.professionalId, actorName)
-    if (rescheduling) await afterStaffReschedule(updated, appointment.date, appointment.time)
+    if (rescheduling) await afterStaffReschedule(updated, appointment.date, appointment.time, { name: actorName, role: 'admin' })
     const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
     return toAdminView(updated, peers)
   },
@@ -2424,23 +2525,23 @@ export const appointmentService = {
   // Lo registran el administrador (cualquier turno) y la profesional (solo los suyos): ambos pueden cobrar en
   // el local el servicio completo o lo que falta después de la seña.
   registerBalancePaymentForProfessional: async (
-    professionalId: string, id: string, data: { method: string; amount: number },
+    professionalId: string, id: string, data: { method: string; amount: number; replace?: boolean },
   ) => {
     const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
     if (!appointment || appointment.professionalId !== professionalId) {
       throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
     }
-    const updated = await registerBalancePayment(appointment, data as { method: BalancePaymentMethod; amount: number }, professionalId)
+    const updated = await registerBalancePayment(appointment, data as { method: BalancePaymentMethod; amount: number; replace?: boolean }, professionalId)
     const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
     return toProfessionalView(updated, peers, await hasAttended(professionalId, updated.clientId))
   },
 
   registerBalancePaymentForAdmin: async (
-    adminId: string, id: string, data: { method: string; amount: number },
+    adminId: string, id: string, data: { method: string; amount: number; replace?: boolean },
   ) => {
     const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
     if (!appointment) throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
-    const updated = await registerBalancePayment(appointment, data as { method: BalancePaymentMethod; amount: number }, adminId)
+    const updated = await registerBalancePayment(appointment, data as { method: BalancePaymentMethod; amount: number; replace?: boolean }, adminId)
     const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
     return toAdminView(updated, peers)
   },

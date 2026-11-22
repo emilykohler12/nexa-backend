@@ -332,6 +332,10 @@ model Appointment {
   // Cuándo se confirmó la seña (Mercado Pago aprobado o marcada paga por el administrador). El tablero suma las señas por
   // este día; en NULL (turnos anteriores a la columna, o cargados a mano) se usa la fecha del turno, como antes.
   depositPaidAt  DateTime? @map("deposit_paid_at") @db.Timestamptz
+  // Cuándo el administrador devolvió DE VERDAD la seña pagada por Mercado Pago (el sistema solo marca paymentStatus =
+  // 'refunded'; la devolución se hace a mano en Mercado Pago). Null = todavía falta devolverla. El tablero lista las
+  // señas marcadas como devueltas con mpPaymentId y deposit_refunded_at nulo.
+  depositRefundedAt DateTime? @map("deposit_refunded_at") @db.Timestamptz
   // Cobro del SALDO restante (precio - seña) en el local — la seña ya se
   // cobra sola por Mercado Pago (mpPaymentId), pero el resto se paga en mano
   // al momento del servicio y hasta ahora no quedaba ningún registro. 'cash' |

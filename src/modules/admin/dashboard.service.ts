@@ -1,6 +1,7 @@
 // src/modules/admin/dashboard.service.ts
 import { prisma } from '../../app/database/prisma'
 import { argentinaWallClock, todayArgentinaStr, appointmentInstant } from '../../app/utils/argentinaTime'
+import { fullName } from '../../app/utils/fullName'
 
 export type PeriodFilter = 'day' | 'week' | 'month' | 'year'
 
@@ -71,16 +72,32 @@ export const dashboardService = {
     const rangeStart = appointmentInstant(startStr, '00:00')
     const rangeEnd   = new Date(appointmentInstant(endStr, '23:59').getTime() + 59_999)
 
+    // Señas pagadas por Mercado Pago que se marcaron como devueltas y todavía falta devolver (no depende del período).
+    const pendingRefundRows = await prisma.appointment.findMany({
+      where:   { paymentStatus: 'refunded', mpPaymentId: { not: null }, depositRefundedAt: null, depositAmount: { gt: 0 } },
+      include: { client: true, service: true },
+      orderBy: [{ date: 'asc' }, { time: 'asc' }],
+    })
+    const pendingRefunds = pendingRefundRows.map(a => ({
+      appointmentId: a.id,
+      clientName:    fullName(a.client),
+      serviceName:   a.service.name,
+      date:          a.date,
+      time:          a.time,
+      amount:        Number(a.depositAmount),
+    }))
+
     const [allInRange, newClientUsers, professionals, holidaysInRange] = await Promise.all([
       prisma.appointment.findMany({
         where:   { date: { gte: startStr, lte: endStr } },
         include: { professional: true, service: true },
       }),
-      // "Nuevos" = se registraron en el período Y llegaron a reservar al menos
-      // un turno (si solo se registró pero nunca reservó, no cuenta acá).
-      prisma.user.findMany({
-        where:  { role: 'client', createdAt: { gte: rangeStart, lte: rangeEnd }, appointmentsAsClient: { some: {} } },
-        select: { id: true },
+      // "Nuevos" = clientas que reservaron un turno POR PRIMERA VEZ en el período: su primer turno (sin contar los
+      // cancelados) cae dentro del día, semana, mes o año elegido. Registrarse sin reservar no cuenta.
+      prisma.appointment.groupBy({
+        by:    ['clientId'],
+        where: { status: { not: 'cancelled' } },
+        _min:  { date: true },
       }),
       prisma.professional.findMany({
         where:   { user: { active: true, role: { in: ['professional', 'admin'] } } },
@@ -89,7 +106,9 @@ export const dashboardService = {
       prisma.businessHoliday.findMany({ where: { date: { gte: startStr, lte: endStr } }, select: { date: true } }),
     ])
 
-    const newClientIds = newClientUsers.map(u => u.id)
+    const newClientIds = newClientUsers
+      .filter(c => c._min.date !== null && c._min.date >= startStr && c._min.date <= endStr)
+      .map(c => c.clientId)
     const holidaySet = new Set(holidaysInRange.map(h => h.date))
 
     // ── Capacidad de agenda (para % de ocupación) ─────────────────────
@@ -289,6 +308,7 @@ export const dashboardService = {
       returningWindowDays: RETURNING_WINDOW_DAYS,
       pendingBalance,
       refundedDeposits,
+      pendingRefunds,
     }
   },
 }
