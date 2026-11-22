@@ -15,6 +15,7 @@ const router = Router()
 router.use(authMiddleware, requireRole('admin'))
 
 router.get ('/clients',             adminController.getClients)
+router.get ('/clients/search',      adminController.searchClients)
 router.post('/clients',             adminController.createClient)
 router.get ('/clients/:id/history', adminController.getClientHistory)
 router.get ('/clients/:id/gallery',              adminController.getClientGallery)

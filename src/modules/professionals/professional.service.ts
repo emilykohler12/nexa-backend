@@ -4,6 +4,7 @@ import { AppError } from '../../app/middlewares/errorHandler'
 import { HTTP }     from '../../app/constants/http'
 import { assertValidPhone } from '../../app/validators/phone'
 import { dateSchema } from '../../app/validators/datetime'
+import { activityService } from '../activity/activity.service'
 import { argentinaParts, todayArgentinaStr } from '../../app/utils/argentinaTime'
 import { OCCUPYING_SLOT_FILTER, earliestBookableStart, reopenedStartsFor } from '../appointments/reopenedSlots'
 
@@ -625,6 +626,8 @@ export const professionalService = {
 
   saveOnboarding: async (userId: string, data: any): Promise<void> => {
     const { personal, work, availability, services, policies } = data
+    // El formulario del enlace se completa una sola vez: solo la primera vez queda el aviso para el administrador.
+    const wasComplete = (await prisma.user.findUnique({ where: { id: userId }, select: { profileComplete: true } }))?.profileComplete ?? false
     assertValidPhone(personal?.phone)
     if (Array.isArray(services)) {
       const current = await prisma.professional.findUnique({ where: { userId }, select: { id: true } })
@@ -688,6 +691,18 @@ export const professionalService = {
       where: { id: userId },
       data:  { profileComplete: true },
     })
+
+    if (!wasComplete) {
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, lastName: true, email: true } })
+      const label = user ? (user.lastName ? `${user.name} ${user.lastName}` : user.name) : 'Una profesional'
+      await activityService.log({
+        userName: label,
+        action:   'Profesional completó su alta',
+        module:   'professionals',
+        level:    'success',
+        detail:   `${label}${user ? ` (${user.email})` : ''} creó su cuenta con el enlace y completó el formulario de bienvenida: ya figura en Profesionales.`,
+      })
+    }
   },
 
   getOnboardingStatus: async (userId: string): Promise<{ profileComplete: boolean }> => {

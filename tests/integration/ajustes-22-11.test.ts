@@ -199,3 +199,57 @@ describe('Actividad: quién cancela o reprograma un turno', () => {
     expect(clog.detail).toContain('el administrador')
   })
 })
+
+// ── Actividad: aviso cuando una profesional completa el formulario del enlace ─────────────────────────────────────
+describe('Actividad: la profesional completa su alta con el enlace', () => {
+  const submit = (pro: { id: string }) =>
+    request(app).post('/api/professional/onboarding').set('Cookie', cookieFor(pro as never)).send({
+      personal: { name: 'Pro Nueva', phone: '3764123456' }, work: { specialty: 'Uñas' },
+    })
+
+  it('deja UNA entrada en el módulo Profesionales, solo la primera vez', async () => {
+    const pro = await createProfessionalUser()
+    await prisma.user.update({ where: { id: pro.id }, data: { profileComplete: false } })
+
+    expect((await submit(pro)).status).toBe(200)
+    expect((await submit(pro)).status).toBe(200)
+
+    const logs = await prisma.activityLog.findMany({ where: { module: 'professionals', action: 'Profesional completó su alta' } })
+    expect(logs).toHaveLength(1)
+    expect(logs[0].userName).toBe('Pro Nueva')
+    expect(logs[0].detail).toContain('completó el formulario de bienvenida')
+  })
+})
+
+// ── Buscador de clientas del turno manual ───────────────────────────────────────────────────────────────────────────
+describe('turno manual: buscar si la clienta ya tiene cuenta', () => {
+  const search = (admin: { id: string }, q: string) =>
+    request(app).get('/api/admin/clients/search').query({ q }).set('Cookie', cookieFor(admin as never))
+
+  it('encuentra por nombre o correo, sin distinguir mayúsculas, y devuelve solo lo necesario', async () => {
+    const admin = await createAdminUser()
+    const ana   = await createClientUser({ name: 'Ana María', email: 'ana.maria@test.local', phone: '3764111111' })
+    await createClientUser({ name: 'Otra Persona' })
+
+    const byName  = await search(admin, 'ana ma')
+    const byEmail = await search(admin, 'ANA.MARIA@')
+
+    expect(byName.status).toBe(200)
+    expect(byName.body.clients).toEqual([{ id: ana.id, name: 'Ana María', email: 'ana.maria@test.local', phone: '3764111111' }])
+    expect(byEmail.body.clients.map((c: { id: string }) => c.id)).toEqual([ana.id])
+  })
+
+  it('con menos de 2 letras no busca, y no ofrece cuentas walk-in ni de otro rol', async () => {
+    const admin = await createAdminUser()
+    await createClientUser({ name: 'Zoe Walkin', email: 'walkin-123@nexa.local' })
+    await createProfessionalUser({ name: 'Zoe Profesional' })
+
+    expect((await search(admin, 'z')).body.clients).toEqual([])
+    expect((await search(admin, 'zoe')).body.clients).toEqual([])
+  })
+
+  it('solo el administrador puede buscar', async () => {
+    const pro = await createProfessionalUser()
+    expect((await search(pro, 'ana')).status).toBe(403)
+  })
+})

@@ -93,6 +93,29 @@ export const adminService = {
     return Promise.all(users.map(async u => mapAdminClient(u, u.client, await computeVisits(u.id))))
   },
 
+  // Buscador del turno manual: cuentas de clienta activas cuyo nombre, apellido o correo contiene el texto. Devuelve lo
+  // justo para elegirla (sin visitas, alergias ni notas) y como máximo 8.
+  searchClients: async (query: string) => {
+    const q = query.trim()
+    if (q.length < 2) return []
+    const users = await prisma.user.findMany({
+      where: {
+        role: 'client', active: true,
+        // Las cuentas generadas para turnos sin correo (walkin-…@nexa.local) no se ofrecen como «cuenta de la clienta».
+        email: { not: { startsWith: 'walkin-' } },
+        OR: [
+          { name:     { contains: q, mode: 'insensitive' } },
+          { lastName: { contains: q, mode: 'insensitive' } },
+          { email:    { contains: q, mode: 'insensitive' } },
+        ],
+      },
+      select:  { id: true, name: true, lastName: true, email: true, phone: true },
+      orderBy: { name: 'asc' },
+      take:    8,
+    })
+    return users.map(u => ({ id: u.id, name: fullName(u), email: u.email, phone: u.phone ?? '' }))
+  },
+
   getClientById: (id: string) => getByIdInternal(id),
 
   getClientHistory: async (id: string) => {

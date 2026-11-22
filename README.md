@@ -97,7 +97,7 @@ Vive en el repositorio **nexa-backend**:
 | Bitácora de decisiones, AE1 (hasta el 03/09/2026) | `00-gestion/BITACORA.md` |
 | Bitácora de decisiones, AE2 (10/09 al 06/10/2026; continúa la anterior) | `00-gestion/20261006_BitacoraIndividual_KohlerAE2_v5.docx` |
 | Bitácora de decisiones, AE3 y AE4 (desde el 23/10/2026 hasta hoy; continúa la anterior; incluye los cambios del frontend y las sesiones de Claude en el chat; entradas 1 a 162) | `00-gestion/20261028_BitacoraIndividual_KohlerAE3_v1.md` |
-| Backup y restauración, RUNBOOK, SOP y texto de la política de privacidad | `00-gestion/` |
+| RUNBOOK (qué hacer si algo se cae en producción) | `00-gestion/RUNBOOK.md` |
 | Evidencia de la medición de RNF-01 | `05-entregas/evidencia-RNF-01/` |
 
 ---
