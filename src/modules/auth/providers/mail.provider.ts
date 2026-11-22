@@ -13,6 +13,7 @@
 import nodemailer from 'nodemailer'
 import { env } from '../../../app/config/env'
 import { maskEmail } from '../../../app/utils/maskEmail'
+import { isPlaceholderEmail } from '../../../app/utils/placeholderEmail'
 
 const FROM_NAME = 'Nexa'
 const BREVO_URL = 'https://api.brevo.com/v3/smtp/email'
@@ -80,6 +81,12 @@ export const mailProvider = {
     subject: string,
     html: string,
   ) => {
+
+    // Una clienta cargada a mano sin correo tiene una dirección interna que no existe: no se le manda nada.
+    if (isPlaceholderEmail(to)) {
+      console.log('[mail] Sin envío: la clienta no tiene correo cargado')
+      return { messageId: undefined }
+    }
 
     try {
 

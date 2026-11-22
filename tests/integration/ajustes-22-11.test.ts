@@ -305,3 +305,127 @@ describe('GET /api/services: el precio es un número, no un texto', () => {
     expect(svc.price).toBe(20000)
   })
 })
+
+// ── Clientas de la profesional: solo con turno finalizado ───────────────────────────────────────────────────────────
+describe('Profesional: la sección Clientes solo tiene clientas con turno finalizado', () => {
+  it('no lista a quien solo tiene turnos futuros, cancelados o no asistidos, y el historial trae solo finalizados', async () => {
+    const pro = await createProfessionalUser()
+    const svc = await createService({ price: 10000 })
+    const [attended, onlyFuture, onlyCancelled] = await Promise.all([createClientUser({ name: 'Atendida' }), createClientUser({ name: 'Futura' }), createClientUser({ name: 'Cancelada' })])
+    await createAppointmentDirect({ clientId: attended.id, professionalId: pro.id, serviceId: svc.id, date: '2020-03-01', time: '10:00', status: 'finished' })
+    await createAppointmentDirect({ clientId: attended.id, professionalId: pro.id, serviceId: svc.id, date: tomorrowStr(3), time: '10:00', status: 'confirmed' })
+    await createAppointmentDirect({ clientId: attended.id, professionalId: pro.id, serviceId: svc.id, date: '2020-03-05', time: '10:00', status: 'cancelled' })
+    await createAppointmentDirect({ clientId: onlyFuture.id, professionalId: pro.id, serviceId: svc.id, date: tomorrowStr(2), time: '11:00', status: 'confirmed' })
+    await createAppointmentDirect({ clientId: onlyCancelled.id, professionalId: pro.id, serviceId: svc.id, date: '2020-03-02', time: '12:00', status: 'cancelled' })
+
+    const res = await request(app).get('/api/professional/clients').set('Cookie', cookieFor(pro))
+
+    expect(res.body.clients.map((c: { name: string }) => c.name)).toEqual(['Atendida'])
+    expect(res.body.clients[0].visits).toHaveLength(1)
+    expect(res.body.clients[0].visits[0].status).toBe('finished')
+    expect(res.body.clients[0]).not.toHaveProperty('cancellations')
+    expect(res.body.clients[0]).not.toHaveProperty('nextAppointment')
+  })
+})
+
+// ── Turno manual sin correo: queda en blanco, sin direcciones inventadas a la vista ─────────────────────────────────
+describe('turno manual sin correo: el correo queda en blanco', () => {
+  const manual = (admin: { id: string }, proId: string, svcId: string) =>
+    request(app).post('/api/admin/appointments').set('Cookie', cookieFor(admin as never)).send({
+      clientName: 'Sin Correo', clientPhone: '', clientEmail: '', serviceId: svcId, professionalId: proId, date: futureWeekDay(2), time: '10:00',
+    })
+
+  it('el administrador y la profesional ven el correo vacío, no la dirección interna', async () => {
+    const admin = await createAdminUser()
+    const pro   = await createProfessionalUser()
+    const svc   = await createService()
+    const created = await manual(admin, pro.id, svc.id)
+    expect(created.status).toBe(201)
+    expect(created.body.appointment.clientEmail).toBe('')
+
+    const list = await request(app).get('/api/professional/appointments').set('Cookie', cookieFor(pro))
+    expect(list.body.appointments[0].client.email).toBe('')
+    const row = await prisma.user.findFirstOrThrow({ where: { name: 'Sin Correo' } })
+    expect(row.email).toMatch(/^walkin-/) // internamente la base exige un correo único
+  })
+
+  it('guardar la edición del administrador con el correo en blanco no lo pisa', async () => {
+    const admin = await createAdminUser()
+    const pro   = await createProfessionalUser()
+    const svc   = await createService()
+    const created = await manual(admin, pro.id, svc.id)
+    const before = (await prisma.user.findFirstOrThrow({ where: { name: 'Sin Correo' } })).email
+
+    const res = await request(app).patch(`/api/admin/appointments/${created.body.appointment.id}`).set('Cookie', cookieFor(admin)).send({ clientEmail: '', internalNotes: 'x' })
+
+    expect(res.status).toBe(200)
+    expect((await prisma.user.findFirstOrThrow({ where: { name: 'Sin Correo' } })).email).toBe(before)
+  })
+
+  it('la dirección interna se reconoce como tal y un correo real no', async () => {
+    const { makePlaceholderEmail, isPlaceholderEmail, visibleEmail } = await import('../../src/app/utils/placeholderEmail')
+    const internal = makePlaceholderEmail()
+    expect(isPlaceholderEmail(internal)).toBe(true)
+    expect(visibleEmail(internal)).toBe('')
+    expect(isPlaceholderEmail('ana@gmail.com')).toBe(false)
+    expect(visibleEmail('ana@gmail.com')).toBe('ana@gmail.com')
+    expect(visibleEmail(null)).toBe('')
+  })
+})
+
+// ── Cobro del saldo: corregir el monto (más o menos) ────────────────────────────────────────────────────────────────
+describe('cobro del saldo en el local: se puede corregir el monto', () => {
+  async function paidTurn() {
+    const client = await createClientUser()
+    const pro    = await createProfessionalUser()
+    const svc    = await createService({ price: 50000 })
+    const appt   = await createAppointmentDirect({
+      clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: '2020-04-01', time: '10:00',
+      status: 'confirmed', paymentStatus: 'partial', depositAmount: 5000,
+    })
+    return { pro, appt }
+  }
+  const adminFix = (admin: { id: string }, id: string, body: object) =>
+    request(app).patch(`/api/admin/appointments/${id}/balance-payment`).set('Cookie', cookieFor(admin as never)).send(body)
+  const proFix = (pro: { id: string }, id: string, body: object) =>
+    request(app).patch(`/api/professional/appointments/${id}/balance-payment`).set('Cookie', cookieFor(pro as never)).send(body)
+
+  it('la profesional cobra, corrige a menos (vuelve a «seña pagada») y a más (queda pagado)', async () => {
+    const { pro, appt } = await paidTurn()
+    expect((await proFix(pro, appt.id, { method: 'cash', amount: 45000 })).status).toBe(200)
+    expect((await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } })).paymentStatus).toBe('paid')
+
+    const less = await proFix(pro, appt.id, { method: 'cash', amount: 30000, replace: true })
+    expect(less.status).toBe(200)
+    let row = await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } })
+    expect(Number(row.balancePaidAmount)).toBe(30000)
+    expect(row.paymentStatus).toBe('partial')
+
+    const more = await proFix(pro, appt.id, { method: 'transfer', amount: 52000, replace: true })
+    expect(more.status).toBe(200)
+    row = await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } })
+    expect(Number(row.balancePaidAmount)).toBe(52000)
+    expect(row.paymentStatus).toBe('paid')
+    expect(row.balancePaymentMethod).toBe('transfer')
+    expect(await prisma.activityLog.count({ where: { appointmentId: appt.id, action: 'Cobro de saldo corregido' } })).toBe(2)
+  })
+
+  it('el administrador corrige cualquier turno; una profesional solo los suyos', async () => {
+    const admin = await createAdminUser()
+    const { pro, appt } = await paidTurn()
+    await proFix(pro, appt.id, { method: 'cash', amount: 45000 })
+    const other = await createProfessionalUser()
+
+    expect((await proFix(other, appt.id, { method: 'cash', amount: 1000, replace: true })).status).toBe(404)
+    expect((await adminFix(admin, appt.id, { method: 'card', amount: 44000, replace: true })).status).toBe(200)
+  })
+
+  it('no se puede corregir un cobro que no existe', async () => {
+    const { pro, appt } = await paidTurn()
+
+    const res = await proFix(pro, appt.id, { method: 'cash', amount: 1000, replace: true })
+
+    expect(res.status).toBe(400)
+    expect(res.body.code).toBe('NO_BALANCE_TO_CORRECT')
+  })
+})

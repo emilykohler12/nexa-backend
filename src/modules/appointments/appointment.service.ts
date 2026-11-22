@@ -10,6 +10,7 @@ import { assertValidPhone } from '../../app/validators/phone'
 import { releaseSpecialSlot } from './specialSlots'
 import { HTTP }          from '../../app/constants/http'
 import { fullName }      from '../../app/utils/fullName'
+import { makePlaceholderEmail, visibleEmail, isPlaceholderEmail } from '../../app/utils/placeholderEmail'
 import { PRIVACY_POLICY_VERSION } from '../../app/constants/legal'
 import type { CompanionRelation } from '../../app/constants/companion'
 import { backendDayOf, weekRangeOf, isTimeInRanges, isOnVacation } from './availability'
@@ -213,7 +214,7 @@ function toProfessionalView(a: AppointmentRow, peers: ComboPeer[] | null, attend
       id:        a.client.id,
       name:      fullName(a.client),
       phone:     a.client.phone ?? '',
-      email:     a.client.email,
+      email:     visibleEmail(a.client.email),
       photo:     null as string | null,
       allergies: attended ? a.client.client?.allergies ?? '' : '',
       notes:     a.client.client?.notes ?? '',
@@ -254,7 +255,7 @@ function toAdminView(a: AppointmentRow, peers: ComboPeer[] | null = null) {
     title:            fullName(a.client),
     clientName:       fullName(a.client),
     clientPhone:      a.client.phone ?? '',
-    clientEmail:      a.client.email,
+    clientEmail:      visibleEmail(a.client.email),
     professionalId:   a.professionalId,
     professionalName: a.professional.name,
     serviceId:        a.serviceId,
@@ -711,7 +712,7 @@ async function registerArrival(appointment: AppointmentRow): Promise<Appointment
 // del turno, o el admin si lo carga por ella).
 async function registerBalancePayment(
   appointment: AppointmentRow,
-  data: { method: BalancePaymentMethod; amount: number },
+  data: { method: BalancePaymentMethod; amount: number; replace?: boolean },
   collectedById: string,
 ): Promise<AppointmentRow> {
   if (!BALANCE_PAYMENT_METHODS.includes(data.method)) {
@@ -724,15 +725,45 @@ async function registerBalancePayment(
     throw new AppError(HTTP.BAD_REQUEST, 'No se puede registrar un cobro sobre un turno cancelado o no asistido', 'INVALID_STATUS')
   }
 
+  const collectedSoFar = Number(appointment.balancePaidAmount ?? 0)
+
+  // Corregir lo ya cobrado en el local: el monto REEMPLAZA al total cobrado (puede ser más o menos que lo que faltaba).
+  // Solo si ya hay un cobro registrado; la seña pagada sigue contando, y el turno queda pagado o con la seña según cubra el precio.
+  if (data.replace) {
+    if (collectedSoFar <= 0) {
+      throw new AppError(HTTP.BAD_REQUEST, 'Todavía no hay un cobro registrado para corregir', 'NO_BALANCE_TO_CORRECT')
+    }
+    const deposit    = ['partial', 'paid'].includes(appointment.paymentStatus) ? Number(appointment.depositAmount) : 0
+    const fullyPaid  = deposit + data.amount >= Number(appointment.servicePrice)
+    const updated = await prisma.appointment.update({
+      where: { id: appointment.id },
+      data: {
+        balancePaymentMethod: data.method,
+        balancePaidAmount:    data.amount,
+        balancePaidAt:        new Date(),
+        balanceCollectedById: collectedById,
+        paymentStatus:        fullyPaid ? 'paid' : (Number(appointment.depositAmount) > 0 ? 'partial' : 'pending'),
+      },
+      include: APPOINTMENT_INCLUDE,
+    })
+    await activityService.log({
+      userName: updated.balanceCollectedBy?.name ?? 'Admin',
+      action: 'Cobro de saldo corregido',
+      module: 'payments',
+      appointmentId: updated.id,
+      detail: `${updated.service.name} — ${fullName(updated.client)} con ${updated.professional.name}: de ${collectedSoFar} a ${data.amount} (turno ${appointment.id})`,
+    })
+    return updated
+  }
+
   if (appointment.paymentStatus === 'paid') {
     throw new AppError(HTTP.BAD_REQUEST, 'Este turno ya figura como pagado', 'ALREADY_PAID')
   }
 
   const depositPaid   = appointment.paymentStatus === 'partial' ? Number(appointment.depositAmount) : 0
-  const collectedSoFar = Number(appointment.balancePaidAmount ?? 0)
   const remaining     = Math.max(Number(appointment.servicePrice) - depositPaid - collectedSoFar, 0)
   if (data.amount > remaining) {
-    throw new AppError(HTTP.BAD_REQUEST, `El monto supera lo que falta cobrar ($${remaining})`, 'AMOUNT_EXCEEDS_BALANCE')
+    throw new AppError(HTTP.BAD_REQUEST, `El monto supera lo que falta cobrar (${remaining})`, 'AMOUNT_EXCEEDS_BALANCE')
   }
   // Seña + lo cobrado antes + este cobro cubren el precio: el turno queda pagado.
   const fullyPaid = depositPaid + collectedSoFar + data.amount >= Number(appointment.servicePrice)
@@ -901,7 +932,8 @@ async function findOrCreateManualClient(name: string, phone: string, email: stri
     }
   }
 
-  const finalEmail    = trimmedEmail || `walkin-${randomUUID()}@nexa.local`
+  // Sin correo: dirección interna (el correo es obligatorio y único); no se muestra ni recibe mails (ver placeholderEmail.ts).
+  const finalEmail    = trimmedEmail || makePlaceholderEmail()
   const passwordHash  = await bcryptProvider.hash(randomUUID())
   const user = await prisma.user.create({
     data: {
@@ -2274,8 +2306,10 @@ export const appointmentService = {
   },
 
   listClientsForProfessional: async (professionalId: string) => {
+    // Solo cuentan los turnos FINALIZADOS ya realizados: una clienta figura en la sección «Clientes» recién cuando tuvo un turno
+    // finalizado con la profesional, y su historial lista solo esos turnos (no los futuros, cancelados ni no asistidos).
     const rows = await prisma.appointment.findMany({
-      where:   { professionalId },
+      where:   { professionalId, status: 'finished', date: { lte: todayArgentinaStr() } },
       include: APPOINTMENT_INCLUDE,
       orderBy: [{ date: 'asc' }],
     })
@@ -2287,18 +2321,15 @@ export const appointmentService = {
       byClient.set(a.clientId, list)
     }
 
-    const today = todayArgentinaStr()
-
     return Array.from(byClient.values()).map(list => {
       const first = list[0]
-      const next = list.find(a => a.date >= today && ['pending', 'confirmed'].includes(a.status))
-      // RNF-03 — la alergia del perfil es un dato de salud: solo la ve una profesional que ya atendió a la
-      // clienta (al menos un turno finalizado con ella). Cancelados, inasistencias y turnos futuros no alcanzan.
-      const attended = list.some(a => a.status === 'finished')
+      // RNF-03 — la alergia del perfil es un dato de salud: solo la ve una profesional que ya atendió a la clienta. Como
+      // la lista solo trae clientas con turno finalizado, siempre se cumple.
+      const attended = true
       return {
         id:            first.client.id,
         name:          fullName(first.client),
-        email:         first.client.email,
+        email:         visibleEmail(first.client.email),
         phone:         first.client.phone ?? '',
         photo:         null as string | null,
         allergies:     attended ? first.client.client?.allergies ?? '' : '',
@@ -2314,8 +2345,6 @@ export const appointmentService = {
           displayStatus: displayStatusOf(a),
           internalNotes: a.internalNotes ?? null,
         })),
-        nextAppointment: next ? next.date : null,
-        cancellations:   list.filter(a => a.status === 'cancelled').length,
       }
     })
   },
@@ -2378,7 +2407,10 @@ export const appointmentService = {
     const clientUpdate: Record<string, unknown> = {}
     if (data.clientName  !== undefined) clientUpdate.name  = data.clientName
     if (data.clientPhone !== undefined) clientUpdate.phone = data.clientPhone
-    if (data.clientEmail !== undefined) clientUpdate.email = data.clientEmail
+    // En blanco (o la dirección interna que se muestra en blanco) no cambia nada: el correo no se puede dejar vacío en la base.
+    if (data.clientEmail !== undefined && data.clientEmail.trim() !== '' && !isPlaceholderEmail(data.clientEmail)) {
+      clientUpdate.email = data.clientEmail.trim().toLowerCase()
+    }
     if (Object.keys(clientUpdate).length > 0) {
       try {
         await prisma.user.update({ where: { id: appointment.clientId }, data: clientUpdate })
@@ -2493,23 +2525,23 @@ export const appointmentService = {
   // Lo registran el administrador (cualquier turno) y la profesional (solo los suyos): ambos pueden cobrar en
   // el local el servicio completo o lo que falta después de la seña.
   registerBalancePaymentForProfessional: async (
-    professionalId: string, id: string, data: { method: string; amount: number },
+    professionalId: string, id: string, data: { method: string; amount: number; replace?: boolean },
   ) => {
     const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
     if (!appointment || appointment.professionalId !== professionalId) {
       throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
     }
-    const updated = await registerBalancePayment(appointment, data as { method: BalancePaymentMethod; amount: number }, professionalId)
+    const updated = await registerBalancePayment(appointment, data as { method: BalancePaymentMethod; amount: number; replace?: boolean }, professionalId)
     const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
     return toProfessionalView(updated, peers, await hasAttended(professionalId, updated.clientId))
   },
 
   registerBalancePaymentForAdmin: async (
-    adminId: string, id: string, data: { method: string; amount: number },
+    adminId: string, id: string, data: { method: string; amount: number; replace?: boolean },
   ) => {
     const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
     if (!appointment) throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
-    const updated = await registerBalancePayment(appointment, data as { method: BalancePaymentMethod; amount: number }, adminId)
+    const updated = await registerBalancePayment(appointment, data as { method: BalancePaymentMethod; amount: number; replace?: boolean }, adminId)
     const peers = updated.comboGroupId ? (await comboGroupPeers([updated.comboGroupId])).get(updated.comboGroupId) ?? null : null
     return toAdminView(updated, peers)
   },

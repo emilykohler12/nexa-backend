@@ -7,6 +7,7 @@ import { assertValidPhone } from '../../app/validators/phone'
 import { bcryptProvider } from '../auth/providers/bcrypt.provider'
 import { activityService } from '../activity/activity.service'
 import { fullName } from '../../app/utils/fullName'
+import { visibleEmail } from '../../app/utils/placeholderEmail'
 import { uploadProvider } from '../uploads/upload.provider'
 
 // Resumen de visitas de la clienta: solo cuentan los turnos finalizados. No hay puntos ni
@@ -34,7 +35,7 @@ function mapAdminClient(
     name:      fullName(user),
     photo:     null as string | null,
     phone:     user.phone ?? '',
-    email:     user.email,
+    email:     visibleEmail(user.email),
     gender:    user.gender ?? null,
     clinical: {
       allergies:    client?.allergies    ?? '',
