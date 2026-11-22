@@ -2503,3 +2503,18 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (shell). |
 
 **Impacto en el frontend (contrato):** ninguno. **Sin migración de base.**
+
+## Entrada 173: «Marcar estado» unificado en el detalle del turno (profesional y administrador)
+
+**Fecha:** 2026-11-22 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), a pedido de Emily**, en la rama local `feat/marcar-estado` (sin subir). En el detalle de un turno que todavía no se realizó (pendiente o confirmado) hay, abajo, una sección «Marcar estado» con cinco opciones: **Cancelar · Reprogramar · Finalizado · Seña pagada · No asistió** (componente compartido `MarkStatusPanel`). Reglas: se puede tener «Seña pagada» tildada y UNA de las otras cuatro; Cancelar y Reprogramar valen siempre, aunque el turno ya haya empezado (el aviso a la clienta por correo, en su página de avisos y con ventana al iniciar sesión lo hace el backend, como ya hacía); Finalizado y No asistió solo desde la hora de inicio; Seña pagada: si fue por Mercado Pago figura tildada y no se destilda, si fue por WhatsApp se tilda y queda la seña paga con el turno confirmado. «Reprogramar» mueve el turno a la fecha y hora elegidas. Abajo solo queda el botón «Editar» (en el admin edita nombre, teléfono, correo, duración, precio, profesional, fecha, hora y notas; en la profesional, fecha, hora y notas internas; las alergias de la clienta no se editan en ningún caso). Se sacaron los botones sueltos de estado que había en otras partes del detalle. Backend: nuevo `PATCH /api/professional/appointments/:id/deposit-paid` (solo turnos propios, mismas reglas que el administrador) para que la profesional tilde la seña por WhatsApp. |
+| 2 | Alternativas y criterio de descarte | **Editar datos de la clienta o el precio desde la profesional:** descartado, el backend de la profesional solo acepta fecha, hora, notas, estado y profesional del combo, y abrirlo es una decisión de negocio. **Reprogramar y cancelar solo antes de empezar:** descartado, Emily pidió «en cualquier momento». |
+| 3 | Evidencia que la sostiene | Backend: `typecheck:all` limpio y 754 pruebas pasan (nuevas para la seña de la profesional). Frontend: typecheck, lint y 445 pruebas pasan (nuevo `MarkStatusPanel.test.tsx`; se actualizaron las de los dos diálogos). No se revisó en el navegador. |
+| 4 | Aporte personal | Emily definió las cinco opciones y sus reglas. |
+| 5 | Desacuerdo y resolución | Sin resolver, para Emily: qué datos puede editar la profesional (hoy fecha, hora y notas). La devolución de la seña al cancelar sigue las reglas ya confirmadas (según quién cancela y la anticipación). |
+| 6 | Herramienta auxiliar | Claude Code con Git, Node y `vitest`. Context7 no se consultó. |
+
+**Impacto en el frontend (contrato):** nuevo `PATCH /api/professional/appointments/:id/deposit-paid` (`{ appointment }`; `404` si no es suyo, `400 NOT_WHATSAPP_DEPOSIT`). Archivos del frontend: `shared/ui/molecules/MarkStatusPanel.tsx` (nuevo), `features/professional/agenda/dialogs/AppointmentDialog.tsx`, `features/professional/agenda/Agenda.tsx`, `features/professional/types/appointment.ts`, `pages/admin/appointments/AppointmentModal.tsx` y sus pruebas. **Sin migración de base.**

@@ -1663,6 +1663,18 @@ export const appointmentService = {
     return toAdminView(updated, null)
   },
 
+  // La profesional marca pagada la seña coordinada por WhatsApp de UN turno suyo (mismas reglas que el administrador).
+  registerWhatsappDepositPaidForProfessional: async (professionalId: string, id: string) => {
+    const own = await prisma.appointment.findUnique({ where: { id }, select: { professionalId: true } })
+    if (!own || own.professionalId !== professionalId) {
+      throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
+    }
+    await appointmentService.registerWhatsappDepositPaid(id)
+    const full = await prisma.appointment.findUniqueOrThrow({ where: { id }, include: APPOINTMENT_INCLUDE })
+    const peers = full.comboGroupId ? (await comboGroupPeers([full.comboGroupId])).get(full.comboGroupId) ?? null : null
+    return toProfessionalView(full, peers, await hasAttended(professionalId, full.clientId))
+  },
+
   // Reserva de un "servicio especial": el cliente elige zonas/paquetes (arman el
   // precio/duración, nunca confiados del cliente) y un horario puntual — el
   // profesional sale del horario, el cliente nunca lo elige. El horario se

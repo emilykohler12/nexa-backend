@@ -253,3 +253,42 @@ describe('turno manual: buscar si la clienta ya tiene cuenta', () => {
     expect((await search(pro, 'ana')).status).toBe(403)
   })
 })
+
+// ── Seña pagada desde el detalle de la profesional ──────────────────────────────────────────────────────────────────
+describe('la profesional marca pagada la seña coordinada por WhatsApp de un turno suyo', () => {
+  async function whatsappAppt(extra: { depositMethod?: string | null } = {}) {
+    const client = await createClientUser()
+    const pro    = await createProfessionalUser()
+    const svc    = await createService()
+    const appt   = await createAppointmentDirect({
+      clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: futureWeekDay(2), time: '10:00',
+      depositAmount: 3000, depositMethod: extra.depositMethod === undefined ? 'whatsapp' : extra.depositMethod,
+    })
+    return { pro, appt }
+  }
+  const markPaid = (pro: { id: string }, id: string) =>
+    request(app).patch(`/api/professional/appointments/${id}/deposit-paid`).set('Cookie', cookieFor(pro as never))
+
+  it('queda con la seña pagada y el turno confirmado', async () => {
+    const { pro, appt } = await whatsappAppt()
+
+    const res = await markPaid(pro, appt.id)
+
+    expect(res.status).toBe(200)
+    const row = await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } })
+    expect(row.paymentStatus).toBe('partial')
+    expect(row.status).toBe('confirmed')
+    expect(row.depositPaidAt).not.toBeNull()
+  })
+
+  it('no puede marcar el turno de otra profesional ni una seña que no es de WhatsApp', async () => {
+    const { appt } = await whatsappAppt()
+    const other = await createProfessionalUser()
+    expect((await markPaid(other, appt.id)).status).toBe(404)
+
+    const mp = await whatsappAppt({ depositMethod: null })
+    const res = await markPaid(mp.pro, mp.appt.id)
+    expect(res.status).toBe(400)
+    expect(res.body.code).toBe('NOT_WHATSAPP_DEPOSIT')
+  })
+})
