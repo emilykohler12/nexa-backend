@@ -2428,3 +2428,18 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5) con Git, Node y `vitest`. Context7 no se consultó (sin APIs nuevas de librerías). |
 
 **Impacto en el frontend (contrato):** se elimina `PATCH /api/client/appointments/:id/arrival`; se agrega `PATCH /api/client/appointments/:id/no-show` (respuesta `{ appointment, appointments }`); `PATCH …/cancel` ahora puede responder `400 APPOINTMENT_STARTED`. Archivos del frontend: `pages/client/AppointmentsPage.tsx`, `features/client/appointments/reminderLink.ts`, `features/professional/agenda/dialogs/AppointmentDialog.tsx`, `features/professional/services/Services.tsx` y `ServiceDetailModal.tsx` (nuevo), con sus pruebas. **Sin migración de base.**
+
+## Entrada 168: ocultar en el frontend la tienda del administrador, el gráfico de productos y las promociones de productos
+
+**Fecha:** 2026-11-22 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), a pedido de Emily**, en la rama local `feat/ocultar-tienda-admin` del frontend (sin subir a GitHub, a pedido suyo). Solo se **comentó** (no se borró) lo que se ve: la entrada «Tienda» del menú del administrador y su ruta `/admin/store` (`AdminSidebar.tsx`, `AppRouter.tsx`), el gráfico de productos del tablero (`DashboardPage.tsx`), la pestaña «Productos» de Promociones (`PromotionsPage.tsx`) y su sección en la página principal (`HomePage.tsx`). Cada lugar lleva un comentario con cómo volver a mostrarlo. Los componentes, el backend, los endpoints y la base quedan igual. |
+| 2 | Alternativas y criterio de descarte | **Una variable de entorno para activar o desactivar:** descartado, Emily pidió simplemente comentar. **Borrar el código o tocar el backend:** descartado, se quiere volver a ponerlo. **Ocultar también la tienda de la clienta:** no se tocó, el pedido era solo la del administrador; las promociones de productos sí se ocultaron también en la home porque ya no se pueden administrar. |
+| 3 | Evidencia que la sostiene | Frontend: typecheck, lint y 423 pruebas pasan; se ajustaron las de `PromotionsPage.test.tsx` (ya no hay pestaña «Productos»). No se revisó en el navegador. |
+| 4 | Aporte personal | Emily decidió qué ocultar y que el código y la base se conserven. |
+| 5 | Desacuerdo y resolución | Sin desacuerdo. Queda a criterio de Emily si la tienda de la clienta y las promociones de productos ya cargadas (si las hay) se quedan visibles en otras pantallas. |
+| 6 | Herramienta auxiliar | Claude Code con Git, Node y `vitest`. Context7 no se consultó. |
+
+**Impacto en el frontend (contrato):** ninguno en la API. Archivos del frontend: `shared/ui/organisms/AdminSidebar.tsx`, `app/router/AppRouter.tsx`, `pages/admin/dashboard/DashboardPage.tsx`, `pages/admin/promotions/PromotionsPage.tsx` (y su prueba), `pages/public/HomePage.tsx`. **Sin migración de base.**
