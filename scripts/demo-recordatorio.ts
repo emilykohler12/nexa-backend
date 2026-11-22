@@ -2,7 +2,7 @@
  * Dispara a pedido el recordatorio por mail de UN turno de demostración, como si faltaran 3 horas para su inicio.
  * Ubicación: nexa-backend/scripts/demo-recordatorio.ts
  *
- * Por qué hace falta: el recordatorio sale solo cuando faltan entre 5 y 1 horas. Para mostrarlo sin esperar, se llama
+ * Por qué hace falta: el recordatorio sale solo cuando faltan 5 horas o menos. Para mostrarlo sin esperar, se llama
  * a runAppointmentReminderJob con `now` = inicio del turno menos 3 horas (el job recibe el reloj por parámetro).
  *
  * ATENCIÓN: el job NO manda el mail de un solo turno: manda el de TODOS los turnos que entran en esa ventana. Por eso
@@ -19,7 +19,7 @@
 import { assertDemoEmails, envEmail, guardDatabase, leerConfiguracion } from './seed-presentacion/entorno'; // primero: carga el .env
 import { prisma } from '../src/app/database/prisma';
 import { runAppointmentReminderJob } from '../src/jobs/appointmentReminder.job';
-import { REMINDER_HOURS_BEFORE, REMINDER_MIN_BOOKING_HOURS, REMINDER_RETRY_UNTIL_HOURS, isReminderDue } from '../src/modules/appointments/reminder';
+import { REMINDER_HOURS_BEFORE, REMINDER_MIN_BOOKING_HOURS, isReminderDue } from '../src/modules/appointments/reminder';
 import { startInstant } from '../src/modules/appointments/reopenedSlots';
 import { isDepositPaid } from '../src/modules/appointments/cancellationRules';
 import { todayArgentinaStr } from '../src/app/utils/argentinaTime';
@@ -79,7 +79,7 @@ async function main() {
     if (Number(target.depositAmount) > 0 && !isDepositPaid(target)) why.push('la seña no está paga');
     if ((start.getTime() - target.createdAt.getTime()) / HOUR_MS < REMINDER_MIN_BOOKING_HOURS) why.push(`se reservó con menos de ${REMINDER_MIN_BOOKING_HOURS} h de anticipación`);
     if (!target.client.active || target.client.client?.blocked) why.push('la cuenta de la clienta está desactivada o bloqueada');
-    console.log(`\nEl turno elegido NO entra en la ventana (${REMINDER_RETRY_UNTIL_HOURS} a ${REMINDER_HOURS_BEFORE} h): ${why.join('; ') || 'revisar la regla en src/modules/appointments/reminder.ts'}.`);
+    console.log(`\nEl turno elegido NO entra en la ventana (hasta ${REMINDER_HOURS_BEFORE} h antes): ${why.join('; ') || 'revisar la regla en src/modules/appointments/reminder.ts'}.`);
   }
 
   if (!send) {

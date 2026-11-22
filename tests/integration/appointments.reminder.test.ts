@@ -79,7 +79,7 @@ describe('recordatorio de turno por mail: cuándo se manda', () => {
     expect(await reminderSentAt(appt.id)).toBeNull()
   })
 
-  it('manda en cualquier corrida entre las 5 horas y 1 hora antes (la primera que lo ve)', async () => {
+  it('manda en cualquier corrida desde las 5 horas antes (la primera que lo ve)', async () => {
     const { appt } = await makeAppointment()
 
     expect((await runAppointmentReminderJob(before(2, 30))).sent).toBe(1)
@@ -107,15 +107,15 @@ describe('recordatorio de turno por mail: cuándo se manda', () => {
     expect(sendMock()).toHaveBeenCalledTimes(1)
   })
 
-  it('1 hora antes todavía manda; con menos de 1 hora ya no', async () => {
-    const { appt: onTime } = await makeAppointment()
-    expect((await runAppointmentReminderJob(before(1))).sent).toBe(1)
-    expect(await reminderSentAt(onTime.id)).not.toBeNull()
+  it('no hay límite de «1 hora antes»: con menos de 1 hora todavía manda, y con más de 5 horas no', async () => {
+    const { appt: lastMinutes } = await makeAppointment()
+    expect((await runAppointmentReminderJob(before(0, 30))).sent).toBe(1)
+    expect(await reminderSentAt(lastMinutes.id)).not.toBeNull()
 
     sendMock().mockClear()
-    const { appt: late } = await makeAppointment()
-    expect((await runAppointmentReminderJob(before(0, 59))).sent).toBe(0)
-    expect(await reminderSentAt(late.id)).toBeNull()
+    const { appt: early } = await makeAppointment()
+    expect((await runAppointmentReminderJob(before(5, 1))).sent).toBe(0)
+    expect(await reminderSentAt(early.id)).toBeNull()
     expect(sendMock()).not.toHaveBeenCalled()
   })
 
@@ -301,7 +301,7 @@ describe('recordatorio de turno por mail: errores y reintentos', () => {
     expect(marked).toHaveLength(1)
   })
 
-  it('reintenta hasta 1 hora antes del turno y después deja de intentar', async () => {
+  it('reintenta hasta la hora de inicio del turno y después deja de intentar', async () => {
     const { appt } = await makeAppointment()
     sendMock().mockRejectedValue(new Error('Brevo caído'))
 
@@ -309,10 +309,11 @@ describe('recordatorio de turno por mail: errores y reintentos', () => {
       expect((await runAppointmentReminderJob(before(5))).failed).toBe(1)
       expect((await runAppointmentReminderJob(before(3))).failed).toBe(1)
       expect((await runAppointmentReminderJob(before(1))).failed).toBe(1)
-      const tooLate = await runAppointmentReminderJob(before(0, 55))
+      expect((await runAppointmentReminderJob(before(0, 30))).failed).toBe(1)
+      const started = await runAppointmentReminderJob(new Date(START.getTime() + 60_000))
 
-      expect(tooLate).toEqual({ sent: 0, failed: 0 })
-      expect(sendMock()).toHaveBeenCalledTimes(3)
+      expect(started).toEqual({ sent: 0, failed: 0 })
+      expect(sendMock()).toHaveBeenCalledTimes(4)
       expect(await reminderSentAt(appt.id)).toBeNull()
       // Con el mail caído no se llena la actividad: una sola entrada de error por turno.
       expect(await prisma.activityLog.count({ where: { appointmentId: appt.id } })).toBe(1)

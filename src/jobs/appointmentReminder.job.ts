@@ -1,12 +1,12 @@
 // src/jobs/appointmentReminder.job.ts
 //
 // Corre cada 5 minutos (ver scheduler.ts). Manda UN mail de recordatorio por turno (o por grupo de combo) cuando
-// faltan 5 horas o menos para la hora de inicio y hasta 1 hora antes. La regla de cuándo corresponde y el armado
+// faltan 5 horas o menos para la hora de inicio (sin límite inferior de «1 hora antes»). La regla de cuándo corresponde y el armado
 // del mail están en modules/appointments/reminder.ts.
 //
 // No se reenvía nunca: antes de mandar se marca appointments.reminder_sent_at con una escritura condicional
 // (reminder_sent_at IS NULL), así dos corridas que se pisen no mandan dos mails. Si el envío falla la marca se
-// deshace y la próxima corrida vuelve a intentar (hasta 1 hora antes del turno). Si el proceso se cae justo entre
+// deshace y la próxima corrida vuelve a intentar (hasta la hora de inicio del turno). Si el proceso se cae justo entre
 // la marca y el envío, ese recordatorio se pierde: es preferible a mandarlo dos veces.
 //
 // Cada envío deja una entrada de actividad con appointment_id. Un fallo no corta el job.
@@ -16,6 +16,7 @@ import { settingsService } from '../modules/settings/settings.service'
 import { mailProvider }    from '../modules/auth/providers/mail.provider'
 import { fullName }        from '../app/utils/fullName'
 import { todayArgentinaStr } from '../app/utils/argentinaTime'
+import { formatDateDMY } from '../app/utils/dateFormat'
 import {
   REMINDER_HOURS_BEFORE, buildReminderEmail, isReminderDue, type ReminderCandidate,
 } from '../modules/appointments/reminder'
@@ -27,7 +28,7 @@ const FAILURE_ACTION = 'No se pudo enviar el recordatorio del turno'
 function summaryOf(legs: ReminderCandidate[]): string {
   const lead = legs[0]
   const services = legs.map(l => `${l.service.name} con ${l.professional.name}`).join(', ')
-  return `${services} — ${fullName(lead.client)} el ${lead.date} ${lead.time}`
+  return `${services} — ${fullName(lead.client)} el ${formatDateDMY(lead.date)} ${lead.time}`
 }
 
 export async function runAppointmentReminderJob(now: Date = new Date()): Promise<{ sent: number; failed: number }> {
@@ -96,7 +97,7 @@ export async function runAppointmentReminderJob(now: Date = new Date()): Promise
       if (previous === 0) {
         await activityService.log({
           action: FAILURE_ACTION, module: 'appointments', level: 'warning', appointmentId: lead.id,
-          detail: `${summaryOf(legs)}: ${err?.message ?? 'error desconocido'}. Se reintenta en cada corrida hasta 1 hora antes del turno.`,
+          detail: `${summaryOf(legs)}: ${err?.message ?? 'error desconocido'}. Se reintenta en cada corrida hasta la hora de inicio del turno.`,
         })
       }
       continue

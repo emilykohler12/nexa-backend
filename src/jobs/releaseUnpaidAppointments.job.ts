@@ -25,6 +25,7 @@
 //    pagas a mano — no hay "tiempo límite" que valga acá.
 import type { Prisma }     from '@prisma/client'
 import { prisma }          from '../app/database/prisma'
+import { formatDateDMY }   from '../app/utils/dateFormat'
 import { activityService } from '../modules/activity/activity.service'
 import { hasStarted, openReopenedSlot } from '../modules/appointments/reopenedSlots'
 import { releaseSpecialSlot } from '../modules/appointments/specialSlots'
@@ -97,7 +98,7 @@ export async function runReleaseUnpaidAppointmentsJob(): Promise<{ released: num
         module:        'appointments',
         level:         'warning',
         appointmentId: row.id,
-        detail:        `${row.service.name} — ${fullName(row.client)} con ${row.professional.name} el ${row.date} ${row.time}: ` +
+        detail:        `${row.service.name} — ${fullName(row.client)} con ${row.professional.name} el ${formatDateDMY(row.date)} ${row.time}: ` +
                        `la seña no se pagó en ${EXPIRE_AFTER_MINUTES} minutos (turno ${row.id})`,
       })
     }

@@ -26,6 +26,28 @@ describe('finalizar un turno: solo desde la hora de inicio', () => {
     expect((await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } })).status).toBe('confirmed')
   })
 
+  it('tampoco se puede finalizar y mover el turno a una fecha futura en el mismo pedido', async () => {
+    const { admin, pro, appt } = await scenario(minutesAgo(10))
+    const future = hoursFromNow(72)
+    for (const [url, who] of [[`/api/admin/appointments/${appt.id}`, admin], [`/api/professional/appointments/${appt.id}`, pro]] as const) {
+      const res = await request(app).patch(url).set('Cookie', cookieFor(who)).send({ status: 'finished', date: future.date, time: future.time })
+      expect(res.status).toBe(400)
+      expect(res.body.code).toBe('FINISH_BEFORE_START')
+    }
+    const row = await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } })
+    expect(row.status).toBe('confirmed')
+    expect(row.date).toBe(appt.date)
+  })
+
+  it('un turno ya finalizado no se puede reprogramar a una fecha futura', async () => {
+    const { admin, appt } = await scenario(minutesAgo(10))
+    await prisma.appointment.update({ where: { id: appt.id }, data: { status: 'finished' } })
+    const future = hoursFromNow(72)
+    const res = await request(app).patch(`/api/admin/appointments/${appt.id}`).set('Cookie', cookieFor(admin)).send({ date: future.date, time: future.time })
+    expect(res.status).toBe(400)
+    expect(res.body.code).toBe('FINISH_BEFORE_START')
+  })
+
   it('la profesional tampoco', async () => {
     const { pro, appt } = await scenario(hoursFromNow(6))
     const res = await request(app).patch(`/api/professional/appointments/${appt.id}`).set('Cookie', cookieFor(pro)).send({ status: 'finished' })

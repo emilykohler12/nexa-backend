@@ -208,23 +208,23 @@ describe('reprogramación', () => {
     expect(res.body.code).toBe('NOT_RESCHEDULABLE')
   })
 
-  it('rechaza reprogramar una pata de un combo', async () => {
+  // Los combos se reprograman enteros: ver appointments.combo-reschedule.test.ts.
+  it('un turno suelto sin servicio ni profesional se rechaza con VALIDATION_ERROR', async () => {
     const client = await createClientUser()
     const pro    = await createProfessionalUser()
     const svc    = await createService()
     const far    = hoursFromNow(48)
     const appt   = await createAppointmentDirect({
       clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: far.date, time: far.time,
-      comboGroupId: randomUUID(),
     })
 
     const newTime = hoursFromNow(72)
     const res = await request(app)
       .patch(`/api/client/appointments/${appt.id}/reschedule`)
       .set('Cookie', cookieFor(client))
-      .send({ serviceId: svc.id, professionalId: pro.id, date: newTime.date, time: newTime.time })
+      .send({ date: newTime.date, time: newTime.time })
 
     expect(res.status).toBe(400)
-    expect(res.body.code).toBe('COMBO_NOT_RESCHEDULABLE')
+    expect(res.body.code).toBe('VALIDATION_ERROR')
   })
 })

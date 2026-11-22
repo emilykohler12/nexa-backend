@@ -5,6 +5,7 @@ import fs   from 'fs'
 import path from 'path'
 import { prisma }        from '../../app/database/prisma'
 import { AppError }      from '../../app/middlewares/errorHandler'
+import { formatDateDMY } from '../../app/utils/dateFormat'
 import { assertValidPhone } from '../../app/validators/phone'
 import { releaseSpecialSlot } from './specialSlots'
 import { HTTP }          from '../../app/constants/http'
@@ -304,8 +305,8 @@ async function notifyProfessionalOfNewAppointments(legs: AppointmentRow[]) {
   const a = legs[0]
   const services = legs.map(l => l.service.name).join(' y ')
   const when = legs.length === 1
-    ? `para el ${a.date} a las ${a.time}`
-    : `para ${legs.map(l => `el ${l.date} a las ${l.time}`).join(' y ')}`
+    ? `para el ${formatDateDMY(a.date)} a las ${a.time}`
+    : `para ${legs.map(l => `el ${formatDateDMY(l.date)} a las ${l.time}`).join(' y ')}`
   await notificationService.notify(a.professionalId, {
     type:  'new_appointment',
     title: 'Nuevo turno',
@@ -327,7 +328,7 @@ async function notifyProfessionalOfNewAppointments(legs: AppointmentRow[]) {
     console.error('[mail] error notificando nuevo turno:', err.message)
     await activityService.log({
       action: 'No se pudo enviar el mail de aviso de turno nuevo', module: 'system', level: 'warning', appointmentId: a.id,
-      detail: `${services} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}: ${err.message}`,
+      detail: `${services} — ${fullName(a.client)} con ${a.professional.name} el ${formatDateDMY(a.date)} ${a.time}: ${err.message}`,
     })
   }
 }
@@ -341,7 +342,7 @@ async function afterCreate(a: AppointmentRow, whatsappPending = false) {
   await activityService.log({
     action: whatsappPending ? 'Nuevo turno: seña por coordinar por WhatsApp' : 'Nuevo turno',
     module: whatsappPending ? 'payments' : 'appointments', level: whatsappPending ? 'warning' : 'success', appointmentId: a.id,
-    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}${whatsappPending ? `. ${WHATSAPP_PENDING_NOTE}` : ''}`,
+    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${formatDateDMY(a.date)} ${a.time}${whatsappPending ? `. ${WHATSAPP_PENDING_NOTE}` : ''}`,
   })
   await notifyProfessionalOfNewAppointment(a)
 }
@@ -374,12 +375,12 @@ async function afterCreateGroup(legs: AppointmentRow[], whatsappPending = false)
 async function afterCancel(a: AppointmentRow, emailClient: boolean, extraDetail = '') {
   await activityService.log({
     action: 'Turno cancelado', module: 'appointments', level: 'warning', appointmentId: a.id,
-    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}${extraDetail}`,
+    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${formatDateDMY(a.date)} ${a.time}${extraDetail}`,
   })
   await notificationService.notify(a.professionalId, {
     type:  'cancelled_appointment',
     title: 'Turno cancelado',
-    body:  `El turno de ${fullName(a.client)} (${a.service.name}, ${a.date} ${a.time}) fue cancelado.`,
+    body:  `El turno de ${fullName(a.client)} (${a.service.name}, ${formatDateDMY(a.date)} ${a.time}) fue cancelado.`,
   })
   if (emailClient) {
     // Cancela el personal: la clienta se entera por mail y, apenas entra a la app, con un aviso emergente.
@@ -412,7 +413,7 @@ async function logStatusChange(a: AppointmentRow, from: string, to: string, acto
     action:        'Cambio de estado de turno',
     module:        'appointments',
     appointmentId: a.id,
-    detail:        `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}: "${from}" → "${to}"${extra}`,
+    detail:        `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${formatDateDMY(a.date)} ${a.time}: "${from}" → "${to}"${extra}`,
   })
 }
 
@@ -535,8 +536,8 @@ async function updateAppointmentRow(id: string, data: Prisma.AppointmentUpdateIn
 
 async function afterReschedule(a: AppointmentRow, previousDate?: string | null, previousTime?: string | null) {
   const detail = previousDate && previousTime
-    ? `${a.service.name} — ${fullName(a.client)} con ${a.professional.name}: ${previousDate} ${previousTime} → ${a.date} ${a.time}`
-    : `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} → ${a.date} ${a.time}`
+    ? `${a.service.name} — ${fullName(a.client)} con ${a.professional.name}: ${formatDateDMY(previousDate)} ${previousTime} → ${formatDateDMY(a.date)} ${a.time}`
+    : `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} → ${formatDateDMY(a.date)} ${a.time}`
 
   await activityService.log({
     action: 'Turno reprogramado', module: 'appointments', level: 'warning', appointmentId: a.id,
@@ -545,7 +546,7 @@ async function afterReschedule(a: AppointmentRow, previousDate?: string | null, 
   await notificationService.notify(a.professionalId, {
     type:  'rescheduled_appointment',
     title: 'Turno reprogramado',
-    body:  `${fullName(a.client)} reprogramó ${a.service.name} para el ${a.date} a las ${a.time}.`,
+    body:  `${fullName(a.client)} reprogramó ${a.service.name} para el ${formatDateDMY(a.date)} a las ${a.time}.`,
   })
   mailProvider.send(
     a.professional.email,
@@ -563,15 +564,100 @@ async function afterReschedule(a: AppointmentRow, previousDate?: string | null, 
 // Cuando ADMIN o PROFESIONAL reprograman (no el cliente), el cliente no lo sabe
 // todavía — se le manda el mail acá, y el aviso en la app queda marcado con
 // rescheduleNoticePending hasta que lo confirma vía acknowledge-reschedule.
+// Reprogramación de un combo por la clienta. Todas las patas activas pasan a la misma fecha y hora (los combos son
+// simultáneos), así que el horario tiene que servirle a TODAS las profesionales del grupo: dentro de su franja, fuera
+// de vacaciones, sin turno propio a esa hora y, si es un horario reabierto, con el servicio entrando. Si una sola
+// falla, no se mueve ninguna (todo en una transacción). Las patas conservan profesional, servicio, precio y seña.
+async function rescheduleComboGroup(
+  clientId: string,
+  existing: { id: string; comboGroupId: string | null },
+  input: { date: string; time: string },
+) {
+  const legs = await prisma.appointment.findMany({
+    where:   { comboGroupId: existing.comboGroupId, clientId, status: { in: ['pending', 'confirmed'] } },
+    include: APPOINTMENT_INCLUDE,
+    orderBy: [{ professionalId: 'asc' }, { id: 'asc' }],
+  })
+  if (legs.length === 0) {
+    throw new AppError(HTTP.BAD_REQUEST, 'Este turno ya no se puede reprogramar', 'NOT_RESCHEDULABLE')
+  }
+  if (legs.every(l => l.date === input.date && l.time === input.time)) {
+    throw new AppError(HTTP.BAD_REQUEST, 'Elegí un día u horario distinto al actual', 'SLOT_UNCHANGED')
+  }
+
+  const now = new Date()
+  const reopenedLegIds = new Set<string>()
+  for (const leg of legs) {
+    // Si falla una pata, el mensaje dice de quién es, para que la clienta entienda por qué ese horario no sirve.
+    try {
+      await assertWithinAvailability(leg.professionalId, input.date, input.time)
+      const startCheck = await checkClientStart(prisma, {
+        professionalId: leg.professionalId, date: input.date, time: input.time,
+        duration: leg.duration, now, excludeAppointmentId: leg.id,
+      })
+      if (startCheck.reopened) reopenedLegIds.add(leg.id)
+    } catch (err: any) {
+      if (err instanceof AppError) throw new AppError(err.statusCode, `${leg.professional.name}: ${err.message}`, err.code)
+      throw err
+    }
+  }
+
+  let updated: AppointmentRow[]
+  try {
+    updated = await prisma.$transaction(async (tx) => {
+      const rows: AppointmentRow[] = []
+      for (const leg of legs) {
+        if (reopenedLegIds.has(leg.id)) {
+          await lockProfessionalDay(tx, leg.professionalId, input.date)
+          await assertServiceFits(tx, {
+            professionalId: leg.professionalId, date: input.date, time: input.time,
+            duration: leg.duration, excludeAppointmentId: leg.id,
+          })
+        }
+        rows.push(await tx.appointment.update({
+          where: { id: leg.id },
+          data: {
+            date: input.date,
+            time: input.time,
+            // La clienta ya ve el horario nuevo: cualquier aviso pendiente de un cambio anterior queda obsoleto.
+            rescheduleNoticePending: false,
+            previousDate: null,
+            previousTime: null,
+            // El nuevo horario vuelve a ser elegible para el recordatorio por mail (reminder.ts).
+            reminderSentAt: null,
+          },
+          include: APPOINTMENT_INCLUDE,
+        }))
+      }
+      return rows
+    })
+  } catch (err: any) {
+    if (err instanceof AppError) throw err
+    if (isSlotConflict(err)) {
+      throw new AppError(HTTP.CONFLICT, 'Uno de los horarios del combo ya no está disponible. Elegí otro horario.', 'PROFESSIONAL_SLOT_TAKEN')
+    }
+    throw err
+  }
+
+  // Cada pata es de una profesional distinta: un aviso y un mail por profesional (RF-24).
+  for (const row of updated) {
+    const before = legs.find(l => l.id === row.id)!
+    await afterReschedule(row, before.date, before.time)
+  }
+
+  const views = updated.map(toClientView)
+  return { appointment: views.find(v => v.id === existing.id) ?? views[0], appointments: views }
+}
+
 async function afterStaffReschedule(a: AppointmentRow, previousDate: string, previousTime: string) {
   await activityService.log({
     action: 'Turno reprogramado', module: 'appointments', level: 'warning', appointmentId: a.id,
-    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name}: ${previousDate} ${previousTime} → ${a.date} ${a.time}`,
+    detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name}: ${formatDateDMY(previousDate)} ${previousTime} → ${formatDateDMY(a.date)} ${a.time}`,
   })
   await notificationService.notify(a.professionalId, {
     type:  'rescheduled_appointment',
     title: 'Turno reprogramado',
-    body:  `El turno de ${fullName(a.client)} (${a.service.name}) se reprogramó para el ${a.date} a las ${a.time}.`,
+    body:  `El turno de ${fullName(a.client)} (${a.service.name}) se reprogramó para el ${formatDateDMY(a.date)} a las ${a.time}.`,
   })
   await clientNotificationService.notify(a.clientId, {
     type:  'appointment_rescheduled',
@@ -1046,12 +1132,12 @@ async function afterComboReassign(updated: AppointmentRow, previousProfessionalI
   const previous = await prisma.user.findUnique({ where: { id: previousProfessionalId }, select: { name: true } })
   await activityService.log({
     userName: actorName, action: 'Profesional cambiada en un combo', module: 'appointments', appointmentId: updated.id,
-    detail: `${updated.service.name} — ${fullName(updated.client)}: de ${previous?.name ?? 'otra profesional'} a ${updated.professional.name} (${updated.date} ${updated.time})`,
+    detail: `${updated.service.name} — ${fullName(updated.client)}: de ${previous?.name ?? 'otra profesional'} a ${updated.professional.name} (${formatDateDMY(updated.date)} ${updated.time})`,
   })
   await notificationService.notify(previousProfessionalId, {
     type:  'cancelled_appointment',
     title: 'Turno reasignado',
-    body:  `El turno de ${fullName(updated.client)} (${updated.service.name}, ${updated.date} a las ${updated.time}) pasó a ${updated.professional.name}.`,
+    body:  `El turno de ${fullName(updated.client)} (${updated.service.name}, ${formatDateDMY(updated.date)} a las ${updated.time}) pasó a ${updated.professional.name}.`,
   })
   // La clienta se entera por mail y con un aviso emergente al entrar a la app.
   await clientNotificationService.notify(updated.clientId, {
@@ -1806,10 +1892,12 @@ export const appointmentService = {
     return { appointment: toClientView(target), refunded }
   },
 
+  // Devuelve `appointment` (el turno pedido) y `appointments` (todos los que se movieron: uno en un turno suelto,
+  // todas las patas activas en un combo).
   rescheduleForClient: async (
     clientId: string,
     id: string,
-    input: { serviceId: string; professionalId: string; date: string; time: string },
+    input: { serviceId?: string; professionalId?: string; date: string; time: string },
   ) => {
     const existing = await prisma.appointment.findUnique({ where: { id } })
     if (!existing || existing.clientId !== clientId) {
@@ -1818,12 +1906,13 @@ export const appointmentService = {
     if (!['pending', 'confirmed'].includes(existing.status)) {
       throw new AppError(HTTP.BAD_REQUEST, 'Este turno ya no se puede reprogramar', 'NOT_RESCHEDULABLE')
     }
+    // Un combo se reprograma entero: todas las patas pasan al mismo día y hora, y tienen que estar libres TODAS
+    // las profesionales del grupo. No se elige servicio ni profesional.
     if (existing.comboGroupId) {
-      throw new AppError(
-        HTTP.BAD_REQUEST,
-        'Los turnos de un combo no se pueden reprogramar individualmente. Cancelá el combo y reservalo de nuevo.',
-        'COMBO_NOT_RESCHEDULABLE',
-      )
+      return rescheduleComboGroup(clientId, existing, { date: input.date, time: input.time })
+    }
+    if (!input.serviceId || !input.professionalId) {
+      throw new AppError(HTTP.BAD_REQUEST, 'Falta el servicio o la profesional', 'VALIDATION_ERROR')
     }
     if (input.professionalId === ANY_PROFESSIONAL_SENTINEL) {
       throw new AppError(HTTP.BAD_REQUEST, 'Para reprogramar elegí un profesional específico', 'INVALID_PROFESSIONAL')
@@ -1899,7 +1988,8 @@ export const appointmentService = {
     }
 
     await afterReschedule(updated, previousDate, previousTime)
-    return toClientView(updated)
+    const view = toClientView(updated)
+    return { appointment: view, appointments: [view] }
   },
 
   updateDetailsForClient: async (
@@ -2039,7 +2129,11 @@ export const appointmentService = {
     // Marcar o corregir una inasistencia tiene reglas propias (ver changeStatusByStaff).
     const statusChanging = data.status !== undefined && data.status !== appointment.status
     const viaNoShowRules = statusChanging && isNoShowTransition(appointment.status, data.status!)
-    if (statusChanging && data.status === 'finished') assertStartedToFinish(appointment)
+    // Se mide con la fecha y hora RESULTANTES: un pedido que a la vez finaliza y mueve el turno a un día futuro, o que
+    // reprograma un turno ya finalizado, también queda rechazado.
+    if ((statusChanging || rescheduling) && (data.status ?? appointment.status) === 'finished') {
+      assertStartedToFinish({ date: data.date ?? appointment.date, time: data.time ?? appointment.time })
+    }
     if (viaNoShowRules) await changeStatusByStaff(appointment, data.status!, appointment.professional.name)
 
     const updated = await updateAppointmentRow(id, {
@@ -2223,7 +2317,10 @@ export const appointmentService = {
     // Marcar o corregir una inasistencia tiene reglas propias (ver changeStatusByStaff).
     const statusChanging = data.status !== undefined && data.status !== appointment.status
     const viaNoShowRules = statusChanging && isNoShowTransition(appointment.status, data.status!)
-    if (statusChanging && data.status === 'finished') assertStartedToFinish(appointment)
+    // Se mide con la fecha y hora RESULTANTES (ver updateForProfessional).
+    if ((statusChanging || rescheduling) && (data.status ?? appointment.status) === 'finished') {
+      assertStartedToFinish({ date: data.date ?? appointment.date, time: data.time ?? appointment.time })
+    }
     if (viaNoShowRules) await changeStatusByStaff(appointment, data.status!, actorName)
 
     const updated = await updateAppointmentRow(id, {

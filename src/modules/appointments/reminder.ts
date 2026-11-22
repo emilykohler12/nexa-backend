@@ -8,7 +8,8 @@
 //  - Solo turnos 'confirmed' con la seña paga o sin seña requerida.
 //  - No se manda si la reserva se hizo con menos de 5 horas de anticipación, si el correo de la clienta no está
 //    desactivada o anonimizada, o si la clienta está bloqueada. El correo SIN verificar no impide el envío (RF-35).
-//  - Si el envío falla se reintenta en cada corrida, pero solo hasta 1 hora antes del turno.
+//  - El recordatorio sale solo a partir de las 5 horas antes (no hay un límite de «1 hora antes»); si el envío
+//    falla se reintenta en cada corrida hasta la hora de inicio.
 //
 // Los botones del mail son enlaces a la web (FRONTEND_URL/mis-turnos?turno=<id>&accion=ver|reprogramar|cancelar):
 // no ejecutan nada, la web exige iniciar sesión y confirmar. En el enlace solo va el id del turno.
@@ -23,7 +24,6 @@ import { startInstant } from './reopenedSlots'
 const HOUR_MS = 60 * 60 * 1000
 
 export const REMINDER_HOURS_BEFORE        = 5
-export const REMINDER_RETRY_UNTIL_HOURS   = 1
 export const REMINDER_MIN_BOOKING_HOURS   = 5
 
 export const REMINDER_ACTIONS = ['ver', 'reprogramar', 'cancelar'] as const
@@ -56,7 +56,8 @@ export function isReminderDue(a: ReminderCandidate, now: Date): boolean {
   const start = startInstant(a).getTime()
   const hoursLeft = (start - now.getTime()) / HOUR_MS
   if (hoursLeft > REMINDER_HOURS_BEFORE) return false
-  if (hoursLeft < REMINDER_RETRY_UNTIL_HOURS) return false
+  // Un turno que ya empezó no se recuerda; no hay otro piso: el aviso sale desde las 5 horas antes.
+  if (hoursLeft <= 0) return false
 
   // Reserva hecha con menos de 5 horas de anticipación: la clienta ya sabe que el turno es en el día.
   if ((start - a.createdAt.getTime()) / HOUR_MS < REMINDER_MIN_BOOKING_HOURS) return false

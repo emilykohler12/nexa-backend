@@ -15,6 +15,7 @@ import { prisma }          from '../app/database/prisma'
 import { activityService } from '../modules/activity/activity.service'
 import { fullName } from '../app/utils/fullName'
 import { todayArgentinaStr } from '../app/utils/argentinaTime'
+import { formatDateDMY } from '../app/utils/dateFormat'
 import { NO_SHOW_AUTO_AFTER_MINUTES, startInstant } from '../modules/appointments/reopenedSlots'
 
 export async function runAutoNoShowJob(now: Date = new Date()): Promise<{ marked: number }> {
@@ -47,7 +48,7 @@ export async function runAutoNoShowJob(now: Date = new Date()): Promise<{ marked
       action: 'Turno marcado como no asistido (automático)',
       module: 'appointments',
       appointmentId: a.id,
-      detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${a.date} ${a.time}: "confirmed" → "no_show_auto"; sin registro de llegada tras más de ${NO_SHOW_AUTO_AFTER_MINUTES} minutos de la hora de inicio. El horario sigue ocupado y la seña no cambia.`,
+      detail: `${a.service.name} — ${fullName(a.client)} con ${a.professional.name} el ${formatDateDMY(a.date)} ${a.time}: "confirmed" → "no_show_auto"; sin registro de llegada tras más de ${NO_SHOW_AUTO_AFTER_MINUTES} minutos de la hora de inicio. El horario sigue ocupado y la seña no cambia.`,
     })
     marked += 1
   }
