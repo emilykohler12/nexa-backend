@@ -147,7 +147,8 @@ function toClientView(a: AppointmentRow) {
     depositAmount:     Number(a.depositAmount),
     status:            a.status,
     displayStatus:     displayStatusOf(a),
-    statusLabel:       STATUS_LABELS[displayStatusOf(a)] ?? a.status,
+    // Para la clienta «No asistió» es un solo estado: no se distingue si lo marcó el sistema o el personal.
+    statusLabel:       a.status === 'no_show_auto' ? STATUS_LABELS.cancelled_no_show : (STATUS_LABELS[displayStatusOf(a)] ?? a.status),
     cancelReason:      a.cancelReason,
     paymentStatus:     a.paymentStatus,
     depositMethod:     a.depositMethod,

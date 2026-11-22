@@ -99,15 +99,24 @@ describe('RF-29: autogestión de la profesional', () => {
 
     const updated = await request(app).patch('/api/professional/profile').set('Cookie', cookieFor(pro)).send({
       name: 'Profesional Perfil Editado', phone: '3764123456', bio: 'Especialista en uñas', specialty: 'Uñas',
-      yearsExperience: 6, languages: 'Español, Portugués', instagram: '@perfil.test', toleranceMinutes: 10,
+      yearsExperience: 6, instagram: '@perfil.test',
+      // Ya no los carga la profesional: si un pedido viejo los manda, se ignoran.
+      languages: 'Español, Portugués', toleranceMinutes: 10, cancellationPolicy: 'Avisar con 24 horas', paymentMethods: ['cash'],
     })
     expect(updated.status).toBe(200)
 
     const res = await request(app).get('/api/professional/profile').set('Cookie', cookieFor(pro))
     expect(res.body.profile).toMatchObject({
       name: 'Profesional Perfil Editado', phone: '3764123456', bio: 'Especialista en uñas', specialty: 'Uñas',
-      yearsExperience: 6, languages: 'Español, Portugués', instagram: '@perfil.test', toleranceMinutes: 10,
+      yearsExperience: 6, instagram: '@perfil.test',
     })
+    for (const gone of ['languages', 'paymentMethods', 'toleranceMinutes', 'latePenalty', 'cancellationPolicy', 'reschedulePolicy', 'depositPolicy', 'policies']) {
+      expect(res.body.profile, gone).not.toHaveProperty(gone)
+    }
+    const row = await prisma.professional.findUniqueOrThrow({ where: { userId: pro.id } })
+    expect(row.toleranceMinutes).toBeNull()
+    expect(row.cancellationPolicy).toBeNull()
+    expect(row.languages).toEqual([])
   })
 
   it('un teléfono que no es un celular argentino se rechaza y no cambia nada', async () => {
@@ -128,7 +137,7 @@ describe('RF-29: autogestión de la profesional', () => {
     const both = await patch([{ serviceId: a.id, status: 'active' }, { serviceId: b.id, status: 'inactive' }])
     expect(both.status).toBe(200)
     expect(both.body.services).toEqual(expect.arrayContaining([
-      { serviceId: a.id, status: 'active', ownPrice: 9000, ownDuration: 45 },
+      { serviceId: a.id, status: 'active' },
       expect.objectContaining({ serviceId: b.id, status: 'inactive' }),
     ]))
 
@@ -155,25 +164,41 @@ describe('RF-29: autogestión de la profesional', () => {
 
   it('completa el onboarding: guarda perfil, franjas y servicios, y queda marcado como completo', async () => {
     const pro = await createProfessionalUser()
-    const svc = await createService({ name: 'Peinado' })
+    const svc = await createService({ name: 'Peinado', price: 15000, duration: 50 })
     expect((await request(app).get('/api/professional/onboarding/status').set('Cookie', cookieFor(pro))).body).toEqual({ profileComplete: false })
 
     const res = await request(app).post('/api/professional/onboarding').set('Cookie', cookieFor(pro)).send({
       personal: { name: 'Profesional Onboarding', phone: '3764555666', bio: 'Peinados de fiesta' },
-      work: { specialty: 'Cabello', yearsExperience: 3, languages: 'Español' },
+      work: { specialty: 'Cabello', yearsExperience: 3 },
       availability: { friday: [{ start: '10:00', end: '18:00' }] },
-      services: [{ serviceId: svc.id, ownPrice: 15000, ownDuration: 50 }],
-      policies: { toleranceMinutes: 15, cancellationPolicy: 'Avisar con 24 horas' },
+      // Un formulario viejo todavía puede mandar precio, duración y políticas propias: se ignoran.
+      services: [{ serviceId: svc.id, ownPrice: 99999, ownDuration: 5 }],
+      policies: { toleranceMinutes: 15, cancellationPolicy: 'Avisar con 24 horas', priorRecommendations: 'Venir con el pelo limpio' },
     })
 
     expect(res.status).toBe(200)
     expect((await request(app).get('/api/professional/onboarding/status').set('Cookie', cookieFor(pro))).body).toEqual({ profileComplete: true })
     const profile = (await request(app).get('/api/professional/profile').set('Cookie', cookieFor(pro))).body.profile
-    expect(profile).toMatchObject({ name: 'Profesional Onboarding', specialty: 'Cabello', yearsExperience: 3, toleranceMinutes: 15, cancellationPolicy: 'Avisar con 24 horas' })
+    expect(profile).toMatchObject({ name: 'Profesional Onboarding', specialty: 'Cabello', yearsExperience: 3, priorRecommendations: 'Venir con el pelo limpio' })
+    expect(profile).not.toHaveProperty('toleranceMinutes')
+    expect(profile).not.toHaveProperty('cancellationPolicy')
     expect(profile.availability).toEqual(expect.arrayContaining([{ dayOfWeek: 4, startTime: '10:00', endTime: '18:00' }]))
     const link = await prisma.professionalService.findFirstOrThrow({ where: { serviceId: svc.id } })
+    // El precio y la duración son los del catálogo (los carga el administrador), no los que manda la profesional.
     expect(Number(link.ownPrice)).toBe(15000)
     expect(link.ownDuration).toBe(50)
+  })
+
+  it('el error de validación del formulario nombra el campo en español', async () => {
+    const pro = await createProfessionalUser()
+
+    const res = await request(app).post('/api/professional/onboarding').set('Cookie', cookieFor(pro)).send({
+      personal: { name: 'Pro' }, work: { specialty: 'Cabello', yearsExperience: 2.5 },
+    })
+
+    expect(res.status).toBe(400)
+    expect(res.body.code).toBe('VALIDATION_ERROR')
+    expect(res.body.error).toBe('«Años de experiencia» no tiene un valor válido.')
   })
 
   it('perfil, servicios, franjas y onboarding son solo de la profesional', async () => {

@@ -309,13 +309,6 @@ export const professionalService = {
             twitter:   true,
             priorRecommendations: true,
             afterCare:            true,
-            // El frontend arma la pantalla final de confirmación con esto
-            // (políticas del profesional, junto con las recomendaciones de arriba).
-            toleranceMinutes:   true,
-            latePenalty:        true,
-            cancellationPolicy: true,
-            reschedulePolicy:   true,
-            depositPolicy:      true,
             services:  { where: { active: true }, select: { serviceId: true } },
           },
         },
@@ -340,11 +333,6 @@ export const professionalService = {
       // El frontend arma el mensaje de confirmación post-reserva con esto.
       priorRecommendations: u.professional?.priorRecommendations ?? null,
       afterCare:            u.professional?.afterCare            ?? null,
-      toleranceMinutes:     u.professional?.toleranceMinutes     ?? null,
-      latePenalty:          u.professional?.latePenalty          ?? null,
-      cancellationPolicy:   u.professional?.cancellationPolicy   ?? null,
-      reschedulePolicy:     u.professional?.reschedulePolicy     ?? null,
-      depositPolicy:        u.professional?.depositPolicy        ?? null,
       rating:      ratings.get(u.id)?.rating      ?? 0,
       reviewCount: ratings.get(u.id)?.reviewCount ?? 0,
       services:  (u.professional?.services ?? []).map(s => s.serviceId),
@@ -530,22 +518,12 @@ export const professionalService = {
       specialty:       professional?.specialty       ?? null,
       yearsExperience: professional?.yearsExperience ?? 0,
       certifications:  professional?.certifications  ?? null,
-      // El formulario de configuración lo edita como texto separado por comas
-      // (igual que el paso de onboarding) — no como array.
-      languages:       (professional?.languages ?? []).join(', '),
       vacationFrom:    professional?.vacationFrom ? professional.vacationFrom.toISOString().slice(0, 10) : null,
       vacationTo:      professional?.vacationTo   ? professional.vacationTo.toISOString().slice(0, 10)   : null,
       instagram:       professional?.instagram       ?? null,
       facebook:        professional?.facebook        ?? null,
       tiktok:          professional?.tiktok          ?? null,
       twitter:         professional?.twitter         ?? null,
-      policies:        professional?.policies        ?? null,
-      paymentMethods:  professional?.paymentMethods  ?? [],
-      toleranceMinutes:     professional?.toleranceMinutes     ?? null,
-      latePenalty:          professional?.latePenalty          ?? null,
-      cancellationPolicy:   professional?.cancellationPolicy   ?? null,
-      reschedulePolicy:     professional?.reschedulePolicy     ?? null,
-      depositPolicy:        professional?.depositPolicy        ?? null,
       priorRecommendations: professional?.priorRecommendations ?? null,
       afterCare:            professional?.afterCare            ?? null,
       availability: (professional?.availability ?? []).map(a => ({
@@ -573,15 +551,9 @@ export const professionalService = {
     const professionalFields: Record<string, unknown> = {}
     for (const key of [
       'bio', 'photo', 'specialty', 'instagram', 'facebook', 'tiktok', 'twitter',
-      'yearsExperience', 'certifications', 'paymentMethods', 'toleranceMinutes',
-      'latePenalty', 'cancellationPolicy', 'reschedulePolicy', 'depositPolicy',
-      'priorRecommendations', 'afterCare',
+      'yearsExperience', 'certifications', 'priorRecommendations', 'afterCare',
     ]) {
       if (data[key] !== undefined) professionalFields[key] = data[key]
-    }
-    if (data.languages !== undefined) {
-      professionalFields.languages = (Array.isArray(data.languages) ? data.languages : String(data.languages).split(','))
-        .map((l: string) => l.trim()).filter(Boolean)
     }
 
     Object.assign(professionalFields, vacation)
@@ -603,8 +575,6 @@ export const professionalService = {
     return rows.map(r => ({
       serviceId:   r.serviceId,
       status:      r.active ? 'active' as const : 'inactive' as const,
-      ownPrice:    Number(r.ownPrice),
-      ownDuration: r.ownDuration,
     }))
   },
 
@@ -653,18 +623,10 @@ export const professionalService = {
       specialty:       work?.specialty           ?? null,
       yearsExperience: work?.yearsExperience     ?? 0,
       certifications:  work?.certifications      ?? null,
-      languages:       work?.languages ? work.languages.split(',').map((l: string) => l.trim()) : [],
       instagram:       personal?.instagram       ?? null,
       facebook:        personal?.facebook        ?? null,
       tiktok:          personal?.tiktok          ?? null,
       twitter:         personal?.twitter         ?? null,
-      policies:        policies?.cancellationPolicy ?? null,
-      paymentMethods:  policies?.paymentMethods  ?? [],
-      toleranceMinutes:     policies?.toleranceMinutes     ?? null,
-      latePenalty:          policies?.latePenalty          ?? null,
-      cancellationPolicy:   policies?.cancellationPolicy   ?? null,
-      reschedulePolicy:     policies?.reschedulePolicy     ?? null,
-      depositPolicy:        policies?.depositPolicy        ?? null,
       priorRecommendations: policies?.priorRecommendations ?? null,
       afterCare:            policies?.afterCare            ?? null,
     }
@@ -679,10 +641,13 @@ export const professionalService = {
 
     if (Array.isArray(services)) {
       for (const s of services) {
+        // La profesional solo elige QUÉ servicios hace: el precio y la duración son los del catálogo (los carga el administrador).
+        const catalogService = await prisma.service.findUnique({ where: { id: s.serviceId } })
+        if (!catalogService) continue
         await prisma.professionalService.upsert({
           where:  { professionalId_serviceId: { professionalId: professional.id, serviceId: s.serviceId } },
-          create: { professionalId: professional.id, serviceId: s.serviceId, ownPrice: s.ownPrice, ownDuration: s.ownDuration, active: true },
-          update: { ownPrice: s.ownPrice, ownDuration: s.ownDuration },
+          create: { professionalId: professional.id, serviceId: s.serviceId, ownPrice: catalogService.price, ownDuration: catalogService.duration, active: true },
+          update: {},
         })
       }
     }

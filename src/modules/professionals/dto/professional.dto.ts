@@ -18,15 +18,12 @@ export const availabilitySchema = z.record(
   z.union([dayRangeSchema, z.array(dayRangeSchema), z.null()]),
 )
 
+// La profesional solo carga recomendaciones previas y cuidados posteriores. Tolerancia, llegadas tarde, cancelación,
+// reprogramación, seña y métodos de pago los define el administrador para todo el negocio: si un pedido viejo los manda,
+// se ignoran (zod descarta las claves que no conoce).
 const policiesShape = {
-  toleranceMinutes:     z.number().int().min(0).max(240).nullable().optional(),
-  latePenalty:          text(500),
-  cancellationPolicy:   text(1000),
-  reschedulePolicy:     text(1000),
-  depositPolicy:        text(1000),
   priorRecommendations: text(1000),
   afterCare:            text(1000),
-  paymentMethods:       z.array(z.string().trim().max(50)).max(20).optional(),
 }
 
 export const profileSchema = z.object({
@@ -41,7 +38,6 @@ export const profileSchema = z.object({
   twitter:   text(150),
   yearsExperience: z.number().int().min(0).max(80).optional(),
   certifications:  text(1000),
-  languages: z.union([z.string().max(300), z.array(z.string().max(50)).max(20)]).optional(),
   // RF-29: la profesional carga y edita sus propias vacaciones (null/'' las borra). El orden se valida en el servicio.
   vacationFrom: z.union([dateSchema, z.literal(''), z.null()]).optional(),
   vacationTo:   z.union([dateSchema, z.literal(''), z.null()]).optional(),
@@ -62,23 +58,55 @@ export const onboardingSchema = z.object({
     specialty: text(150),
     yearsExperience: z.number().int().min(0).max(80).optional(),
     certifications: text(1000),
-    languages: z.string().max(300).nullable().optional(),
   }).optional(),
   availability: availabilitySchema.optional(),
+  // Solo se eligen los servicios: el precio y la duración son los del catálogo (los carga el administrador).
   services: z.array(z.object({
     serviceId: z.string().min(1),
-    ownPrice: z.number().min(0),
-    ownDuration: z.number().int().min(1).max(1440),
   })).max(200).optional(),
   policies: z.object(policiesShape).optional(),
 })
+
+// Nombre con el que se le habla a la usuaria de cada campo (el último tramo de la ruta del error).
+const FIELD_LABEL: Record<string, string> = {
+  name: 'Nombre', phone: 'Teléfono', gender: 'Género', bio: 'Presentación', photo: 'Foto',
+  instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', twitter: 'Twitter / X',
+  specialty: 'Especialidad', yearsExperience: 'Años de experiencia', certifications: 'Certificaciones',
+  priorRecommendations: 'Recomendaciones previas', afterCare: 'Cuidados posteriores',
+  serviceId: 'Servicio', vacationFrom: 'Vacaciones: desde', vacationTo: 'Vacaciones: hasta',
+}
+
+// Mensaje en español y sin jerga para el primer problema de validación. Los textos de zod por defecto están en inglés y
+// la pantalla los oculta (quedaba un «datos inválidos» que no decía qué corregir): acá se arma uno que nombra el campo.
+// Los mensajes propios de los esquemas (ya en español) se respetan.
+function friendlyIssue(issue: z.core.$ZodIssue): string {
+  const field = String(issue.path[issue.path.length - 1] ?? '')
+  const label = FIELD_LABEL[field] ?? (field && Number.isNaN(Number(field)) ? field : 'Uno de los datos')
+  const anyIssue = issue as unknown as { origin?: string; maximum?: number | bigint; minimum?: number | bigint; message: string }
+  switch (issue.code) {
+    case 'too_big':
+      return anyIssue.origin === 'string'
+        ? `«${label}» es demasiado largo (máximo ${anyIssue.maximum} caracteres).`
+        : `«${label}» no puede ser mayor a ${anyIssue.maximum}.`
+    case 'too_small':
+      return anyIssue.origin === 'string'
+        ? `«${label}» es obligatorio.`
+        : `«${label}» no puede ser menor a ${anyIssue.minimum}.`
+    case 'invalid_type':
+      return `«${label}» no tiene un valor válido.`
+    default:
+      // Si el esquema ya trae un texto en español se usa; si es el de zod (inglés), se nombra el campo.
+      return /^(invalid|required|expected|too (small|big)|string must|number must|unrecognized)/i.test(anyIssue.message)
+        ? `«${label}» no tiene un valor válido.`
+        : anyIssue.message
+  }
+}
 
 export function parseOrThrow<T>(schema: z.ZodType<T>, body: unknown): T {
   const parsed = schema.safeParse(body ?? {})
   if (!parsed.success) {
     const first = parsed.error.issues[0]
-    const where = first?.path.length ? ` (${first.path.join('.')})` : ''
-    throw new AppError(HTTP.BAD_REQUEST, `${first?.message ?? 'Datos inválidos'}${where}`, 'VALIDATION_ERROR')
+    throw new AppError(HTTP.BAD_REQUEST, first ? friendlyIssue(first) : 'Datos inválidos', 'VALIDATION_ERROR')
   }
   return parsed.data
 }
