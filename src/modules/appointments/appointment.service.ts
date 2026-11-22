@@ -1557,6 +1557,33 @@ export const appointmentService = {
   // que lo confirme solo. Funciona tanto para un turno suelto como para un
   // combo (ahí aplica a TODAS las patas, igual que applyGroupPaymentResult).
   // Idempotente: si ya estaba paga, solo devuelve el estado actual.
+  // El administrador avisa que ya devolvió, en Mercado Pago, la seña de un turno que el sistema marcó como devuelta
+  // (el sistema no ejecuta devoluciones). Solo señas pagadas por Mercado Pago (mpPaymentId). Idempotente: si ya estaba
+  // marcada, no cambia la fecha.
+  markDepositRefundDone: async (id: string, actorId: string) => {
+    const actor = await prisma.user.findUnique({ where: { id: actorId }, select: { name: true, lastName: true } })
+    const actorName = actor ? fullName(actor) : 'Administrador'
+    const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
+    if (!appointment) throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
+    if (appointment.paymentStatus !== 'refunded' || !appointment.mpPaymentId || Number(appointment.depositAmount) <= 0) {
+      throw new AppError(HTTP.BAD_REQUEST, 'Este turno no tiene una seña de Mercado Pago pendiente de devolver', 'NO_REFUND_PENDING')
+    }
+    if (appointment.depositRefundedAt) return toAdminView(appointment)
+
+    const { count } = await prisma.appointment.updateMany({
+      where: { id, depositRefundedAt: null },
+      data:  { depositRefundedAt: new Date() },
+    })
+    const updated = await prisma.appointment.findUniqueOrThrow({ where: { id }, include: APPOINTMENT_INCLUDE })
+    if (count > 0) {
+      await activityService.log({
+        userName: actorName, action: 'Seña devuelta en Mercado Pago', module: 'payments', appointmentId: id,
+        detail: `${updated.service.name} — ${fullName(updated.client)} el ${formatDateDMY(updated.date)} ${updated.time}: seña de $${Number(updated.depositAmount).toLocaleString('es-AR')} devuelta`,
+      })
+    }
+    return toAdminView(updated)
+  },
+
   registerWhatsappDepositPaid: async (id: string) => {
     const appointment = await prisma.appointment.findUnique({ where: { id } })
     if (!appointment) throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')

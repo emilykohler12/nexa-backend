@@ -2443,3 +2443,18 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code con Git, Node y `vitest`. Context7 no se consultó. |
 
 **Impacto en el frontend (contrato):** ninguno en la API. Archivos del frontend: `shared/ui/organisms/AdminSidebar.tsx`, `app/router/AppRouter.tsx`, `pages/admin/dashboard/DashboardPage.tsx`, `pages/admin/promotions/PromotionsPage.tsx` (y su prueba), `pages/public/HomePage.tsx`. **Sin migración de base.**
+
+## Entrada 169: se quita la política de reembolso de la configuración y se agrega «Señas por devolver (Mercado Pago)» al tablero
+
+**Fecha:** 2026-11-22 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), a pedido de Emily**, en ramas locales `feat/senas-por-devolver` (sin subir a GitHub, a pedido suyo). (a) **Configuración:** el frontend deja de mostrar «Política de reembolso de seña»; el backend conserva `refundPolicy` (queda en `full`, el valor por defecto). (b) **Tablero:** nuevo cuadro «Señas por devolver (Mercado Pago)» con el total, la clienta, el servicio, la fecha y el monto de cada seña que el sistema marcó como devuelta, que se pagó por Mercado Pago (`mp_payment_id`) y que todavía no se devolvió de verdad. Como el sistema solo marca la seña, se agregó la columna `appointments.deposit_refunded_at` (migración `20261122120000_sena_devuelta_en`, nullable, solo agrega) y el endpoint `PATCH /api/admin/appointments/:id/refund-done` («Marcar devuelta»), que deja una entrada de actividad. `GET /api/admin/dashboard` suma `pendingRefunds`. Las señas por WhatsApp no figuran (solo Mercado Pago). |
+| 2 | Alternativas y criterio de descarte | **Listar todas las señas `refunded` sin poder marcarlas:** descartado, la lista nunca se vaciaría y no diría qué «falta». **Acotarlo al período del tablero:** descartado, una devolución pendiente no deja de estarlo al cambiar de mes. **Borrar `refundPolicy` del backend:** descartado, las reglas de cancelación la usan; solo se quitó del formulario. |
+| 3 | Evidencia que la sostiene | Backend: `typecheck:all` limpio y 736 pruebas pasan (nuevo `dashboard.pending-refunds.test.ts`); migración aplicada a la base de pruebas con `npm run test:migrate`. Frontend: typecheck, lint y 427 pruebas pasan (nuevo `PendingRefundsChart.test.tsx`). No se revisó en el navegador. |
+| 4 | Aporte personal | Emily definió que solo cuenten las señas por Mercado Pago y dónde se muestra. |
+| 5 | Desacuerdo y resolución | Sin resolver, para Emily: las señas ya marcadas como devueltas antes de este cambio quedan como «faltan devolver» hasta que se marquen una por una. **La migración tiene que aplicarse en Supabase ANTES del despliegue.** |
+| 6 | Herramienta auxiliar | Claude Code con Prisma, Git, Node y `vitest`. Context7 no se consultó (sin APIs nuevas). |
+
+**Impacto en el frontend (contrato):** `GET /api/admin/dashboard` devuelve además `pendingRefunds: { appointmentId, clientName, serviceName, date, time, amount }[]`; nuevo `PATCH /api/admin/appointments/:id/refund-done` (`400 NO_REFUND_PENDING`). Archivos del frontend: `pages/admin/dashboard/PendingRefundsChart.tsx` (nuevo), `DashboardPage.tsx`, `types.ts`, `pages/admin/settings/PaymentsSection.tsx`. **Con migración de base.**

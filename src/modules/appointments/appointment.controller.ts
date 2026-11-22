@@ -413,6 +413,13 @@ export const appointmentController = {
     } catch (err) { next(err) }
   },
 
+  markRefundDone: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const appointment = await appointmentService.markDepositRefundDone(getId(req), req.user!.id)
+      res.json({ appointment })
+    } catch (err) { next(err) }
+  },
+
   createForAdmin: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const input = parseBody(adminCreateAppointmentSchema, req.body)

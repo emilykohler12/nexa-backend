@@ -35,6 +35,7 @@ router.patch('/appointments/:id/arrival', appointmentController.markArrivalForAd
 router.patch('/appointments/:id/balance-payment', appointmentController.registerBalancePaymentForAdmin)
 router.patch('/appointments/:id/polish-removal', appointmentController.registerPolishRemoval)
 router.patch('/appointments/:id/deposit-paid',   appointmentController.markDepositPaid)
+router.patch('/appointments/:id/refund-done',    appointmentController.markRefundDone)
 
 router.get('/activity',  adminController.getActivity)
 router.get('/dashboard', adminController.getDashboard)
