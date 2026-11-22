@@ -76,6 +76,32 @@ function getDummyPasswordHash(): Promise<string> {
   return dummyPasswordHash
 }
 
+// Genera un código de 6 dígitos (vigente 15 minutos), lo guarda y lo manda por mail con la plantilla indicada. Sirve para
+// recuperar la contraseña y para activar una cuenta creada por el personal: en los dos casos se canjea en reset-password.
+async function sendResetCode(userId: string, email: string, template: 'resetPassword' | 'activateAccount', subject: string): Promise<void> {
+  let code        = generateVerificationCode()
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000)
+  // El código es único en toda la tabla (6 dígitos): si justo otra usuaria tiene el mismo
+  // vigente, la base lo rechaza (P2002). Se sortea otro en vez de devolver un 500.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await authRepository.savePasswordReset(userId, code, expiresAt)
+      break
+    } catch (err: any) {
+      if (err?.code !== 'P2002' || attempt >= 4) throw err
+      code = generateVerificationCode()
+    }
+  }
+
+  // El mail no se espera (como en el registro): si no, un email registrado tardaría lo que dura
+  // el envío y uno inexistente respondería enseguida, y esa diferencia revelaría qué cuentas
+  // existen. Tampoco se registra el email en los logs.
+  const html = loadTemplate(template, { CODE: code })
+  mailProvider.send(email, subject, html)
+    .then(() => console.log('[mail] ✅ Código enviado'))
+    .catch((err: any) => console.error('[mail] ❌ Error enviando código:', err?.message))
+}
+
 // Dispositivos con la sesión abierta a la vez; al abrir uno más se cierra el más antiguo.
 const MAX_SESSIONS = 10
 // Tras renovar, el refresh token anterior se sigue aceptando este tiempo (solo para renovar el
@@ -97,8 +123,21 @@ export const authService = {
   },
 
   register: async (dto: RegisterDto): Promise<{ user: AuthUser; tokens: TokenPair }> => {
-    const exists = await authRepository.emailExists(dto.email)
-    if (exists) throw new AppError(HTTP.CONFLICT, 'El email ya está registrado', 'EMAIL_TAKEN')
+    const existing = await authRepository.findAnyByEmail(dto.email)
+    if (existing) {
+      // La ficha la creó el personal (alta del administrador o turno manual) y la clienta todavía no eligió contraseña:
+      // no se rechaza, se le manda un código al correo para activar la cuenta (conserva sus turnos y notas). Tener el
+      // correo es lo que prueba que la cuenta es suya. Una cuenta que se registró sola nunca pasa por acá.
+      if (existing.pendingActivation && existing.active && existing.role === 'client') {
+        await sendResetCode(existing.id, existing.email, 'activateAccount', 'Activá tu cuenta — Nexa')
+        throw new AppError(
+          HTTP.CONFLICT,
+          'Ya tenés una ficha en el estudio. Te mandamos un código por mail para activar tu cuenta.',
+          'ACCOUNT_PENDING_ACTIVATION',
+        )
+      }
+      throw new AppError(HTTP.CONFLICT, 'El email ya está registrado', 'EMAIL_TAKEN')
+    }
 
     const passwordHash = await bcryptProvider.hash(dto.password)
 
@@ -208,27 +247,12 @@ export const authService = {
     const dbUser = await authRepository.findByEmail(dto.email)
     if (!dbUser) return
 
-    let code        = generateVerificationCode()
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000)
-    // El código es único en toda la tabla (6 dígitos): si justo otra usuaria tiene el mismo
-    // vigente, la base lo rechaza (P2002). Se sortea otro en vez de devolver un 500.
-    for (let attempt = 0; ; attempt++) {
-      try {
-        await authRepository.savePasswordReset(dbUser.id, code, expiresAt)
-        break
-      } catch (err: any) {
-        if (err?.code !== 'P2002' || attempt >= 4) throw err
-        code = generateVerificationCode()
-      }
-    }
-
-    // El mail no se espera (como en el registro): si no, un email registrado tardaría lo que dura
-    // el envío y uno inexistente respondería enseguida, y esa diferencia revelaría qué cuentas
-    // existen. Tampoco se registra el email en los logs.
-    const html = loadTemplate('resetPassword', { CODE: code })
-    mailProvider.send(dbUser.email, 'Código para recuperar tu contraseña — Nexa', html)
-      .then(() => console.log('[mail] ✅ Código de recuperación enviado'))
-      .catch((err: any) => console.error('[mail] ❌ Error enviando código:', err?.message))
+    // Una cuenta sin activar que pide recuperar la contraseña recibe el mismo código: al usarlo queda activada.
+    await sendResetCode(
+      dbUser.id, dbUser.email,
+      dbUser.pendingActivation ? 'activateAccount' : 'resetPassword',
+      dbUser.pendingActivation ? 'Activá tu cuenta — Nexa' : 'Código para recuperar tu contraseña — Nexa',
+    )
   },
 
   resetPassword: async (dto: ResetPasswordDto): Promise<void> => {

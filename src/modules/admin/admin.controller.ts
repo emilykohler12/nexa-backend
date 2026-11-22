@@ -5,6 +5,7 @@ import { activityService }  from '../activity/activity.service'
 import { dashboardService, type PeriodFilter } from './dashboard.service'
 import { AppError }         from '../../app/middlewares/errorHandler'
 import { HTTP }             from '../../app/constants/http'
+import { markPaymentRefunded } from '../payments/paymentRecord'
 
 function getId(req: Request): string {
   const { id } = req.params
@@ -19,6 +20,14 @@ function getParam(req: Request, name: string): string {
 }
 
 export const adminController = {
+
+  // El administrador avisa que ya devolvió, en Mercado Pago, un pago que no se pudo reservar (tarjeta «Pagos para devolver»).
+  markPaymentRefunded: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const payment = await markPaymentRefunded(getId(req), req.user!.id)
+      res.json({ payment })
+    } catch (err) { next(err) }
+  },
 
   getClients: async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {

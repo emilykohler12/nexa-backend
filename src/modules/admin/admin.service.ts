@@ -5,7 +5,7 @@ import { AppError }       from '../../app/middlewares/errorHandler'
 import { HTTP }           from '../../app/constants/http'
 import { assertValidPhone } from '../../app/validators/phone'
 import { bcryptProvider } from '../auth/providers/bcrypt.provider'
-import { activityService } from '../activity/activity.service'
+import { activityService, ANONYMIZED_NAME } from '../activity/activity.service'
 import { fullName } from '../../app/utils/fullName'
 import { visibleEmail } from '../../app/utils/placeholderEmail'
 import { uploadProvider } from '../uploads/upload.provider'
@@ -23,7 +23,7 @@ async function computeVisits(userId: string) {
 }
 
 function mapAdminClient(
-  user: { id: string; name: string; lastName?: string | null; email: string; phone: string | null; gender: string | null; createdAt: Date },
+  user: { id: string; name: string; lastName?: string | null; email: string; phone: string | null; gender: string | null; createdAt: Date; pendingActivation?: boolean },
   client: {
     allergies: string | null; preferences: string | null; observations: string | null
     blocked: boolean
@@ -48,6 +48,8 @@ function mapAdminClient(
       lastVisit:   visits.lastVisit,
     },
     blocked:   client?.blocked ?? false,
+    // true = la creó el personal y la clienta todavía no activó su cuenta (no eligió contraseña).
+    pendingActivation: user.pendingActivation ?? false,
     createdAt: user.createdAt.toISOString(),
   }
 }
@@ -156,10 +158,10 @@ export const adminService = {
     const exists = await prisma.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } })
     if (exists) throw new AppError(HTTP.CONFLICT, 'Ese email ya está en uso', 'EMAIL_TAKEN')
 
-    const password = typeof data.password === 'string' && data.password.length >= 8
-      ? data.password
-      : crypto.randomBytes(6).toString('hex')
-    const passwordHash = await bcryptProvider.hash(password)
+    // El administrador NO elige contraseña (si el formulario viejo la manda, se ignora): la cuenta nace «sin activar», con
+    // una clave que nadie conoce. Cuando la clienta se registre con este correo recibe un código para activarla y elige la
+    // suya, conservando sus turnos y notas.
+    const passwordHash = await bcryptProvider.hash(crypto.randomBytes(24).toString('hex'))
 
     const user = await prisma.user.create({
       data: {
@@ -170,6 +172,7 @@ export const adminService = {
         phone:         data.phone ?? null,
         gender:        data.gender ?? null,
         emailVerified: true,
+        pendingActivation: true,
       },
     })
 
@@ -250,12 +253,24 @@ export const adminService = {
 
     const photos = await prisma.clientGalleryPhoto.findMany({ where: { clientId: id }, select: { id: true, url: true } })
 
+    // Actividad: las entradas nuevas guardan una marca con su id y pasan solas a «Cliente eliminado»; las viejas tienen el
+    // nombre escrito en el texto, así que se lo reemplaza acá (solo en las ligadas a sus turnos o hechas por ella, y solo la
+    // palabra completa: un nombre corto no se toca dentro de otra palabra).
+    const oldName = fullName(user)
+    const namePattern = `(?<![[:alnum:]])${oldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![[:alnum:]])`
+    const scrubActivity = oldName && oldName !== ANONYMIZED_NAME
+      ? prisma.$executeRaw`UPDATE activity_logs
+          SET detail    = regexp_replace(detail, ${namePattern}, ${ANONYMIZED_NAME}, 'g'),
+              user_name = regexp_replace(user_name, ${namePattern}, ${ANONYMIZED_NAME}, 'g')
+          WHERE appointment_id IN (SELECT id FROM appointments WHERE client_id = ${id}::uuid) OR user_name = ${oldName}`
+      : prisma.$executeRaw`SELECT 0`
+
     // Todo o nada en la base: si algo falla no queda la cuenta a medio anonimizar.
-    const [, sessions, removedPhotos, orders, reviews] = await prisma.$transaction([
+    const [, sessions, removedPhotos, orders, reviews, activityRows] = await prisma.$transaction([
       prisma.user.update({
         where: { id },
         data: {
-          name:         'Cliente eliminado',
+          name:         ANONYMIZED_NAME,
           lastName:     null,
           email:        `anonimo_${id}@borrado.com`,
           phone:        null,
@@ -273,6 +288,7 @@ export const adminService = {
         where: { clientId: id, message: { not: null } },
         data:  { message: null },
       }),
+      scrubActivity,
     ])
 
     // Los archivos se borran después de confirmar la base: si fallan, las filas ya no están, así que la
@@ -291,6 +307,7 @@ export const adminService = {
         `Fotos de la galería eliminadas: ${removedPhotos.count} (archivos borrados del almacenamiento: ${files.deleted.length}).`,
         `Pedidos con teléfono, dirección y notas vaciados: ${orders.count}.`,
         `Reseñas con el texto vaciado (se conserva el puntaje): ${reviews.count}.`,
+        `Entradas viejas de Actividad con su nombre reemplazado: ${activityRows}.`,
         'Se conservan turnos, pagos, montos de pedidos, alergias, preferencias, observaciones y notas.',
       ].join('\n'),
     })

@@ -28,7 +28,7 @@ vi.mock('../src/modules/payments/payment.service', () => ({
 }))
 
 const TABLES = [
-  'users', 'refresh_sessions', 'professionals', 'professional_availability', 'invitations', 'password_resets',
+  'users', 'refresh_sessions', 'payment_records', 'professionals', 'professional_availability', 'invitations', 'password_resets',
   'clients', 'professional_services', 'services', 'appointments', 'products',
   'reopened_slots', 'inventory_movements', 'orders', 'product_orders',
   'promotions', 'special_events', 'payment_settings', 'business_settings', 'business_schedule_days',

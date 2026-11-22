@@ -94,7 +94,7 @@ export const paymentService = {
    * Se usa para verificar el pago "a demanda" (cuando el cliente vuelve del
    * checkout o toca "ya pagué"), sin depender de que el webhook haya llegado.
    */
-  findPaymentByReference: async (externalReference: string): Promise<{ id: string; status: string; amount?: number; currency?: string } | null> => {
+  findPaymentByReference: async (externalReference: string): Promise<{ id: string; status: string; amount?: number; currency?: string; statusDetail?: string } | null> => {
     const payment = new Payment(requireClient())
     const search = await payment.search({
       options: { external_reference: externalReference, sort: 'date_created', criteria: 'desc' },
@@ -106,6 +106,6 @@ export const paymentService = {
     const chosen = approved ?? results[0]
     if (!chosen.id || !chosen.status) return null
     // El monto y la moneda reales del pago: quien aplica el resultado los compara con lo esperado.
-    return { id: String(chosen.id), status: chosen.status, amount: chosen.transaction_amount, currency: chosen.currency_id }
+    return { id: String(chosen.id), status: chosen.status, amount: chosen.transaction_amount, currency: chosen.currency_id, statusDetail: chosen.status_detail }
   },
 }

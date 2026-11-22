@@ -44,6 +44,10 @@ model User {
   // (PRIVACY_POLICY_VERSION). NULL en cuentas que aceptaron antes de que se
   // guardara la versión: no se inventa una versión retroactiva.
   termsVersion      String?   @map("terms_version") @db.VarChar(20)
+  // Cuenta creada por el personal (alta de clienta del administrador o turno manual con correo): la clienta todavía no
+  // eligió contraseña. Si se registra con ese correo no se rechaza: se le manda un código para activarla (conserva sus
+  // turnos y notas). Se apaga cuando fija su contraseña. Las cuentas que se registran solas nunca la prenden.
+  pendingActivation Boolean   @default(false) @map("pending_activation")
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -263,6 +267,12 @@ model Appointment {
   // Id del pago en Mercado Pago que confirmó la seña — se completa recién
   // cuando llega el webhook, nunca antes. Sirve también de traza de auditoría.
   mpPaymentId    String?  @map("mp_payment_id") @db.VarChar(50)
+  // Frase corta con el motivo por el que la seña no se pagó («Pago rechazado: fondos insuficientes», «Pago rechazado: monto
+  // menor a la seña»…). La clienta la ve solo cuando el turno se liberó por falta de pago; el personal la ve siempre.
+  paymentNote    String?  @map("payment_note") @db.VarChar(120)
+  // Lo que Mercado Pago cobró de verdad, SOLO cuando superó la seña (pago de más). Es informativo: la seña y el saldo se
+  // siguen calculando con depositAmount; en el local se cobra de menos por esa diferencia. Null = pagó exactamente la seña.
+  depositPaidAmount Decimal? @map("deposit_paid_amount") @db.Decimal(10, 2)
   clientNotes    String?  @map("client_notes") @db.Text
   internalNotes  String?  @map("internal_notes") @db.Text
   allergies      String?  @db.Text
@@ -618,6 +628,33 @@ model ActivityLog {
 
   @@index([appointmentId])
   @@map("activity_logs")
+}
+
+// Todo pago de Mercado Pago que llega al webhook (o a la verificación a demanda), con su resultado y el motivo. Una fila por
+// pago (mp_payment_id único): si el mismo pago cambia de estado, la fila se actualiza. `needs_refund` marca los pagos en los
+// que la clienta pagó pero no se reservó nada (monto menor, otra moneda, llegó tarde): el administrador los devuelve a mano
+// en Mercado Pago y los marca con `refunded_at`. Referencia suelta (sin FK) al turno, al grupo de combo o al pedido.
+model PaymentRecord {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  mpPaymentId    String    @unique @map("mp_payment_id") @db.VarChar(50)
+  // 'appointment' | 'combo' | 'order'
+  kind           String    @db.VarChar(15)
+  refId          String    @map("ref_id") @db.Uuid
+  mpStatus       String    @map("mp_status") @db.VarChar(30)
+  statusDetail   String?   @map("status_detail") @db.VarChar(80)
+  // 'accepted' | 'overpaid' | 'pending' | 'rejected' | 'underpaid' | 'wrong_currency' | 'late'
+  outcome        String    @db.VarChar(20)
+  reason         String    @db.VarChar(160)
+  expectedAmount Decimal?  @map("expected_amount") @db.Decimal(10, 2)
+  paidAmount     Decimal?  @map("paid_amount") @db.Decimal(10, 2)
+  currency       String?   @db.VarChar(10)
+  needsRefund    Boolean   @default(false) @map("needs_refund")
+  refundedAt     DateTime? @map("refunded_at") @db.Timestamptz
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([needsRefund, refundedAt])
+  @@map("payment_records")
 }
 
 model Review {

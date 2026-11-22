@@ -209,7 +209,8 @@ describe('RF-24: mails a la clienta por un turno', () => {
       'modules/appointments/appointment.service.ts: Tu turno fue reprogramado — Nexa', // a la clienta, reprogramación del personal
       'modules/appointments/appointment.service.ts: Cambió la profesional de tu turno — Nexa', // a la clienta, cambio de profesional en un combo (personal)
       'modules/appointments/appointment.service.ts: Turno reprogramado — Nexa',     // a la profesional
-      'modules/auth/auth.service.ts: Código para recuperar tu contraseña — Nexa',   // de cuenta, lo pide la clienta (excepción)
+      'modules/auth/auth.service.ts: (sin asunto literal)',                           // de cuenta (recuperar contraseña o activar la ficha creada por el personal), lo pide la clienta (excepción)
+      'modules/payments/paymentRecord.ts: Hay un pago para devolver — Nexa',          // al estudio, solo cuando la clienta pagó y no se reservó nada (no es un mail a la clienta)
       'modules/invitations/invitation.service.ts: Invitación para unirte como profesional — Nexa', // a una profesional
     ].sort())
   })

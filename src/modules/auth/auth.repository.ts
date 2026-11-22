@@ -165,7 +165,8 @@ export const authRepository = {
   // Cambiar la contraseña cierra la sesión en TODOS los dispositivos.
   updatePassword: async (userId: string, passwordHash: string) => {
     const [user] = await prisma.$transaction([
-      prisma.user.update({ where: { id: userId }, data: { passwordHash } }),
+      // Elegir contraseña también activa una cuenta creada por el personal.
+      prisma.user.update({ where: { id: userId }, data: { passwordHash, pendingActivation: false } }),
       prisma.refreshSession.deleteMany({ where: { userId } }),
     ])
     return user
