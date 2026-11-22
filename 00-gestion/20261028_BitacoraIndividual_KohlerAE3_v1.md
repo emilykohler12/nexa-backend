@@ -2518,3 +2518,18 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code con Git, Node y `vitest`. Context7 no se consultó. |
 
 **Impacto en el frontend (contrato):** nuevo `PATCH /api/professional/appointments/:id/deposit-paid` (`{ appointment }`; `404` si no es suyo, `400 NOT_WHATSAPP_DEPOSIT`). Archivos del frontend: `shared/ui/molecules/MarkStatusPanel.tsx` (nuevo), `features/professional/agenda/dialogs/AppointmentDialog.tsx`, `features/professional/agenda/Agenda.tsx`, `features/professional/types/appointment.ts`, `pages/admin/appointments/AppointmentModal.tsx` y sus pruebas. **Sin migración de base.**
+
+## Entrada 174: perfil de administradora sin datos de profesional, configuración a todo el ancho y salida del formulario de bienvenida
+
+**Fecha:** 2026-11-22 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), a pedido de Emily**, solo en el frontend, rama local `feat/admin-perfil-y-alta` (sin subir). (a) **Profesionales (admin):** una persona con rol administradora muestra en su tarjeta solo nombre, rol y estado, y en su perfil solo datos personales (nombre, teléfono, correo, foto, estado e ingreso al estudio): se ocultan Rendimiento, especialidad, redes sociales, servicios que realiza, horarios y vacaciones. Se ocultan, no se borran: al volver a «profesional» reaparece todo con sus datos. (b) **Configuración:** nombre del negocio, correo y WhatsApp ahora reparten todo el ancho (los campos de ancho completo de la grilla dejaban columnas vacías). (c) **Formulario de bienvenida de la profesional:** el error «Hay datos que no son válidos» venía de un error de validación en inglés del servidor que la pantalla oculta; la causa probable es que se ofrecían los servicios especiales (duración 0), que el servidor rechaza (la duración propia tiene que ser de al menos 1 minuto). Ya no se ofrecen en ese paso (los asigna la administradora). Y el formulario tapaba toda la pantalla sin salida: ahora tiene un «Cerrar sesión». |
+| 2 | Alternativas y criterio de descarte | **Borrar los datos de profesional al hacer administradora:** descartado, Emily pidió que al volver a profesional reaparezcan. **Aceptar duración 0 en el servidor:** descartado, esa duración se usa para calcular horarios. **Mostrar el mensaje en inglés del servidor:** descartado, no es para la usuaria. |
+| 3 | Evidencia que la sostiene | Frontend: typecheck, lint y 450 pruebas pasan (nuevas: perfil y tarjeta de administradora y profesional, «Cerrar sesión» del formulario). **La causa del error del formulario es una hipótesis**: no se reprodujo con los datos reales de Emily ni en el navegador. |
+| 4 | Aporte personal | Emily definió qué ve una administradora y los problemas del formulario. |
+| 5 | Desacuerdo y resolución | Sin resolver, para Emily: probar de nuevo el formulario de bienvenida; si vuelve a fallar, pasar qué datos cargó (o el mensaje del servidor desde la consola del navegador, pestaña Red) para encontrar el campo exacto. |
+| 6 | Herramienta auxiliar | Claude Code con Git, Node y `vitest`. Context7 no se consultó. |
+
+**Impacto en el frontend (contrato):** ninguno en la API. Archivos del frontend: `pages/admin/professionals/ProfessionalCard.tsx`, `ProfessionalDetail.tsx`, `tabs/ProfileTab.tsx`, `pages/admin/settings/GeneralSection.tsx`, `features/professional/onboarding/OnboardingWizard.tsx` y `steps/ServicesStep.tsx`, con sus pruebas. **Sin migración de base.**
