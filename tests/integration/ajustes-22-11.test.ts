@@ -292,3 +292,16 @@ describe('la profesional marca pagada la seña coordinada por WhatsApp de un tur
     expect(res.body.code).toBe('NOT_WHATSAPP_DEPOSIT')
   })
 })
+
+// ── El precio del catálogo público sale como número ─────────────────────────────────────────────────────────────────
+describe('GET /api/services: el precio es un número, no un texto', () => {
+  it('«20000» llegaba como string y rompía el formato y el formulario de la profesional', async () => {
+    await createService({ name: 'Capping Manos', price: 20000 })
+
+    const res = await request(app).get('/api/services')
+
+    const svc = res.body.services.find((s: { name: string }) => s.name === 'Capping Manos')
+    expect(typeof svc.price).toBe('number')
+    expect(svc.price).toBe(20000)
+  })
+})

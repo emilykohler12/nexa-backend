@@ -2548,3 +2548,18 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code con Git, Node y `vitest`. Context7 no se consultó. |
 
 **Impacto en el frontend (contrato):** `GET /api/professionals/public`, `GET /api/professional/profile` y `GET /api/professional/services` dejan de devolver `languages`, `paymentMethods`, `toleranceMinutes`, `latePenalty`, `cancellationPolicy`, `reschedulePolicy`, `depositPolicy`, `policies`, `ownPrice` y `ownDuration`; `POST /api/professional/onboarding` y `PATCH /api/professional/profile` los ignoran; `GET /api/client/appointments` manda `statusLabel: "No asistió"` también para el automático. Archivos del frontend: formulario de bienvenida (`OnboardingWizard`, `steps/*`, `types.ts`), `features/professional/settings/Settings.tsx`, `features/client/booking/PaymentStep.tsx` y `ComboBookingFlow.tsx`, `pages/client/AppointmentsPage.tsx` y `AppointmentDetailModal.tsx`, `app/data/shared/status.data.ts`, `features/client/appointments/reminderLink.ts`, `pages/admin/dashboard/DashboardPage.tsx`, `features/professional/statistics/Statistics.tsx`, `shared/ui/molecules/MarkStatusPanel.tsx`, `shared/ui/organisms/AdminSidebar.tsx`. **Sin migración de base.**
+
+## Entrada 176: causa encontrada del error del formulario de la profesional — el precio del catálogo viajaba como texto
+
+**Fecha:** 2026-11-22 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5), a pedido de Emily**, en la misma rama local `feat/profesional-sin-politicas`. En la captura del paso «Servicios» el precio figuraba como «$20000» (sin separador de miles): `GET /api/services` mandaba el precio de los servicios comunes como TEXTO (`"20000"`, es un Decimal de la base) y el formulario lo reenviaba tal cual como precio propio; el servidor exige un número y respondía 400 (el mensaje en inglés de zod se ocultaba tras «Hay datos que no son válidos»). La corrección de fondo: `publicService` (`service.model.ts`) manda el precio siempre como número. Además el precio propio ya no se envía (entrada 175) y el paso formatea con `Number(...)`. |
+| 2 | Alternativas y criterio de descarte | **Convertir el precio solo en el formulario:** descartado, el mismo texto afectaba el formato del precio en otras pantallas de la clienta. **Cambiar también la lista del administrador (`findAll`):** no se tocó, sus pantallas ya convierten con `Number()`. |
+| 3 | Evidencia que la sostiene | Backend: nueva prueba (el precio sale como número) y 756 pruebas pasan. La captura de Emily muestra el síntoma («$20000», `toLocaleString` sobre un texto no formatea). No se volvió a probar en el navegador. |
+| 4 | Aporte personal | Emily aportó la captura y el registro de la consola. |
+| 5 | Desacuerdo y resolución | Sin desacuerdo. |
+| 6 | Herramienta auxiliar | Claude Code con Git, Node y `vitest`. Context7 no se consultó. |
+
+**Impacto en el frontend (contrato):** `GET /api/services` devuelve `price` como número (antes texto en los servicios comunes). Las pantallas que ya hacían `Number(price)` no cambian; las que formateaban el texto ahora muestran el separador de miles (ej. «$20.000»). **Sin migración de base.**
