@@ -1,8 +1,8 @@
 // src/jobs/autoNoShow.job.ts
 //
 // Corre cada 5 minutos (ver scheduler.ts). Si pasaron MÁS de 30 minutos desde la hora de inicio de un turno
-// 'confirmed' y nadie registró la llegada de la clienta (ni ella desde la app, ni el profesional/admin por
-// ella — ver markArrivalFor* en appointment.service.ts), el turno pasa a 'no_show_auto'
+// 'confirmed' y nadie registró la llegada de la clienta (la registra solo el profesional/admin, ver
+// markArrivalFor* en appointment.service.ts; la clienta ya no puede), el turno pasa a 'no_show_auto'
 // («No asistió (automático)»). Con 30 minutos exactos todavía no se marca.
 //
 // 'no_show_auto' NO libera el horario: el índice único parcial de R-01 solo excluye 'cancelled' y

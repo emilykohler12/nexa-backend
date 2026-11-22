@@ -1833,6 +1833,10 @@ export const appointmentService = {
     if (!['pending', 'confirmed'].includes(appointment.status)) {
       throw new AppError(HTTP.BAD_REQUEST, 'Este turno ya no se puede cancelar', 'NOT_CANCELLABLE')
     }
+    // Un turno que ya empezó no se cancela: la clienta solo avisa que no va a asistir (markNoShowForClient).
+    if (hasStarted(appointment)) {
+      throw new AppError(HTTP.BAD_REQUEST, 'El turno ya empezó: no se puede cancelar. Si no vas a asistir, avisalo con «No voy a asistir».', 'APPOINTMENT_STARTED')
+    }
 
     // Combo simultáneo: se cancela SOLO esta pata; las demás quedan igual (mismo día, hora y profesional). NO se
     // devuelve nada, salvo que esta sea la última pata activa: ahí se canceló el combo entero y la devolución de
@@ -1890,6 +1894,54 @@ export const appointmentService = {
     const refunded      = target.paymentStatus === 'refunded'
 
     return { appointment: toClientView(target), refunded }
+  },
+
+  // «No voy a asistir»: la clienta avisa, una vez empezado el turno, que no va a ir. Es lo único que puede hacer
+  // con un turno ya empezado (no se cancela). Pasa a 'cancelled_no_show' por las mismas reglas que si lo marcara el
+  // personal (changeStatusByStaff): el horario original queda bloqueado, hasta 40 minutos después de la hora de
+  // inicio se abre un horario reabierto y la seña queda retenida. Se le avisa a la profesional. En un combo se
+  // marcan todas las patas confirmadas del grupo (la clienta no va a ir a ninguna).
+  markNoShowForClient: async (clientId: string, id: string) => {
+    const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
+    if (!appointment || appointment.clientId !== clientId) {
+      throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
+    }
+    if (appointment.status !== 'confirmed') {
+      throw new AppError(HTTP.BAD_REQUEST, 'Solo se puede avisar que no vas a asistir a un turno confirmado', 'INVALID_STATUS_TRANSITION')
+    }
+    if (appointment.arrivedAt) {
+      throw new AppError(HTTP.BAD_REQUEST, 'Ya se registró tu llegada a este turno', 'ALREADY_ARRIVED')
+    }
+    const now = new Date()
+    if (!hasStarted(appointment, now)) {
+      throw new AppError(HTTP.BAD_REQUEST, 'El turno todavía no empezó: si no vas a asistir, cancelalo', 'NO_SHOW_BEFORE_START')
+    }
+
+    const legs = appointment.comboGroupId
+      ? await prisma.appointment.findMany({
+          where: { comboGroupId: appointment.comboGroupId, status: 'confirmed', arrivedAt: null },
+          include: APPOINTMENT_INCLUDE,
+        })
+      : [appointment]
+
+    const actorName = fullName(appointment.client)
+    const done: AppointmentRow[] = []
+    for (const leg of legs) {
+      done.push(await changeStatusByStaff(leg, 'cancelled_no_show', actorName, now))
+    }
+    // RF-24: un aviso por profesional (en un combo, una sola puede tener varias patas).
+    const byPro = new Map<string, AppointmentRow[]>()
+    for (const l of done) byPro.set(l.professionalId, [...(byPro.get(l.professionalId) ?? []), l])
+    for (const proLegs of byPro.values()) {
+      const a = proLegs[0]
+      await notificationService.notify(a.professionalId, {
+        type:  'cancelled_appointment',
+        title: 'La clienta avisó que no asistirá',
+        body:  `${fullName(a.client)} avisó que no va a asistir a ${proLegs.map(l => l.service.name).join(' y ')} (${formatDateDMY(a.date)} ${a.time}). El horario se libera.`,
+      })
+    }
+    const updated = done.find(l => l.id === id) ?? done[0]
+    return { appointment: toClientView(updated), appointments: done.map(toClientView) }
   },
 
   // Devuelve `appointment` (el turno pedido) y `appointments` (todos los que se movieron: uno en un turno suelto,
@@ -2347,19 +2399,9 @@ export const appointmentService = {
   },
 
   // ── Registro de llegada ──────────────────────────────────────────
-  // La clienta marca que llegó al local (o lo hace el profesional/admin por
-  // ella, ej. si no tiene el celular a mano). Evita que autoNoShow.job.ts
-  // cancele el turno a los 20 minutos de la hora pactada. Idempotente: una
-  // segunda llamada no falla, simplemente no vuelve a tocar arrivedAt.
-  markArrivalForClient: async (clientId: string, id: string) => {
-    const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
-    if (!appointment || appointment.clientId !== clientId) {
-      throw new AppError(HTTP.NOT_FOUND, 'Turno no encontrado', 'NOT_FOUND')
-    }
-    const updated = await registerArrival(appointment)
-    return toClientView(updated)
-  },
-
+  // La llegada la registra SOLO el personal (profesional o administrador): la clienta ya no puede marcarla.
+  // Evita que autoNoShow.job.ts marque el turno como no asistido. Idempotente: una segunda llamada no falla,
+  // simplemente no vuelve a tocar arrivedAt.
   markArrivalForProfessional: async (professionalId: string, id: string) => {
     const appointment = await prisma.appointment.findUnique({ where: { id }, include: APPOINTMENT_INCLUDE })
     if (!appointment || appointment.professionalId !== professionalId) {

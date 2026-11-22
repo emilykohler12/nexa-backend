@@ -2413,3 +2413,18 @@ Entre el 07/10 y el 22/10/2026 no hay entradas: el único cambio de ese período
 | 6 | Herramienta auxiliar | Claude Code con `tsx` y Prisma. Context7 no se consultó. |
 
 **Impacto en el frontend (contrato):** ninguno.
+
+## Entrada 167: «No voy a asistir» de la clienta, llegada solo del personal, scroll del turno y servicios de la profesional
+
+**Fecha:** 2026-11-22 (hora de Argentina)
+
+| # | Elemento | Registro |
+|---|---|---|
+| 1 | Qué se decidió | **Hecho por Claude Code (Claude Sonnet 5.5, `claude-sonnet-5-5`), a pedido de Emily**, en la rama `feat/ajustes-post-defensa`. (a) **Turno ya empezado:** la clienta ya no lo cancela (`400 APPOINTMENT_STARTED`); solo puede avisar «No voy a asistir» (`PATCH /api/client/appointments/:id/no-show`), que pasa el turno (y, en un combo, todas las patas confirmadas) a `cancelled_no_show` reutilizando `changeStatusByStaff`: seña retenida, horario original bloqueado, horario reabierto hasta 40 minutos después del inicio y aviso a la profesional. (b) **Llegada:** se quitó `PATCH /api/client/appointments/:id/arrival` y el botón «Ya llegué»; la registran solo el profesional y el administrador. (c) **Scroll:** el detalle del turno de la profesional (`AppointmentDialog`) tenía `overflow: hidden` sin alto máximo y un turno confirmado, con más secciones, quedaba cortado; ahora se desplaza por dentro. (d) **Servicios de la profesional:** la tarjeta muestra solo nombre y precio; al tocarla se abre `ServiceDetailModal` con categoría, duración, descripción, imagen, precio y el interruptor activo/inactivo (que ya no está en la tarjeta). El enlace «cancelar» del mail de recordatorio con el turno empezado ahora muestra el aviso «ya empezó». |
+| 2 | Alternativas y criterio de descarte | **Que el aviso de la clienta libere el horario original:** descartado, contradice la regla confirmada por la propietaria (el original nunca se reabre; se abre el reabierto). **Estado nuevo en la base:** descartado, `cancelled_no_show` ya cubre el caso y mantiene el índice R-01. **Permitir el aviso en un turno `pending` ya empezado:** descartado, ese caso lo resuelve el job de liberación por falta de pago. |
+| 3 | Evidencia que la sostiene | Backend: `typecheck:all` limpio, 731 pruebas pasan (nuevo `appointments.client-no-show.test.ts`; ajustadas las de llegada, cancelación con reembolso, horarios reabiertos y zona horaria). Frontend: typecheck, lint y 423 pruebas pasan (nuevas en `AppointmentsPage.dates.test.tsx`, `AppointmentsPage.test.tsx` y `Services.test.tsx`). El scroll no se verificó en un navegador. |
+| 4 | Aporte personal | Emily definió las cinco reglas. |
+| 5 | Desacuerdo y resolución | Sin desacuerdo. Queda a criterio de Emily si la clienta que avisa debería recibir un mail de confirmación (hoy no). |
+| 6 | Herramienta auxiliar | Claude Code (Claude Sonnet 5.5) con Git, Node y `vitest`. Context7 no se consultó (sin APIs nuevas de librerías). |
+
+**Impacto en el frontend (contrato):** se elimina `PATCH /api/client/appointments/:id/arrival`; se agrega `PATCH /api/client/appointments/:id/no-show` (respuesta `{ appointment, appointments }`); `PATCH …/cancel` ahora puede responder `400 APPOINTMENT_STARTED`. Archivos del frontend: `pages/client/AppointmentsPage.tsx`, `features/client/appointments/reminderLink.ts`, `features/professional/agenda/dialogs/AppointmentDialog.tsx`, `features/professional/services/Services.tsx` y `ServiceDetailModal.tsx` (nuevo), con sus pruebas. **Sin migración de base.**

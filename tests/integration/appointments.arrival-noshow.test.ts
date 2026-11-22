@@ -12,7 +12,7 @@ import { cookieFor } from '../helpers/auth'
 describe('registro de llegada', () => {
   afterEach(() => { vi.useRealTimers() })
 
-  it('la clienta registra su propia llegada en un turno confirmado de hoy', async () => {
+  it('la profesional registra la llegada en un turno confirmado de hoy', async () => {
     const client = await createClientUser()
     const pro    = await createProfessionalUser()
     const svc    = await createService()
@@ -23,8 +23,8 @@ describe('registro de llegada', () => {
     })
 
     const res = await request(app)
-      .patch(`/api/client/appointments/${appt.id}/arrival`)
-      .set('Cookie', cookieFor(client))
+      .patch(`/api/professional/appointments/${appt.id}/arrival`)
+      .set('Cookie', cookieFor(pro))
 
     expect(res.status).toBe(200)
     expect(res.body.appointment.arrivedAt).not.toBeNull()
@@ -41,8 +41,8 @@ describe('registro de llegada', () => {
     })
 
     const res = await request(app)
-      .patch(`/api/client/appointments/${appt.id}/arrival`)
-      .set('Cookie', cookieFor(client))
+      .patch(`/api/professional/appointments/${appt.id}/arrival`)
+      .set('Cookie', cookieFor(pro))
 
     expect(res.status).toBe(200)
     expect(res.body.appointment.arrivedAt).not.toBeNull()
@@ -56,15 +56,15 @@ describe('registro de llegada', () => {
       clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: todayStr(), time: '08:00',
     })
 
-    const first  = await request(app).patch(`/api/client/appointments/${appt.id}/arrival`).set('Cookie', cookieFor(client))
-    const second = await request(app).patch(`/api/client/appointments/${appt.id}/arrival`).set('Cookie', cookieFor(client))
+    const first  = await request(app).patch(`/api/professional/appointments/${appt.id}/arrival`).set('Cookie', cookieFor(pro))
+    const second = await request(app).patch(`/api/professional/appointments/${appt.id}/arrival`).set('Cookie', cookieFor(pro))
 
     expect(first.status).toBe(200)
     expect(second.status).toBe(200)
     expect(second.body.appointment.arrivedAt).toBe(first.body.appointment.arrivedAt)
   })
 
-  it('rechaza registrar llegada en un turno no confirmado (pending)', async () => {
+  it('rechaza registrar la llegada de un turno no confirmado (pending)', async () => {
     const client = await createClientUser()
     const pro    = await createProfessionalUser()
     const svc    = await createService()
@@ -72,12 +72,12 @@ describe('registro de llegada', () => {
       clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: todayStr(), time: '08:00', status: 'pending',
     })
 
-    const res = await request(app).patch(`/api/client/appointments/${appt.id}/arrival`).set('Cookie', cookieFor(client))
+    const res = await request(app).patch(`/api/professional/appointments/${appt.id}/arrival`).set('Cookie', cookieFor(pro))
     expect(res.status).toBe(400)
     expect(res.body.code).toBe('INVALID_STATUS')
   })
 
-  it('rechaza registrar llegada en un turno que no es de hoy', async () => {
+  it('rechaza registrar la llegada de un turno que no es de hoy', async () => {
     const client = await createClientUser()
     const pro    = await createProfessionalUser()
     const svc    = await createService()
@@ -86,22 +86,22 @@ describe('registro de llegada', () => {
       clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: future.date, time: future.time,
     })
 
-    const res = await request(app).patch(`/api/client/appointments/${appt.id}/arrival`).set('Cookie', cookieFor(client))
+    const res = await request(app).patch(`/api/professional/appointments/${appt.id}/arrival`).set('Cookie', cookieFor(pro))
     expect(res.status).toBe(400)
     expect(res.body.code).toBe('NOT_TODAY')
   })
 
-  it('rechaza registrar la llegada del turno de otra clienta', async () => {
-    const owner    = await createClientUser()
-    const intruder = await createClientUser()
-    const pro      = await createProfessionalUser()
-    const svc      = await createService()
-    const appt     = await createAppointmentDirect({
-      clientId: owner.id, professionalId: pro.id, serviceId: svc.id, date: todayStr(), time: '08:00',
+  it('la clienta NO puede registrar su llegada: solo el personal (la ruta ya no existe)', async () => {
+    const client = await createClientUser()
+    const pro    = await createProfessionalUser()
+    const svc    = await createService()
+    const appt   = await createAppointmentDirect({
+      clientId: client.id, professionalId: pro.id, serviceId: svc.id, date: todayStr(), time: '08:00',
     })
 
-    const res = await request(app).patch(`/api/client/appointments/${appt.id}/arrival`).set('Cookie', cookieFor(intruder))
+    const res = await request(app).patch(`/api/client/appointments/${appt.id}/arrival`).set('Cookie', cookieFor(client))
     expect(res.status).toBe(404)
+    expect((await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } })).arrivedAt).toBeNull()
   })
 
   it('la profesional puede registrar la llegada por la clienta', async () => {
