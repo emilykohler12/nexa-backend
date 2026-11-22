@@ -251,12 +251,12 @@ describe('el horario ORIGINAL nunca se reabre', () => {
     expect(res.body.bookedTimes).toContain('16:00')
   })
 
-  it('una cancelación de la clienta con el turno ya empezado bloquea el original; antes de empezar lo libera', async () => {
+  it('el aviso de inasistencia de la clienta con el turno ya empezado bloquea el original; una cancelación antes de empezar lo libera', async () => {
     const started = await scenario()
     const early   = await scenario({ time: '18:00' })
     setNowArt('16:10')
 
-    const cancelStarted = await request(app).patch(`/api/client/appointments/${started.appt.id}/cancel`).set('Cookie', cookieFor(started.client))
+    const cancelStarted = await request(app).patch(`/api/client/appointments/${started.appt.id}/no-show`).set('Cookie', cookieFor(started.client))
     const cancelEarly   = await request(app).patch(`/api/client/appointments/${early.appt.id}/cancel`).set('Cookie', cookieFor(early.client))
 
     expect(cancelStarted.status).toBe(200)

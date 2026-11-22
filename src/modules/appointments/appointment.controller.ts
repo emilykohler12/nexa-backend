@@ -313,10 +313,10 @@ export const appointmentController = {
     } catch (err) { next(err) }
   },
 
-  markArrivalMine: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  noShowMine: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const appointment = await appointmentService.markArrivalForClient(req.user!.id, getId(req))
-      res.json({ appointment })
+      const result = await appointmentService.markNoShowForClient(req.user!.id, getId(req))
+      res.json(result)
     } catch (err) { next(err) }
   },
 

@@ -104,11 +104,11 @@ describe('cancelación y reembolso en hora de Argentina (corte de 12 horas)', ()
 })
 
 describe('"hoy" en hora de Argentina', () => {
-  it('la clienta puede registrar su llegada a un turno de las 22:00 a las 22:30 (ya es el día siguiente en UTC)', async () => {
+  it('la profesional puede registrar la llegada de un turno de las 22:00 a las 22:30 (ya es el día siguiente en UTC)', async () => {
     setNow('2026-10-25T01:30:00Z') // 22:30 del 24 en Argentina
-    const { client, appt } = await confirmedAppointment('2026-10-24', '22:00')
+    const { pro, appt } = await confirmedAppointment('2026-10-24', '22:00')
 
-    const res = await request(app).patch(`/api/client/appointments/${appt.id}/arrival`).set('Cookie', cookieFor(client))
+    const res = await request(app).patch(`/api/professional/appointments/${appt.id}/arrival`).set('Cookie', cookieFor(pro))
 
     expect(res.status).toBe(200)
     expect((await prisma.appointment.findUniqueOrThrow({ where: { id: appt.id } })).arrivedAt).not.toBeNull()

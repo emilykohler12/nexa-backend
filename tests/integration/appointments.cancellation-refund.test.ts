@@ -50,6 +50,9 @@ const fresh = (id: string) => prisma.appointment.findUniqueOrThrow({ where: { id
 const clientCancel = (client: U, id: string) =>
   request(app).patch(`/api/client/appointments/${id}/cancel`).set('Cookie', cookieFor(client))
 
+const clientNoShow = (client: U, id: string) =>
+  request(app).patch(`/api/client/appointments/${id}/no-show`).set('Cookie', cookieFor(client))
+
 const staffCancel = (who: 'professional' | 'admin', user: U, id: string, body: object) =>
   request(app).patch(`/api/${who}/appointments/${id}`).set('Cookie', cookieFor(user)).send({ status: 'cancelled', ...body })
 
@@ -126,15 +129,16 @@ describe('cancelación de la clienta desde la app', () => {
     expect(res.body.refunded).toBe(false)
   })
 
-  it('con el turno ya empezado: sin devolución, el original queda bloqueado y se abre el horario reabierto', async () => {
+  it('con el turno ya empezado no se cancela: avisa que no asiste, sin devolución, el original queda bloqueado y se abre el horario reabierto', async () => {
     const { client, appt } = await scenario()
     setNowArt('16:10')
 
-    const res = await clientCancel(client, appt.id)
+    expect((await clientCancel(client, appt.id)).body.code).toBe('APPOINTMENT_STARTED')
+    const res = await clientNoShow(client, appt.id)
 
     expect(res.status).toBe(200)
-    expect(res.body.refunded).toBe(false)
     const row = await fresh(appt.id)
+    expect(row.status).toBe('cancelled_no_show')
     expect(row.paymentStatus).toBe('partial')
     expect(row.slotLocked).toBe(true)
     const slot = await prisma.reopenedSlot.findUniqueOrThrow({ where: { appointmentId: appt.id } })
@@ -147,19 +151,19 @@ describe('cancelación de la clienta desde la app', () => {
     const at41 = await scenario()
 
     setNowArt('16:40')
-    await clientCancel(at40.client, at40.appt.id)
+    await clientNoShow(at40.client, at40.appt.id)
     setNowArt('16:41')
-    await clientCancel(at41.client, at41.appt.id)
+    await clientNoShow(at41.client, at41.appt.id)
 
     expect(await prisma.reopenedSlot.count({ where: { appointmentId: at40.appt.id } })).toBe(1)
     expect(await prisma.reopenedSlot.count({ where: { appointmentId: at41.appt.id } })).toBe(0)
     expect((await fresh(at41.appt.id)).slotLocked).toBe(true)
   })
 
-  it('el horario original no se puede reservar después de cancelar un turno ya empezado', async () => {
+  it('el horario original no se puede reservar después de avisar la inasistencia de un turno ya empezado', async () => {
     const { client, pro, svc, appt } = await scenario()
     setNowArt('16:10')
-    await clientCancel(client, appt.id)
+    await clientNoShow(client, appt.id)
     const other = await createClientUser()
     setNowArt('16:12')
 
